@@ -3,7 +3,8 @@
  * High-res, volledig procedurele speelkaart-textures op canvas:
  *  - roomwit kaartoppervlak met subtiele gradient/vignet;
  *  - correcte pip-layouts per rang (2-10, gespiegelde onderhelft);
- *  - hoekindices met NL-rang (B/V/H/A) + kleurteken;
+ *  - hoekindices met NL-rang (B/V/H/A) + kleurteken in alle vier de hoeken
+ *    (4-index, leesbaar in een overlappende waaier);
  *  - sierlijke hofkaarten (zie cardArt/court.ts);
  *  - azen met groot ornamentaal middenteken (schoppenaas extra ornamentaal);
  *  - klassieke geornamenteerde kaartrug (guilloche met wit kader);
@@ -120,14 +121,27 @@ function drawPips(ctx: CanvasRenderingContext2D, card: Card, w: number, h: numbe
 // Hoekindices
 // ---------------------------------------------------------------------------
 
-function drawCornerIndex(ctx: CanvasRenderingContext2D, card: Card, w: number, h: number, rotated: boolean): void {
+/**
+ * Eén hoekindex (rang + kleurteken). `rotated` spiegelt 180° (onderzijde),
+ * `rechts` tekent de index aan de rechterkant van de (eventueel gedraaide)
+ * bovenrand. Met vier indices (4-index deck) blijft elke kaart leesbaar,
+ * ongeacht welke zijde in de handwaaier vrij blijft.
+ */
+function drawCornerIndex(
+  ctx: CanvasRenderingContext2D,
+  card: Card,
+  w: number,
+  h: number,
+  rotated: boolean,
+  rechts = false,
+): void {
   ctx.save();
   if (rotated) {
     ctx.translate(w, h);
     ctx.rotate(Math.PI);
   }
   const label = RANK_LABELS_NL[card.rank];
-  const cx = w * 0.088;
+  const cx = rechts ? w - w * 0.088 : w * 0.088;
   const fontSize = label.length > 1 ? w * 0.105 : w * 0.125;
   ctx.font = `700 ${fontSize}px Georgia, 'Times New Roman', serif`;
   ctx.textAlign = 'center';
@@ -272,9 +286,13 @@ export function drawCardFace(ctx: CanvasRenderingContext2D, card: Card, w: numbe
     drawPips(ctx, card, w, h);
   }
 
-  // Hoekindices (linksboven + gespiegeld rechtsonder).
+  // Hoekindices in alle vier de hoeken (4-index deck): linksboven en
+  // rechtsboven rechtop, linksonder en rechtsonder 180° gespiegeld. Zo is
+  // rang + kleurteken altijd zichtbaar in een overlappende handwaaier.
   drawCornerIndex(ctx, card, w, h, false);
+  drawCornerIndex(ctx, card, w, h, false, true);
   drawCornerIndex(ctx, card, w, h, true);
+  drawCornerIndex(ctx, card, w, h, true, true);
 
   // Fijne randlijn voor definitie.
   roundedRectPath(ctx, w * 0.006, w * 0.006, w - w * 0.012, h - w * 0.012, r * 0.92);

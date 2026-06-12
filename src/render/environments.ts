@@ -433,6 +433,26 @@ function maakHanglamp(x: number, y: number, z: number, kapKleur: number, kapStra
   return lamp;
 }
 
+/**
+ * Zachte, schaduwloze spot op de eigen-hand-zone (stoel 0, aan de +Z-kant van
+ * de tafel). Elke omgeving voegt deze toe zodat de eigen kaarten ook in
+ * donkere sferen (café, casino) altijd goed leesbaar blijven, zonder harde
+ * schaduwen of een aangetaste sfeer.
+ */
+function maakHandLicht(
+  tableSurfaceY: number,
+  tableRadius: number,
+  kleur: number,
+  intensiteit: number,
+): THREE.SpotLight {
+  const licht = new THREE.SpotLight(kleur, intensiteit, 4.5, 0.62, 0.9, 1.7);
+  licht.position.set(0, tableSurfaceY + 1.05, tableRadius + 0.7);
+  licht.target.position.set(0, tableSurfaceY + 0.18, tableRadius * 1.03);
+  licht.castShadow = false;
+  licht.name = 'handlicht';
+  return licht;
+}
+
 function stelSchaduwIn(licht: THREE.SpotLight | THREE.DirectionalLight, formaat = 1024): void {
   licht.castShadow = true;
   licht.shadow.mapSize.set(formaat, formaat);
@@ -477,6 +497,9 @@ export function createCafeEnvironment(): Environment {
     const bar = new THREE.PointLight(0xff9a4d, 4, 7, 2);
     bar.position.set(0, 1.7, -3.6);
     lichten.push(bar);
+
+    // Subtiel warm leeslicht op de eigen hand.
+    lichten.push(maakHandLicht(tableSurfaceY, tableRadius, 0xffcf9a, 14));
 
     return lichten;
   };
@@ -576,6 +599,9 @@ export function createKeukentafelEnvironment(): Environment {
     const vul = new THREE.PointLight(0xffe6c0, 2.2, 9, 2);
     vul.position.set(-2.2, 2.3, 2.0);
     lichten.push(vul);
+
+    // Licht leeslicht op de eigen hand (de keuken is al helder; mild houden).
+    lichten.push(maakHandLicht(tableSurfaceY, tableRadius, 0xfff4e0, 6));
 
     return lichten;
   };
@@ -679,6 +705,9 @@ export function createCasinoEnvironment(): Environment {
     const goud2 = new THREE.PointLight(0xd4af37, 2.2, 6, 2);
     goud2.position.set(-2.6, 1.0, 1.6);
     lichten.push(goud2);
+
+    // Subtiel warm leeslicht op de eigen hand (de centrale spot reikt daar niet).
+    lichten.push(maakHandLicht(tableSurfaceY, tableRadius, 0xffe7c0, 16));
 
     return lichten;
   };

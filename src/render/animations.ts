@@ -115,12 +115,13 @@ export function createTableLayout(tableSurfaceY: number, tableRadius: number): K
     handAnchor(seat: Seat, seatCount: number): { position: THREE.Vector3; rotationY: number } {
       const a = seatAngle(seat, seatCount);
       const lokaal = seat === 0;
-      // Eigen hand iets buiten de rand en hoger (groot gewaaierd richting camera);
-      // tegenstanders net binnen de rand met een compacte gesloten waaier.
-      const r = straal * (lokaal ? 1.06 : 0.94);
+      // Eigen hand net buiten de rand, relatief laag (verder van de camera,
+      // zodat tafel en tegenstanders de compositie domineren); tegenstanders
+      // net binnen de rand met een compacte gesloten waaier.
+      const r = straal * (lokaal ? 1.02 : 0.94);
       const position = new THREE.Vector3(
         Math.cos(a) * r,
-        opp + (lokaal ? 0.26 : 0.17),
+        opp + (lokaal ? 0.16 : 0.17),
         Math.sin(a) * r,
       );
       // Lokale +Z van het hand-anker wijst naar het tafelmidden.
@@ -188,7 +189,16 @@ function herstelOpacity(mesh: THREE.Mesh): void {
 interface DoelTransform {
   pos: THREE.Vector3;
   quat: THREE.Quaternion;
+  /** Uniforme schaal van de mesh op de bestemming (default 1). */
+  schaal?: number;
 }
+
+/**
+ * Schaal van kaarten in de eigen hand (stoel 0). Kleiner dan 1 zodat de
+ * voorgrond-waaier de tafel en tegenstanders niet domineert; bij het spelen
+ * groeit de kaart tijdens de vlucht terug naar 1 (tafelformaat).
+ */
+const EIGEN_HAND_SCHAAL = 0.58;
 
 // ---------------------------------------------------------------------------
 // CardAnimator
@@ -254,7 +264,7 @@ export function createCardAnimator(
     return h;
   };
 
-  /** Tween een mesh naar een doel-transform; optioneel met boog en/of fade. */
+  /** Tween een mesh naar een doel-transform; optioneel met boog, schaal en/of fade. */
   const beweegMesh = (
     mesh: THREE.Mesh,
     doel: DoelTransform,
@@ -262,6 +272,8 @@ export function createCardAnimator(
   ): Promise<void> => {
     const p0 = mesh.position.clone();
     const q0 = mesh.quaternion.clone();
+    const s0 = mesh.scale.x;
+    const s1 = doel.schaal ?? 1;
     mesh.userData['animating'] = true;
     const h = volg(
       startTween({
@@ -272,6 +284,7 @@ export function createCardAnimator(
           mesh.position.lerpVectors(p0, doel.pos, t);
           if (opties.boog) mesh.position.y += Math.sin(Math.PI * t) * opties.boog;
           mesh.quaternion.slerpQuaternions(q0, doel.quat, t);
+          if (s0 !== s1) mesh.scale.setScalar(s0 + (s1 - s0) * t);
           if (opties.fade) zetOpacity(mesh, 1 - easeInQuad(t));
         },
       }),
@@ -288,18 +301,23 @@ export function createCardAnimator(
     const ch = cardRenderer.cardSize.height;
     const lokaal = seat === 0;
 
-    // Eigen hand: grote open waaier; tegenstanders: smalle gesloten waaier.
+    // Eigen hand: open waaier (verkleind, zie EIGEN_HAND_SCHAAL);
+    // tegenstanders: smalle gesloten waaier.
     const stap = lokaal
-      ? Math.min(0.105, 0.95 / Math.max(n, 1))
+      ? Math.min(0.085, 0.5 / Math.max(n, 1))
       : Math.min(0.06, 0.5 / Math.max(n, 1));
-    const waaierStraal = ch * (lokaal ? 2.4 : 1.5);
+    const waaierStraal = ch * (lokaal ? 1.7 : 1.5);
 
     const uit: DoelTransform[] = [];
     for (let i = 0; i < n; i++) {
       const phi = (i - (n - 1) / 2) * stap;
       const lx = Math.sin(phi) * waaierStraal * (lokaal ? 1 : 0.6);
       const ly = (Math.cos(phi) - 1) * waaierStraal * (lokaal ? 1 : 0.5);
-      const lz = -i * (lokaal ? 0.0028 : 0.0022);
+      // Stapelvolgorde: bij de eigen hand ligt de RECHTER kaart bovenop
+      // (zoals een echte waaier in de hand); van elke bedekte kaart blijft zo
+      // de linkerbovenhoek — mét index — zichtbaar. Tegenstanders andersom
+      // (onzichtbaar detail, alleen z-fighting vermijden).
+      const lz = lokaal ? -(n - 1 - i) * 0.0028 : -i * 0.0022;
       // ry=π: voorkant naar de eigenaar (rug naar het tafelmidden);
       // rx: kaarten leunen naar de houder; rz: waaierdraaiing per kaart.
       const lokaleQ = new THREE.Quaternion().setFromEuler(
@@ -307,7 +325,7 @@ export function createCardAnimator(
       );
       const pos = new THREE.Vector3(lx, ly, lz).applyQuaternion(ankerQ).add(anker.position);
       const quat = ankerQ.clone().multiply(lokaleQ);
-      uit.push({ pos, quat });
+      uit.push({ pos, quat, schaal: lokaal ? EIGEN_HAND_SCHAAL : 1 });
     }
     return uit;
   };
@@ -349,6 +367,7 @@ export function createCardAnimator(
       } else {
         mesh.position.copy(doel.pos);
         mesh.quaternion.copy(doel.quat);
+        mesh.scale.setScalar(doel.schaal ?? 1);
       }
     }
     return Promise.all(promises).then(() => undefined);

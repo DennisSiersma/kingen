@@ -18,9 +18,39 @@ import type { EnvironmentId, SceneManager } from './types.ts';
 export interface KingenSceneManager extends SceneManager {
   /** Resolved zodra alle door GameEvents getriggerde animaties klaar zijn. */
   waitForIdle(): Promise<void>;
+  /** Helderheid in procenten (50-160); schaalt de tone-mapping-exposure. */
+  setBrightness(percent: number): void;
+  /** Muis-parallax van de camera aan/uit (staat altijd stil tijdens kaartkeuze). */
+  setCameraMotion(enabled: boolean): void;
 }
 
 const wacht = (ms: number): Promise<void> => new Promise((res) => setTimeout(res, ms));
+
+/** Basis-exposure; de helderheidsinstelling is een factor hier bovenop. */
+const BASIS_EXPOSURE = 1.15;
+const HELDERHEID_KEY = 'kingen.brightness';
+const CAMERA_KEY = 'kingen.cameraMotion';
+
+const klemHelderheid = (pct: number): number => Math.min(160, Math.max(50, pct));
+
+function leesHelderheid(): number {
+  try {
+    const v = Number(window.localStorage.getItem(HELDERHEID_KEY));
+    if (Number.isFinite(v) && v > 0) return klemHelderheid(v);
+  } catch {
+    // localStorage kan geblokkeerd zijn; val terug op default.
+  }
+  return 100;
+}
+
+function leesCameraBeweging(): boolean {
+  try {
+    // Standaard UIT: een meebewegende camera maakt richten op kaarten lastig.
+    return window.localStorage.getItem(CAMERA_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 type DealEvent = Extract<GameEvent, { type: 'deal' }>;
 
@@ -39,7 +69,7 @@ export async function createSceneManager(
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = BASIS_EXPOSURE * (leesHelderheid() / 100);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.style.display = 'block';
   container.appendChild(renderer.domElement);
@@ -61,7 +91,9 @@ export async function createSceneManager(
   const basisElevatie = 0.58; // rad boven de horizon
   const basisAzimut = Math.PI / 2; // boven stoel 0 (+Z)
 
-  // Lichte orbit/parallax met de muis, beperkt in bereik.
+  // Lichte orbit/parallax met de muis, beperkt in bereik. Standaard UIT
+  // (instelbaar via het HUD-menu) en altijd bevroren tijdens kaartkeuze.
+  let cameraBeweging = leesCameraBeweging();
   let doelYaw = 0;
   let doelPitch = 0;
   let huidigeYaw = 0;
@@ -266,8 +298,11 @@ export async function createSceneManager(
 
   // --- render-loop ---
   const tik = (): void => {
-    huidigeYaw += (doelYaw - huidigeYaw) * 0.06;
-    huidigePitch += (doelPitch - huidigePitch) * 0.06;
+    // Camera volgt de muis alleen als de toggle aanstaat én er geen kaartkeuze
+    // loopt (speelbaar leeg): richten op een kaart moet altijd stabiel zijn.
+    const volgMuis = cameraBeweging && speelbaar.size === 0;
+    huidigeYaw += ((volgMuis ? doelYaw : 0) - huidigeYaw) * 0.06;
+    huidigePitch += ((volgMuis ? doelPitch : 0) - huidigePitch) * 0.06;
     plaatsCamera();
 
     // Hover-lift van speelbare kaarten in de eigen hand.
@@ -324,6 +359,14 @@ export async function createSceneManager(
 
     waitForIdle(): Promise<void> {
       return staart;
+    },
+
+    setBrightness(percent: number): void {
+      renderer.toneMappingExposure = BASIS_EXPOSURE * (klemHelderheid(percent) / 100);
+    },
+
+    setCameraMotion(enabled: boolean): void {
+      cameraBeweging = enabled;
     },
 
     start(): void {
