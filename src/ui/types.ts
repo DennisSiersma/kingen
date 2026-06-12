@@ -37,6 +37,10 @@ export type UiEvent =
   | { type: 'claimRequested'; seat: Seat }
   /** Scorebord open/dicht. */
   | { type: 'toggleScoreboard' }
+  /** Helderheid (tone-mapping) aangepast via het HUD-menu (50-160%). */
+  | { type: 'brightnessChanged'; percent: number }
+  /** Camerabeweging (muis-parallax) aan/uit gezet via het HUD-menu. */
+  | { type: 'cameraMotionChanged'; enabled: boolean }
   /** Terug naar het setup-scherm (partij afbreken). */
   | { type: 'quitToSetup' }
   /** Nieuwe partij met dezelfde instellingen. */
@@ -72,6 +76,8 @@ export interface Hud {
    * UiEvent 'claimRequested' voor stoel 0.
    */
   setClaimAvailable(beschikbaar: boolean): void;
+  /** Synchroniseer de omgeving-keuzelijst in het instellingenmenu met de actieve omgeving. */
+  setEnvironment(id: EnvironmentId): void;
   show(): void;
   hide(): void;
 }

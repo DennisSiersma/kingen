@@ -30,6 +30,27 @@ function isRedSuit(suit: Suit): boolean {
   return suit === 'hearts' || suit === 'diamonds';
 }
 
+// Persistente HUD-instellingen (best-effort; localStorage kan geblokkeerd zijn).
+const HELDERHEID_KEY = 'kingen.brightness';
+const CAMERA_KEY = 'kingen.cameraMotion';
+const RONDE_UITLEG_KEY = 'kingen.roundHelp';
+
+function leesOpgeslagen(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function bewaar(key: string, waarde: string): void {
+  try {
+    window.localStorage.setItem(key, waarde);
+  } catch {
+    // Persistentie is best-effort.
+  }
+}
+
 export function createHud(root: HTMLElement): Hud {
   const hud = el('div', 'kg-hud');
   hud.hidden = true;
@@ -50,16 +71,30 @@ export function createHud(root: HTMLElement): Hud {
   const rondeTeller = el('div', 'kg-hud__rondeteller', '');
   rondeBlok.append(rondeLabel, rondeTeller);
 
-  const infoKnop = el('button', 'kg-hud__info kg-klikbaar');
+  // "?"-knop: toont/verbergt het paneel met het doel van de huidige ronde.
+  // Zichtbaarheid persist in localStorage; standaard AAN bij eerste gebruik.
+  let uitlegAan = leesOpgeslagen(RONDE_UITLEG_KEY) !== '0';
+  const infoKnop = el('button', 'kg-hud__info kg-klikbaar', '?');
   infoKnop.type = 'button';
-  infoKnop.appendChild(el('span', undefined, 'i'));
-  const tooltip = el('div', 'kg-hud__tooltip', '');
-  infoKnop.appendChild(tooltip);
 
   const troefBadge = el('div', 'kg-hud__troef is-leeg');
 
   rondePaneel.append(rondeBlok, infoKnop, troefBadge);
   hud.appendChild(rondePaneel);
+
+  // Compact uitlegpaneel onder het rondepaneel.
+  const uitlegPaneel = el('div', 'kg-hud__uitleg');
+  const uitlegKop = el('div', 'kg-hud__uitlegkop', '');
+  const uitlegTekst = el('div', 'kg-hud__uitlegtekst', '');
+  uitlegPaneel.append(uitlegKop, uitlegTekst);
+  uitlegPaneel.hidden = true;
+  hud.appendChild(uitlegPaneel);
+
+  infoKnop.addEventListener('click', () => {
+    uitlegAan = !uitlegAan;
+    bewaar(RONDE_UITLEG_KEY, uitlegAan ? '1' : '0');
+    tekenRonde();
+  });
 
   // --- Bovenmidden: spelerschips --------------------------------------
   const spelersStrip = el('div', 'kg-hud__spelers');
@@ -124,6 +159,49 @@ export function createHud(root: HTMLElement): Hud {
   taalRegel.append(taalLabel, taalSelect);
   menu.appendChild(taalRegel);
 
+  // Helderheid: 50-160%, default 100%; werkt direct op de renderer-exposure.
+  const helderRegel = el('div', 'kg-menu-regel');
+  const helderLabel = el('label');
+  helderLabel.htmlFor = 'kg-hud-helderheid';
+  const helderRij = el('div', 'kg-slider-rij');
+  const helderSlider = el('input', 'kg-slider');
+  helderSlider.id = 'kg-hud-helderheid';
+  helderSlider.type = 'range';
+  helderSlider.min = '50';
+  helderSlider.max = '160';
+  helderSlider.step = '5';
+  const opgeslagenHelderheid = Number(leesOpgeslagen(HELDERHEID_KEY));
+  const beginHelderheid =
+    Number.isFinite(opgeslagenHelderheid) && opgeslagenHelderheid >= 50 && opgeslagenHelderheid <= 160
+      ? opgeslagenHelderheid
+      : 100;
+  helderSlider.value = String(beginHelderheid);
+  const helderWaarde = el('span', 'kg-slider-waarde', `${beginHelderheid}%`);
+  helderSlider.addEventListener('input', () => {
+    const pct = Number(helderSlider.value);
+    helderWaarde.textContent = `${pct}%`;
+    bewaar(HELDERHEID_KEY, String(pct));
+    emitUiEvent(root, { type: 'brightnessChanged', percent: pct });
+  });
+  helderRij.append(helderSlider, helderWaarde);
+  helderRegel.append(helderLabel, helderRij);
+  menu.appendChild(helderRegel);
+
+  // Camerabeweging (muis-parallax): standaard UIT; persist in localStorage.
+  const cameraRegel = el('div', 'kg-menu-regel kg-menu-schakel');
+  const cameraLabel = el('label');
+  cameraLabel.htmlFor = 'kg-hud-camera';
+  const cameraToggle = el('input');
+  cameraToggle.id = 'kg-hud-camera';
+  cameraToggle.type = 'checkbox';
+  cameraToggle.checked = leesOpgeslagen(CAMERA_KEY) === '1';
+  cameraToggle.addEventListener('change', () => {
+    bewaar(CAMERA_KEY, cameraToggle.checked ? '1' : '0');
+    emitUiEvent(root, { type: 'cameraMotionChanged', enabled: cameraToggle.checked });
+  });
+  cameraRegel.append(cameraLabel, cameraToggle);
+  menu.appendChild(cameraRegel);
+
   // Geluid: gereserveerd, nog niet aanwezig in deze versie.
   const geluidRegel = el('div', 'kg-menu-regel kg-menu-uit');
   const geluidLabel = el('span');
@@ -171,18 +249,23 @@ export function createHud(root: HTMLElement): Hud {
   // ------------------------------------------------------------------
 
   function tekenRonde(): void {
-    if (huidigeRonde && huidigeRonde.kind) {
+    const heeftRonde = huidigeRonde !== null && huidigeRonde.kind !== '';
+    if (huidigeRonde && heeftRonde) {
       rondeLabel.textContent = roundKindName(huidigeRonde.kind);
       rondeTeller.textContent = t('hud.roundOf', {
         num: huidigeRonde.index + 1,
         total: huidigeRonde.total,
       });
-      tooltip.textContent = roundKindExplanation(huidigeRonde.kind);
+      uitlegKop.textContent = t('hud.roundGoal');
+      uitlegTekst.textContent = roundKindExplanation(huidigeRonde.kind);
     } else {
       rondeLabel.textContent = '—';
       rondeTeller.textContent = '';
-      tooltip.textContent = '';
+      uitlegKop.textContent = '';
+      uitlegTekst.textContent = '';
     }
+    uitlegPaneel.hidden = !uitlegAan || !heeftRonde;
+    infoKnop.classList.toggle('is-actief', uitlegAan);
   }
 
   function tekenTroef(): void {
@@ -220,6 +303,7 @@ export function createHud(root: HTMLElement): Hud {
   /** Statische teksten (knoppen, menu, tooltips) in de actieve taal zetten. */
   function tekenStatisch(): void {
     infoKnop.setAttribute('aria-label', t('hud.roundInfoAria'));
+    infoKnop.title = t('hud.roundInfoAria');
     scoreKnop.textContent = t('hud.scoreboard');
     scoreKnop.title = t('hud.scoreboardTitle');
     instelKnop.textContent = t('hud.settings');
@@ -231,6 +315,9 @@ export function createHud(root: HTMLElement): Hud {
     }
     taalLabel.textContent = t('hud.language');
     taalSelect.value = getLang();
+    helderLabel.textContent = t('hud.brightness');
+    cameraLabel.textContent = t('hud.cameraMotion');
+    cameraRegel.title = t('hud.cameraMotionHint');
     geluidLabel.textContent = t('hud.sound');
     geluidHint.textContent = t('hud.comingSoon');
     stopKnop.textContent = t('hud.quit');
@@ -253,6 +340,10 @@ export function createHud(root: HTMLElement): Hud {
   // ------------------------------------------------------------------
 
   return {
+    setEnvironment(id: EnvironmentId): void {
+      omgevingSelect.value = id;
+    },
+
     setRound(kind: string, index: number, total: number): void {
       huidigeRonde = { kind, index, total };
       tekenRonde();

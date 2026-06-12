@@ -543,39 +543,49 @@
   background: rgba(201, 162, 39, 0.1);
   color: var(--kg-gold-bright);
   font-family: var(--kg-serif);
-  font-style: italic;
   font-size: 0.85rem;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: help;
+  cursor: pointer;
   padding: 0;
+  transition: all 130ms ease;
 }
 
-.kg-hud__tooltip {
+.kg-hud__info:hover { border-color: var(--kg-gold-bright); }
+
+.kg-hud__info.is-actief {
+  background: rgba(201, 162, 39, 0.32);
+  border-color: var(--kg-gold-bright);
+}
+
+/* Togglebaar paneel met het doel van de huidige ronde (onder het rondepaneel) */
+.kg-hud__uitleg {
   position: absolute;
-  top: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 240px;
+  top: 84px;
+  left: 14px;
+  width: 252px;
   background: var(--kg-panel);
   border: 1px solid var(--kg-panel-line);
   border-radius: 10px;
   padding: 10px 12px;
-  font-size: 0.82rem;
-  color: var(--kg-text);
-  box-shadow: var(--kg-shadow);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 150ms ease;
-  z-index: 5;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  animation: kg-fade-in 160ms ease-out;
 }
 
-.kg-hud__info:hover .kg-hud__tooltip,
-.kg-hud__info:focus .kg-hud__tooltip {
-  opacity: 1;
-  visibility: visible;
+.kg-hud__uitlegkop {
+  font-family: var(--kg-serif);
+  font-size: 0.82rem;
+  color: var(--kg-gold-bright);
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+}
+
+.kg-hud__uitlegtekst {
+  font-size: 0.82rem;
+  color: var(--kg-text);
 }
 
 .kg-hud__troef {
@@ -751,6 +761,51 @@
   align-items: center;
   font-size: 0.85rem;
   color: var(--kg-muted);
+}
+
+/* Helderheid-slider in het instellingenmenu */
+.kg-slider-rij {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#ui .kg-slider {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--kg-gold);
+  cursor: pointer;
+}
+
+.kg-slider-waarde {
+  min-width: 3em;
+  text-align: right;
+  font-size: 0.82rem;
+  color: var(--kg-gold-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Schakelregel (label + checkbox) in het instellingenmenu */
+.kg-hud__menu .kg-menu-schakel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.kg-hud__menu .kg-menu-schakel label {
+  margin-bottom: 0;
+  font-size: 0.85rem;
+  color: var(--kg-text);
+  cursor: pointer;
+}
+
+.kg-menu-schakel input[type='checkbox'] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--kg-gold);
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 /* ---------------------------------------------------------------------------

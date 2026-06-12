@@ -386,6 +386,13 @@ async function main(): Promise<void> {
     void scene?.setEnvironment(id);
   });
 
+  // Weergave-instellingen uit het HUD-menu (helderheid, camerabeweging);
+  // het HUD persist ze zelf in localStorage, de scene leest die bij opstart.
+  onUiEvent(ui, (ev) => {
+    if (ev.type === 'brightnessChanged') scene?.setBrightness(ev.percent);
+    if (ev.type === 'cameraMotionChanged') scene?.setCameraMotion(ev.enabled);
+  });
+
   for (;;) {
     const setup = await setupScreen.show(vorige);
     setupScreen.hide();
@@ -398,6 +405,7 @@ async function main(): Promise<void> {
     } else {
       await scene.setEnvironment(setup.omgeving);
     }
+    hud.setEnvironment(setup.omgeving);
 
     const ctx: AppContext = {
       uiRoot: ui,
