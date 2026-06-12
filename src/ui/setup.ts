@@ -2,29 +2,38 @@
  * src/ui/setup.ts
  * Setup-scherm (DOM-overlay in #ui): aantal spelers (3-5), per stoel
  * mens/computer + naam + AI-niveau, variantkeuze (standaard/dubbel + alle
- * vlaggen uit KingenVariantConfig), omgevingskeuze. Nederlandse teksten.
+ * vlaggen uit KingenVariantConfig), omgevingskeuze en taalkeuze (NL/EN).
+ * Alle teksten lopen via src/ui/i18n.ts.
  */
 
 import '../styles.css';
 import type { PlayerConfig } from '../core/types.ts';
 import type { KingenRoundKind, KingenVariantConfig, TrumpSelectionMode } from '../games/kingen/types.ts';
-import { DEFAULT_VARIANT, NEGATIVE_ROUND_KINDS, ROUND_LABELS_NL } from '../games/kingen/types.ts';
+import { DEFAULT_VARIANT, NEGATIVE_ROUND_KINDS } from '../games/kingen/types.ts';
 import type { EnvironmentId } from '../render/types.ts';
 import { ENVIRONMENT_IDS } from '../render/types.ts';
+import type { Lang } from './i18n.ts';
+import {
+  aiLevelName,
+  environmentDescription,
+  environmentName,
+  getLang,
+  onLangChange,
+  roundKindExplanation,
+  roundKindName,
+  setLang,
+  t,
+  trumpModeName,
+} from './i18n.ts';
 import type { SetupConfig, SetupScreen } from './types.ts';
-import { ROUND_EXPLANATIONS_NL, el, emitUiEvent } from './uiBus.ts';
+import { el, emitUiEvent } from './uiBus.ts';
 
 // ---------------------------------------------------------------------------
 // Vaste teksten en icoontjes
 // ---------------------------------------------------------------------------
 
-const DEFAULT_NAMES = ['Jij', 'Anna', 'Bram', 'Carla', 'Daan'] as const;
-
-const ENV_INFO: Record<EnvironmentId, { naam: string; tekst: string }> = {
-  cafe: { naam: 'Bruin café', tekst: 'Warm lamplicht, hout en gezelligheid' },
-  keukentafel: { naam: 'Keukentafel', tekst: 'Huiselijk potje onder de hanglamp' },
-  casino: { naam: 'Casino', tekst: 'Groen vilt en gedempte spots' },
-};
+/** Stoel 0 krijgt een taalafhankelijke naam ("Jij"/"You") in defaultPlayers(). */
+const DEFAULT_AI_NAMES = ['Anna', 'Bram', 'Carla', 'Daan'] as const;
 
 /** Procedurele SVG-icoontjes (geen externe assets). */
 const ENV_ICONS: Record<EnvironmentId, string> = {
@@ -60,11 +69,7 @@ const ENV_ICONS: Record<EnvironmentId, string> = {
     </g></svg>`,
 };
 
-const TRUMP_MODE_LABELS: Record<TrumpSelectionMode, string> = {
-  delerKiest: 'Deler kiest troef',
-  laatsteKaart: 'Laatste kaart bepaalt troef',
-  uitkomerKiest: 'Uitkomer kiest troef',
-};
+const TRUMP_MODES: readonly TrumpSelectionMode[] = ['delerKiest', 'laatsteKaart', 'uitkomerKiest'];
 
 const AI_LEVELS = ['makkelijk', 'gemiddeld', 'moeilijk'] as const;
 
@@ -81,12 +86,21 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
   let spelerPool: PlayerConfig[] = [];
   let onStart: ((config: SetupConfig) => void) | null = null;
 
+  // Live herrenderen bij taalwissel: het paneel volledig opnieuw opbouwen
+  // vanuit de bestaande werkstate (variant/omgeving/spelers blijven behouden).
+  onLangChange(() => {
+    if (!overlay) return;
+    const vers = build();
+    overlay.replaceWith(vers);
+    overlay = vers;
+  });
+
   function defaultPlayers(): PlayerConfig[] {
-    return DEFAULT_NAMES.map((name, i): PlayerConfig =>
-      i === 0
-        ? { name, kind: 'human' }
-        : { name, kind: 'ai', aiDifficulty: 'gemiddeld' },
-    );
+    return [
+      { name: t('setup.you'), kind: 'human' },
+      ...DEFAULT_AI_NAMES.map((name): PlayerConfig =>
+        ({ name, kind: 'ai', aiDifficulty: 'gemiddeld' })),
+    ];
   }
 
   // ------------------------------------------------------------------
@@ -107,7 +121,7 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
       naam.type = 'text';
       naam.maxLength = 16;
       naam.value = cfg.name;
-      naam.placeholder = `Speler ${i + 1}`;
+      naam.placeholder = t('setup.playerPlaceholder', { n: i + 1 });
       naam.addEventListener('input', () => {
         cfg.name = naam.value;
       });
@@ -116,17 +130,17 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
 
       // Mens/Computer-schakelaar (stoel 1 = altijd de lokale mens).
       const soort = el('div', 'kg-soort');
-      const mensKnop = el('button', 'kg-soort__knop', 'Mens');
+      const mensKnop = el('button', 'kg-soort__knop', t('setup.human'));
       mensKnop.type = 'button';
-      const aiKnop = el('button', 'kg-soort__knop', 'Computer');
+      const aiKnop = el('button', 'kg-soort__knop', t('setup.computer'));
       aiKnop.type = 'button';
       soort.append(mensKnop, aiKnop);
       rij.appendChild(soort);
 
       const niveau = el('select');
-      niveau.title = 'Speelsterkte van de computerspeler';
+      niveau.title = t('setup.aiLevelTitle');
       for (const d of AI_LEVELS) {
-        const opt = el('option', undefined, d.charAt(0).toUpperCase() + d.slice(1));
+        const opt = el('option', undefined, aiLevelName(d));
         opt.value = d;
         niveau.appendChild(opt);
       }
@@ -148,7 +162,7 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
         delete cfg.aiDifficulty;
         mensKnop.disabled = true;
         aiKnop.disabled = true;
-        aiKnop.title = 'Stoel 1 is jouw eigen stoel';
+        aiKnop.title = t('setup.seat0Title');
       } else {
         // Hotseat (meerdere mensen aan één scherm) wordt nog niet ondersteund;
         // bied 'Mens' hier dus eerlijk niet aan in plaats van het stilzwijgend
@@ -156,9 +170,9 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
         cfg.kind = 'ai';
         cfg.aiDifficulty = cfg.aiDifficulty ?? 'gemiddeld';
         mensKnop.disabled = true;
-        mensKnop.title = 'Meerdere menselijke spelers aan één scherm komt later';
+        mensKnop.title = t('setup.hotseatTitle');
         aiKnop.disabled = true;
-        aiKnop.title = 'Deze stoel wordt door de computer gespeeld';
+        aiKnop.title = t('setup.aiSeatTitle');
       }
       sync();
       container.appendChild(rij);
@@ -171,13 +185,13 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
     variant.roundOrder.forEach((kind, idx) => {
       const li = el('li');
       li.appendChild(el('span', 'kg-volgorde__nr', `${idx + 1}.`));
-      const naam = el('span', 'kg-volgorde__naam', ROUND_LABELS_NL[kind]);
-      naam.title = ROUND_EXPLANATIONS_NL[kind] ?? '';
+      const naam = el('span', 'kg-volgorde__naam', roundKindName(kind));
+      naam.title = roundKindExplanation(kind);
       li.appendChild(naam);
 
       const omhoog = el('button', 'kg-btn kg-btn--stil kg-btn--mini', '▲');
       omhoog.type = 'button';
-      omhoog.title = 'Eerder spelen';
+      omhoog.title = t('setup.moveEarlier');
       omhoog.disabled = idx === 0;
       omhoog.addEventListener('click', () => {
         const vorige = variant.roundOrder[idx - 1];
@@ -189,7 +203,7 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
 
       const omlaag = el('button', 'kg-btn kg-btn--stil kg-btn--mini', '▼');
       omlaag.type = 'button';
-      omlaag.title = 'Later spelen';
+      omlaag.title = t('setup.moveLater');
       omlaag.disabled = idx === variant.roundOrder.length - 1;
       omlaag.addEventListener('click', () => {
         const volgende = variant.roundOrder[idx + 1];
@@ -246,10 +260,24 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
 
     // Kop
     const kop = el('header', 'kg-setup__kop');
+
+    // Taalschakelaar (NL/EN) rechtsboven; herrendert het hele scherm direct.
+    const taal = el('div', 'kg-taalwissel');
+    taal.setAttribute('role', 'group');
+    taal.setAttribute('aria-label', t('setup.language'));
+    for (const lang of ['nl', 'en'] as Lang[]) {
+      const knop = el('button', 'kg-taalwissel__knop', lang.toUpperCase());
+      knop.type = 'button';
+      knop.classList.toggle('is-actief', getLang() === lang);
+      knop.addEventListener('click', () => setLang(lang));
+      taal.appendChild(knop);
+    }
+    kop.appendChild(taal);
+
     const titel = el('h1', 'kg-setup__titel');
     titel.innerHTML = '<span class="kg-suit-deco">♠</span>Kingen<span class="kg-suit-deco">♥</span>';
     kop.appendChild(titel);
-    kop.appendChild(el('p', 'kg-setup__ondertitel', 'Het klassieke Nederlandse kaartspel — nu in 3D'));
+    kop.appendChild(el('p', 'kg-setup__ondertitel', t('setup.subtitle')));
     panel.appendChild(kop);
 
     const body = el('div', 'kg-setup__body');
@@ -261,12 +289,12 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
 
     // Aantal spelers
     const sectieAantal = el('section', 'kg-setup__sectie');
-    sectieAantal.appendChild(el('h2', 'kg-setup__sectiekop', 'Aantal spelers'));
+    sectieAantal.appendChild(el('h2', 'kg-setup__sectiekop', t('setup.playerCount')));
     const aantal = el('div', 'kg-aantal');
     const aantalKnoppen = new Map<3 | 4 | 5, HTMLButtonElement>();
     const stoelen = el('div');
     for (const n of [3, 4, 5] as const) {
-      const knop = el('button', 'kg-aantal__knop', `${n} spelers`);
+      const knop = el('button', 'kg-aantal__knop', t('setup.playersN', { n }));
       knop.type = 'button';
       knop.addEventListener('click', () => {
         variant.playerCount = n;
@@ -277,29 +305,26 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
       aantal.appendChild(knop);
     }
     sectieAantal.appendChild(aantal);
-    sectieAantal.appendChild(
-      el('p', 'kg-hint', 'Bij 3 of 5 spelers worden enkele tweetjes uit het spel genomen zodat de kaarten gelijk opgaan.'),
-    );
+    sectieAantal.appendChild(el('p', 'kg-hint', t('setup.playerCountHint')));
     links.appendChild(sectieAantal);
 
     // Stoelen
     const sectieStoelen = el('section', 'kg-setup__sectie');
-    sectieStoelen.appendChild(el('h2', 'kg-setup__sectiekop', 'Aan tafel'));
+    sectieStoelen.appendChild(el('h2', 'kg-setup__sectiekop', t('setup.atTable')));
     sectieStoelen.appendChild(stoelen);
     links.appendChild(sectieStoelen);
 
     // Omgeving
     const sectieOmgeving = el('section', 'kg-setup__sectie');
-    sectieOmgeving.appendChild(el('h2', 'kg-setup__sectiekop', 'Omgeving'));
+    sectieOmgeving.appendChild(el('h2', 'kg-setup__sectiekop', t('setup.environment')));
     const omgevingen = el('div', 'kg-omgevingen');
     const omgevingKnoppen = new Map<EnvironmentId, HTMLButtonElement>();
     for (const id of ENVIRONMENT_IDS) {
-      const info = ENV_INFO[id];
       const kaart = el('button', 'kg-omgeving');
       kaart.type = 'button';
       kaart.innerHTML = ENV_ICONS[id];
-      kaart.appendChild(el('div', 'kg-omgeving__naam', info.naam));
-      kaart.appendChild(el('div', 'kg-omgeving__tekst', info.tekst));
+      kaart.appendChild(el('div', 'kg-omgeving__naam', environmentName(id)));
+      kaart.appendChild(el('div', 'kg-omgeving__tekst', environmentDescription(id)));
       kaart.addEventListener('click', () => {
         omgeving = id;
         for (const [m, k] of omgevingKnoppen) k.classList.toggle('is-actief', m === id);
@@ -315,27 +340,25 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
     body.appendChild(rechts);
 
     const sectieVariant = el('section', 'kg-setup__sectie');
-    sectieVariant.appendChild(el('h2', 'kg-setup__sectiekop', 'Spelregels'));
+    sectieVariant.appendChild(el('h2', 'kg-setup__sectiekop', t('setup.rules')));
 
     // Preset
     const preset = el('div', 'kg-preset');
     const presetTekst = el('div');
-    presetTekst.appendChild(el('div', 'kg-variant-regel__label', 'Standaard (Nederlands)'));
-    presetTekst.appendChild(
-      el('p', 'kg-hint', '10 gevingen, deler kiest troef, hartenheer 5 punten, strikte huisregels.'),
-    );
-    const presetKnop = el('button', 'kg-btn kg-btn--stil', 'Herstel standaard');
+    presetTekst.appendChild(el('div', 'kg-variant-regel__label', t('setup.presetName')));
+    presetTekst.appendChild(el('p', 'kg-hint', t('setup.presetHint')));
+    const presetKnop = el('button', 'kg-btn kg-btn--stil', t('setup.presetRestore'));
     presetKnop.type = 'button';
     preset.append(presetTekst, presetKnop);
     sectieVariant.appendChild(preset);
 
     // Modus
-    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', 'Spelmodus'));
-    const modus = selectRij('Modus', '');
+    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', t('setup.modeHeading')));
+    const modus = selectRij(t('setup.modeLabel'), '');
     const modusHint = modus.rij.querySelector<HTMLParagraphElement>('.kg-hint');
     for (const [waarde, label] of [
-      ['standaard', 'Standaard (10 gevingen)'],
-      ['dubbel', 'Dubbelkingen (deler kiest het spel)'],
+      ['standaard', t('setup.modeStandard')],
+      ['dubbel', t('setup.modeDouble')],
     ] as const) {
       const opt = el('option', undefined, label);
       opt.value = waarde;
@@ -344,9 +367,9 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
     sectieVariant.appendChild(modus.rij);
 
     // Troefbepaling
-    const troef = selectRij('Troefbepaling', 'Hoe wordt in troefrondes de troefkleur gekozen?');
-    for (const mode of Object.keys(TRUMP_MODE_LABELS) as TrumpSelectionMode[]) {
-      const opt = el('option', undefined, TRUMP_MODE_LABELS[mode]);
+    const troef = selectRij(t('setup.trumpSelectionLabel'), t('setup.trumpSelectionHint'));
+    for (const mode of TRUMP_MODES) {
+      const opt = el('option', undefined, trumpModeName(mode));
       opt.value = mode;
       troef.select.appendChild(opt);
     }
@@ -356,12 +379,9 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
     sectieVariant.appendChild(troef.rij);
 
     // Hartenheer-punten
-    const hh = selectRij(
-      'Straf voor de hartenheer',
-      '5 punten is gangbaar in Nederland; 4 is de klassieke telling.',
-    );
+    const hh = selectRij(t('setup.heartKingLabel'), t('setup.heartKingHint'));
     for (const p of [5, 4] as const) {
-      const opt = el('option', undefined, `${p} strafpunten`);
+      const opt = el('option', undefined, t('setup.penaltyPoints', { n: p }));
       opt.value = String(p);
       hh.select.appendChild(opt);
     }
@@ -371,95 +391,94 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
     sectieVariant.appendChild(hh.rij);
 
     // Troefrondes
-    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', 'Troefrondes'));
+    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', t('setup.trumpRoundsHeading')));
     sectieVariant.appendChild(checkboxRegel(
-      'Verplicht kopen',
-      'Wie niet kan bekennen, moet een troefkaart spelen als hij die heeft.',
+      t('setup.mustTrumpLabel'),
+      t('setup.mustTrumpHint'),
       () => variant.mustTrump,
       (v) => { variant.mustTrump = v; },
     ));
     sectieVariant.appendChild(checkboxRegel(
-      'Verplicht overtroeven',
-      'Ligt er al een troef, dan moet je er met een hogere troef overheen als dat kan.',
+      t('setup.mustOvertrumpLabel'),
+      t('setup.mustOvertrumpHint'),
       () => variant.mustOvertrump,
       (v) => { variant.mustOvertrump = v; },
     ));
 
     // Negatieve rondes
-    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', 'Negatieve rondes'));
+    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', t('setup.negativeRoundsHeading')));
     sectieVariant.appendChild(checkboxRegel(
-      'De King stopt de ronde',
-      'Zodra de hartenheer gevallen is, wordt de King-ronde direct afgebroken.',
+      t('setup.stopKingLabel'),
+      t('setup.stopKingHint'),
       () => variant.stopWhenKingFalls,
       (v) => { variant.stopWhenKingFalls = v; },
     ));
 
-    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', 'Strikt afgooien (niet kunnen bekennen)'));
+    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', t('setup.strictHeading')));
     sectieVariant.appendChild(checkboxRegel(
-      'Strikt bij “Geen harten”',
-      'Kun je niet bekennen, dan móét je een harten afgooien als je die hebt.',
+      t('setup.strictHeartsLabel'),
+      t('setup.strictHeartsHint'),
       () => variant.discardRules.geenHarten,
       (v) => { variant.discardRules.geenHarten = v; },
     ));
     sectieVariant.appendChild(checkboxRegel(
-      'Strikt bij “Geen heren en boeren”',
-      'Kun je niet bekennen, dan móét je een heer of boer afgooien als je die hebt.',
+      t('setup.strictKJLabel'),
+      t('setup.strictKJHint'),
       () => variant.discardRules.geenHerenBoeren,
       (v) => { variant.discardRules.geenHerenBoeren = v; },
     ));
     sectieVariant.appendChild(checkboxRegel(
-      'Strikt bij “Geen dames”',
-      'Kun je niet bekennen, dan móét je een dame afgooien als je die hebt.',
+      t('setup.strictQueensLabel'),
+      t('setup.strictQueensHint'),
       () => variant.discardRules.geenDames,
       (v) => { variant.discardRules.geenDames = v; },
     ));
     sectieVariant.appendChild(checkboxRegel(
-      'Strikt bij “De King”',
-      'Kun je niet bekennen, dan móét je de hartenheer afgooien als je hem hebt.',
+      t('setup.strictKingLabel'),
+      t('setup.strictKingHint'),
       () => variant.discardRules.hartenheer,
       (v) => { variant.discardRules.hartenheer = v; },
     ));
 
-    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', 'Uitkomen met harten'));
+    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', t('setup.heartLeadHeading')));
     sectieVariant.appendChild(checkboxRegel(
-      'Hartenverbod bij “Geen harten”',
-      'Niet met harten uitkomen, tenzij je alleen nog harten hebt.',
+      t('setup.heartLeadHeartsLabel'),
+      t('setup.heartLeadHint'),
       () => variant.heartLeadBan.geenHarten,
       (v) => { variant.heartLeadBan.geenHarten = v; },
     ));
     sectieVariant.appendChild(checkboxRegel(
-      'Hartenverbod bij “De King”',
-      'Niet met harten uitkomen, tenzij je alleen nog harten hebt.',
+      t('setup.heartLeadKingLabel'),
+      t('setup.heartLeadHint'),
       () => variant.heartLeadBan.hartenheer,
       (v) => { variant.heartLeadBan.hartenheer = v; },
     ));
 
     // Overige (WK-)regels
-    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', 'Overige regels'));
+    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', t('setup.otherRulesHeading')));
     const dwangRegel = checkboxRegel(
-      'Derde-gift-troefdwang (dubbelkingen)',
-      'Wie bij zijn derde keuzebeurt nog nooit troef koos, wordt daartoe verplicht (WK-regel).',
+      t('setup.forcedTrumpLabel'),
+      t('setup.forcedTrumpHint'),
       () => variant.derdeGiftTroefdwang,
       (v) => { variant.derdeGiftTroefdwang = v; },
     );
     sectieVariant.appendChild(dwangRegel);
     sectieVariant.appendChild(checkboxRegel(
-      'Hand afleggen toegestaan',
-      'Een speler mag claimen en neemt dan in één keer alle resterende strafpunten (WK-regel).',
+      t('setup.claimingLabel'),
+      t('setup.claimingHint'),
       () => variant.claimingAllowed,
       (v) => { variant.claimingAllowed = v; },
     ));
     sectieVariant.appendChild(checkboxRegel(
-      'Alles als straf — laagste wint',
-      'Ook troefslagen tellen als strafpunten; wie het laagst eindigt, wint.',
+      t('setup.lowestWinsLabel'),
+      t('setup.lowestWinsHint'),
       () => variant.lowestWins,
       (v) => { variant.lowestWins = v; },
     ));
 
     // Rondevolgorde
-    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', 'Volgorde van de negatieve rondes'));
-    sectieVariant.appendChild(el('p', 'kg-hint',
-      'Alleen in standaardmodus; daarna volgen de troefrondes. Hover voor uitleg per ronde.'));
+    sectieVariant.appendChild(el('h3', 'kg-variant-groepkop', t('setup.orderHeading')));
+    sectieVariant.appendChild(el('p', 'kg-hint', t('setup.orderHint')));
     const volgordeLijst = el('ol', 'kg-volgorde');
     sectieVariant.appendChild(volgordeLijst);
 
@@ -467,7 +486,7 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
 
     // Voet met startknop
     const voet = el('footer', 'kg-setup__voet');
-    const start = el('button', 'kg-btn kg-btn--groot', 'Deel de kaarten');
+    const start = el('button', 'kg-btn kg-btn--groot', t('setup.start'));
     start.type = 'button';
     voet.appendChild(start);
     panel.appendChild(voet);
@@ -480,8 +499,8 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
       modus.select.value = variant.mode;
       if (modusHint) {
         modusHint.textContent = variant.mode === 'dubbel'
-          ? 'Deler kiest per geving het spel; elk negatief spel max. 2x, troef precies 2x per speler.'
-          : 'Vaste volgorde: zes negatieve rondes, daarna één troefronde per speler.';
+          ? t('setup.modeHintDouble')
+          : t('setup.modeHintStandard');
       }
       const dwangBox = dwangRegel.querySelector('input');
       if (dwangBox) dwangBox.disabled = variant.mode !== 'dubbel';
@@ -509,7 +528,7 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
       for (let i = 0; i < variant.playerCount; i++) {
         const p = spelerPool[i];
         if (!p) continue;
-        const naam = p.name.trim() || `Speler ${i + 1}`;
+        const naam = p.name.trim() || t('setup.playerPlaceholder', { n: i + 1 });
         spelers.push(
           p.kind === 'ai'
             ? { name: naam, kind: 'ai', aiDifficulty: p.aiDifficulty ?? 'gemiddeld' }

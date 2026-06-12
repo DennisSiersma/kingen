@@ -6,11 +6,12 @@
 
 import '../styles.css';
 import type { Seat, Suit } from '../core/types.ts';
-import { SUITS, SUIT_NAMES_NL, SUIT_SYMBOLS } from '../core/types.ts';
+import { SUITS, SUIT_SYMBOLS } from '../core/types.ts';
 import type { KingenRoundKind } from '../games/kingen/types.ts';
-import { ALL_ROUND_KINDS, ROUND_LABELS_NL } from '../games/kingen/types.ts';
+import { ALL_ROUND_KINDS } from '../games/kingen/types.ts';
+import { roundKindExplanation, roundKindName, suitName, t } from './i18n.ts';
 import type { ChoiceDialogs, Notifications } from './types.ts';
-import { ROUND_EXPLANATIONS_NL, el } from './uiBus.ts';
+import { el } from './uiBus.ts';
 
 function wacht(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -88,21 +89,20 @@ export function createChoiceDialogs(root: HTMLElement): ChoiceDialogs {
     vraagTroef(legal: Suit[]): Promise<Suit> {
       return new Promise((resolve) => {
         const { overlay, panel } = maakDialoog('kg-dialoog', true);
-        panel.appendChild(el('h3', undefined, 'Kies de troefkleur'));
-        panel.appendChild(el('p', 'kg-dialoog__sub',
-          'Elke gewonnen slag levert deze ronde 1 punt op.'));
+        panel.appendChild(el('h3', undefined, t('dialog.chooseTrump')));
+        panel.appendChild(el('p', 'kg-dialoog__sub', t('dialog.chooseTrumpSub')));
 
         const keuze = el('div', 'kg-troefkeuze');
         for (const suit of SUITS) {
           const knop = el('button', 'kg-troefknop');
           knop.type = 'button';
           knop.disabled = !legal.includes(suit);
-          if (knop.disabled) knop.title = 'Deze kleur is nu niet toegestaan';
+          if (knop.disabled) knop.title = t('dialog.suitNotAllowed');
           const sym = el('span',
             `kg-troefknop__symbool ${isRedSuit(suit) ? 'kg-suit-rood' : 'kg-suit-zwart'}`,
             SUIT_SYMBOLS[suit]);
           knop.appendChild(sym);
-          knop.appendChild(el('span', 'kg-troefknop__naam', SUIT_NAMES_NL[suit]));
+          knop.appendChild(el('span', 'kg-troefknop__naam', suitName(suit)));
           knop.addEventListener('click', () => {
             overlay.remove();
             resolve(suit);
@@ -116,9 +116,8 @@ export function createChoiceDialogs(root: HTMLElement): ChoiceDialogs {
     vraagRondeKeuze(available: KingenRoundKind[]): Promise<KingenRoundKind> {
       return new Promise((resolve) => {
         const { overlay, panel } = maakDialoog('kg-dialoog', true);
-        panel.appendChild(el('h3', undefined, 'Kies het spel voor deze geving'));
-        panel.appendChild(el('p', 'kg-dialoog__sub',
-          'Jij bent de deler — bekijk je hand onderin beeld. Uitgespeelde keuzes zijn uitgeschakeld.'));
+        panel.appendChild(el('h3', undefined, t('dialog.chooseGame')));
+        panel.appendChild(el('p', 'kg-dialoog__sub', t('dialog.chooseGameSub')));
 
         const lijst = el('div', 'kg-rondekeuze');
         for (const kind of ALL_ROUND_KINDS) {
@@ -127,11 +126,11 @@ export function createChoiceDialogs(root: HTMLElement): ChoiceDialogs {
           knop.disabled = !available.includes(kind);
 
           const tekst = el('div');
-          tekst.appendChild(el('div', 'kg-rondeknop__naam', ROUND_LABELS_NL[kind]));
-          tekst.appendChild(el('div', 'kg-rondeknop__uitleg', ROUND_EXPLANATIONS_NL[kind] ?? ''));
+          tekst.appendChild(el('div', 'kg-rondeknop__naam', roundKindName(kind)));
+          tekst.appendChild(el('div', 'kg-rondeknop__uitleg', roundKindExplanation(kind)));
           knop.appendChild(tekst);
           if (knop.disabled) {
-            knop.appendChild(el('span', 'kg-rondeknop__status', 'niet meer beschikbaar'));
+            knop.appendChild(el('span', 'kg-rondeknop__status', t('dialog.unavailable')));
           }
 
           knop.addEventListener('click', () => {
@@ -149,15 +148,15 @@ export function createChoiceDialogs(root: HTMLElement): ChoiceDialogs {
         const { overlay, panel } = maakDialoog('kg-eindstand');
 
         panel.appendChild(el('div', 'kg-eindstand__kroon', '♛'));
-        panel.appendChild(el('h3', undefined, 'Eindstand'));
+        panel.appendChild(el('h3', undefined, t('end.title')));
 
         const winnaarNamen = winners
           .map((s) => names[s])
           .filter((n): n is string => n !== undefined);
         panel.appendChild(el('p', 'kg-eindstand__winnaar',
           winnaarNamen.length > 1
-            ? `Gedeelde winst voor ${winnaarNamen.join(' en ')}!`
-            : `${winnaarNamen[0] ?? 'Niemand'} wint de partij!`));
+            ? t('end.sharedWin', { names: winnaarNamen.join(t('end.and')) })
+            : t('end.wins', { name: winnaarNamen[0] ?? t('end.nobody') })));
 
         // Ranglijst: gesorteerd op totaal (winnaars bovenaan).
         const volgorde = names
@@ -180,13 +179,13 @@ export function createChoiceDialogs(root: HTMLElement): ChoiceDialogs {
         panel.appendChild(lijst);
 
         const knoppen = el('div', 'kg-eindstand__knoppen');
-        const opnieuw = el('button', 'kg-btn kg-btn--groot', 'Opnieuw spelen');
+        const opnieuw = el('button', 'kg-btn kg-btn--groot', t('end.playAgain'));
         opnieuw.type = 'button';
         opnieuw.addEventListener('click', () => {
           overlay.remove();
           resolve('opnieuw');
         });
-        const setup = el('button', 'kg-btn kg-btn--stil', 'Andere instellingen');
+        const setup = el('button', 'kg-btn kg-btn--stil', t('end.changeSettings'));
         setup.type = 'button';
         setup.addEventListener('click', () => {
           overlay.remove();

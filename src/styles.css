@@ -197,11 +197,45 @@
 }
 
 .kg-setup__kop {
+  position: relative;
   text-align: center;
   padding: 26px 28px 14px;
   border-bottom: 1px solid rgba(201, 162, 39, 0.18);
   background:
     radial-gradient(ellipse at 50% 120%, rgba(201, 162, 39, 0.12), transparent 70%);
+}
+
+/* Taalschakelaar (NL/EN) rechtsboven in het setup-scherm */
+.kg-taalwissel {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  display: flex;
+  gap: 0;
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.kg-taalwissel__knop {
+  padding: 0.35em 0.85em;
+  background: rgba(201, 162, 39, 0.05);
+  color: var(--kg-muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  border: none;
+  transition: all 130ms ease;
+}
+
+.kg-taalwissel__knop + .kg-taalwissel__knop {
+  border-left: 1px solid rgba(201, 162, 39, 0.35);
+}
+
+.kg-taalwissel__knop:hover { color: var(--kg-gold-bright); }
+
+.kg-taalwissel__knop.is-actief {
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.32), rgba(201, 162, 39, 0.14));
+  color: var(--kg-gold-bright);
 }
 
 .kg-setup__titel {

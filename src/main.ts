@@ -11,7 +11,7 @@
 import './styles.css';
 
 import type { Card, GameEvent, PlayerConfig, PublicGameView, Seat, Suit } from './core/types.ts';
-import { SUITS, SUIT_NAMES_NL, SUIT_SYMBOLS } from './core/types.ts';
+import { SUITS, SUIT_SYMBOLS } from './core/types.ts';
 import { createGameEventBus, type GameEventBus } from './core/events.ts';
 import { ScoreSheet } from './core/scoresheet.ts';
 import { AiPlayer, type PlayerController } from './core/player.ts';
@@ -28,6 +28,7 @@ import type { KingenCardAnimator } from './render/animations.ts';
 
 import { createSetupScreen } from './ui/setup.ts';
 import { createHud } from './ui/hud.ts';
+import { roundKindName, suitName, t } from './ui/i18n.ts';
 import { createScoreboard } from './ui/scoreboard.ts';
 import { createChoiceDialogs, createNotifications } from './ui/notifications.ts';
 import type { ChoiceDialogs, Hud, Notifications, Scoreboard, SetupConfig } from './ui/types.ts';
@@ -166,45 +167,54 @@ async function speelPartij(ctx: AppContext, setup: SetupConfig): Promise<'opnieu
 
   // --- HUD/scorebord in beginstand ---
   hud.setPlayers(namen, soorten);
-  hud.setRound('Kingen', 0, params.totalRounds);
+  hud.setRound('', 0, params.totalRounds);
   hud.setTrump(null);
   hud.setTrickCounts(new Array<number>(n).fill(0));
   hud.show();
   scoreboard.update([], namen);
 
   // --- Room via het transport (lokaal loopback; later: WebSocket-server) ---
-  const room = await transport.createRoom(`Tafel van ${namen[0] ?? 'speler'}`, 'kingen', n);
+  const room = await transport.createRoom(
+    t('app.roomName', { name: namen[0] ?? t('setup.playerPlaceholder', { n: 1 }) }),
+    'kingen',
+    n,
+  );
   await transport.joinRoom(room.id, spelers[0]!);
   const offNet = bus.onAny((ev) => {
     transport.send({ kind: 'gameEvent', roomId: room.id, event: ev });
   });
 
   // --- UI-state bijwerken op GameEvents ---
-  let huidigLabel = '';
   const slagen = new Array<number>(n).fill(0);
   let einde: { winners: Seat[]; totals: number[] } | null = null;
+  const naamVan = (seat: number): string => namen[seat] ?? t('app.seat', { num: seat + 1 });
 
   const offUiState = bus.onAny((ev: GameEvent) => {
     switch (ev.type) {
       case 'roundStart':
-        huidigLabel = ev.roundLabel;
         slagen.fill(0);
-        hud.setRound(ev.roundLabel, ev.roundIndex, params.totalRounds);
+        // De UI leidt de zichtbare rondenaam taalbewust af uit ev.roundKind;
+        // het (Nederlandse) ev.roundLabel uit de engine wordt genegeerd.
+        hud.setRound(ev.roundKind, ev.roundIndex, params.totalRounds);
         hud.setTrump(null);
         hud.setTrickCounts([...slagen]);
         break;
       case 'trumpChosen': {
         hud.setTrump(ev.trump);
-        const kiezer = namen[ev.chooser] ?? `Stoel ${ev.chooser + 1}`;
         void notifications.toon(
-          `${kiezer} kiest ${SUIT_SYMBOLS[ev.trump]} ${SUIT_NAMES_NL[ev.trump]} als troef`,
+          t('toast.trumpChosen', {
+            name: naamVan(ev.chooser),
+            suit: `${SUIT_SYMBOLS[ev.trump]} ${suitName(ev.trump)}`,
+          }),
           { soort: 'info', duurMs: 1800 },
         );
         break;
       }
       case 'roundKindChosen': {
-        const kiezer = namen[ev.chooser] ?? `Stoel ${ev.chooser + 1}`;
-        void notifications.toon(`${kiezer} (deler) kiest het spel`, { duurMs: 1400 });
+        void notifications.toon(
+          t('toast.dealerPicks', { name: naamVan(ev.chooser) }),
+          { duurMs: 1400 },
+        );
         break;
       }
       case 'turnStart':
@@ -214,34 +224,31 @@ async function speelPartij(ctx: AppContext, setup: SetupConfig): Promise<'opnieu
         slagen[ev.winner] = (slagen[ev.winner] ?? 0) + 1;
         hud.setTrickCounts([...slagen]);
         hud.setTurn(null);
-        const winnaar = namen[ev.winner] ?? `Stoel ${ev.winner + 1}`;
-        void notifications.toon(`${winnaar} pakt slag ${ev.trickIndex + 1}`, {
-          soort: ev.winner === 0 ? 'succes' : 'info',
-          duurMs: 1500,
-        });
+        void notifications.toon(
+          t('toast.trickWon', { name: naamVan(ev.winner), num: ev.trickIndex + 1 }),
+          { soort: ev.winner === 0 ? 'succes' : 'info', duurMs: 1500 },
+        );
         break;
       }
       case 'handClaimed': {
-        const wie = namen[ev.seat] ?? `Stoel ${ev.seat + 1}`;
         void notifications.toon(
-          `${wie} legt de hand af en neemt ${ev.acceptedPenalty} strafpunt(en)`,
+          t('toast.handClaimed', { name: naamVan(ev.seat), points: ev.acceptedPenalty }),
           { soort: 'waarschuwing', duurMs: 2400 },
         );
         break;
       }
       case 'roundEnd': {
         const scores = naarArray(ev.scores, n);
-        sheet.addRound(ev.roundIndex, ev.roundKind, huidigLabel, scores);
+        sheet.addRound(ev.roundIndex, ev.roundKind, roundKindName(ev.roundKind), scores);
         scoreboard.update([...sheet.getRows()], namen);
         break;
       }
       case 'illegalMove':
-        void notifications.toon(ev.reason, { soort: 'waarschuwing', duurMs: 2200 });
+        void notifications.toon(t('toast.illegalMove'), { soort: 'waarschuwing', duurMs: 2200 });
         break;
       case 'custom': {
         if (ev.subtype === 'troefdwang') {
-          const data = ev.data as { melding?: string } | null;
-          void notifications.toon(data?.melding ?? 'Troefdwang actief', {
+          void notifications.toon(t('toast.trumpForce'), {
             soort: 'waarschuwing',
             duurMs: 3200,
           });
@@ -264,10 +271,7 @@ async function speelPartij(ctx: AppContext, setup: SetupConfig): Promise<'opnieu
   if (hotseatStoelen.length > 0) {
     // Verdedigend: het setup-scherm biedt dit niet meer aan, maar oudere
     // defaults kunnen nog 'human' bevatten op andere stoelen.
-    void notifications.toon(
-      'Meerdere menselijke spelers aan één scherm komt later; de computer speelt die stoelen.',
-      { soort: 'info', duurMs: 3600 },
-    );
+    void notifications.toon(t('toast.hotseat'), { soort: 'info', duurMs: 3600 });
   }
 
   const controllers: PlayerController[] = spelers.map((cfg, i) => {
@@ -279,7 +283,9 @@ async function speelPartij(ctx: AppContext, setup: SetupConfig): Promise<'opnieu
   // --- Animatie-gate: render/meldingen afronden vóór de volgende zet ---
   const afterEvent = async (ev: GameEvent): Promise<void> => {
     if (ev.type === 'roundStart') {
-      await notifications.kondigRondeAan(`Geving ${ev.roundIndex + 1} — ${ev.roundLabel}`);
+      await notifications.kondigRondeAan(
+        t('announce.round', { num: ev.roundIndex + 1, name: roundKindName(ev.roundKind) }),
+      );
     }
     await scene.waitForIdle();
   };
@@ -419,7 +425,9 @@ main().catch((fout) => {
     const melding = document.createElement('p');
     melding.style.cssText =
       'color:#fff;font-family:system-ui;padding:1rem;background:rgba(120,0,0,0.8);margin:1rem;border-radius:8px;';
-    melding.textContent = `Er ging iets mis bij het starten: ${fout instanceof Error ? fout.message : String(fout)}`;
+    melding.textContent = t('app.startError', {
+      message: fout instanceof Error ? fout.message : String(fout),
+    });
     ui.appendChild(melding);
   }
 });

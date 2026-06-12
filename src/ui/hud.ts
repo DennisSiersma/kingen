@@ -3,41 +3,44 @@
  * HUD-overlay tijdens het spel: rondenaam + voortgang, troefindicator,
  * beurtindicator, slagentellers en spelersnamen rond de tafel.
  * Rechtsboven: scorebord-knop en instellingenmenu (omgeving wisselen,
- * terug naar setup).
+ * taalkeuze, terug naar setup). Alle teksten via src/ui/i18n.ts; bij een
+ * taalwissel wordt het HUD live opnieuw getekend vanuit de laatste state.
  */
 
 import '../styles.css';
-import type { Suit } from '../core/types.ts';
-import { SUIT_NAMES_NL, SUIT_SYMBOLS } from '../core/types.ts';
-import { ROUND_LABELS_NL } from '../games/kingen/types.ts';
+import type { Seat, Suit } from '../core/types.ts';
+import { SUIT_SYMBOLS } from '../core/types.ts';
 import type { EnvironmentId } from '../render/types.ts';
 import { ENVIRONMENT_IDS } from '../render/types.ts';
+import type { Lang } from './i18n.ts';
+import {
+  environmentName,
+  getLang,
+  onLangChange,
+  roundKindExplanation,
+  roundKindName,
+  setLang,
+  suitName,
+  t,
+} from './i18n.ts';
 import type { Hud } from './types.ts';
-import { ROUND_EXPLANATIONS_NL, el, emitEnvironmentChange, emitUiEvent } from './uiBus.ts';
-
-const ENV_NAMES: Record<EnvironmentId, string> = {
-  cafe: 'Bruin café',
-  keukentafel: 'Keukentafel',
-  casino: 'Casino',
-};
+import { el, emitEnvironmentChange, emitUiEvent } from './uiBus.ts';
 
 function isRedSuit(suit: Suit): boolean {
   return suit === 'hearts' || suit === 'diamonds';
 }
 
-/** Zoek de uitleg bij een rondelabel (HUD krijgt alleen het label binnen). */
-function uitlegBijLabel(label: string): string {
-  for (const [kind, lbl] of Object.entries(ROUND_LABELS_NL)) {
-    if (lbl === label) return ROUND_EXPLANATIONS_NL[kind] ?? '';
-  }
-  // Troefrondes kunnen als "Troef: ♠ schoppen" o.i.d. binnenkomen.
-  if (label.toLowerCase().startsWith('troef')) return ROUND_EXPLANATIONS_NL['troef'] ?? '';
-  return 'Speel de slagen volgens de opdracht van deze ronde.';
-}
-
 export function createHud(root: HTMLElement): Hud {
   const hud = el('div', 'kg-hud');
   hud.hidden = true;
+
+  // Laatst bekende state, zodat een taalwissel alles opnieuw kan tekenen.
+  let huidigeRonde: { kind: string; index: number; total: number } | null = null;
+  let huidigeTroef: Suit | null = null;
+  let huidigeNamen: string[] = [];
+  let huidigeSoorten: ('human' | 'ai')[] = [];
+  let huidigeSlagen: number[] = [];
+  let huidigeBeurt: Seat | null = null;
 
   // --- Linksboven: ronde + troef -------------------------------------
   const rondePaneel = el('div', 'kg-hud__ronde');
@@ -49,7 +52,6 @@ export function createHud(root: HTMLElement): Hud {
 
   const infoKnop = el('button', 'kg-hud__info kg-klikbaar');
   infoKnop.type = 'button';
-  infoKnop.setAttribute('aria-label', 'Uitleg van deze ronde');
   infoKnop.appendChild(el('span', undefined, 'i'));
   const tooltip = el('div', 'kg-hud__tooltip', '');
   infoKnop.appendChild(tooltip);
@@ -65,6 +67,7 @@ export function createHud(root: HTMLElement): Hud {
 
   interface ChipRefs {
     chip: HTMLDivElement;
+    soort: HTMLDivElement;
     slagen: HTMLSpanElement;
   }
   let chips: ChipRefs[] = [];
@@ -72,14 +75,12 @@ export function createHud(root: HTMLElement): Hud {
   // --- Rechtsboven: knoppen + instellingenmenu -------------------------
   const knoppen = el('div', 'kg-hud__knoppen');
 
-  const scoreKnop = el('button', 'kg-hud__knop kg-klikbaar', '♛ Scorebord');
+  const scoreKnop = el('button', 'kg-hud__knop kg-klikbaar');
   scoreKnop.type = 'button';
-  scoreKnop.title = 'Scorebord tonen of verbergen';
   scoreKnop.addEventListener('click', () => emitUiEvent(root, { type: 'toggleScoreboard' }));
 
-  const instelKnop = el('button', 'kg-hud__knop kg-klikbaar', '⚙ Instellingen');
+  const instelKnop = el('button', 'kg-hud__knop kg-klikbaar');
   instelKnop.type = 'button';
-  instelKnop.title = 'Instellingen';
 
   knoppen.append(scoreKnop, instelKnop);
   hud.appendChild(knoppen);
@@ -87,15 +88,16 @@ export function createHud(root: HTMLElement): Hud {
   // Instellingenmenu (uitklapbaar)
   const menu = el('div', 'kg-hud__menu');
   menu.hidden = true;
-  menu.appendChild(el('h4', undefined, 'Instellingen'));
+  const menuKop = el('h4');
+  menu.appendChild(menuKop);
 
   const omgevingRegel = el('div', 'kg-menu-regel');
-  const omgevingLabel = el('label', undefined, 'Omgeving');
+  const omgevingLabel = el('label');
   omgevingLabel.htmlFor = 'kg-hud-omgeving';
   const omgevingSelect = el('select', 'kg-select');
   omgevingSelect.id = 'kg-hud-omgeving';
   for (const id of ENVIRONMENT_IDS) {
-    const opt = el('option', undefined, ENV_NAMES[id]);
+    const opt = el('option');
     opt.value = id;
     omgevingSelect.appendChild(opt);
   }
@@ -105,19 +107,37 @@ export function createHud(root: HTMLElement): Hud {
   omgevingRegel.append(omgevingLabel, omgevingSelect);
   menu.appendChild(omgevingRegel);
 
+  // Taalkeuze (NL/EN), ook tijdens het spel te wisselen.
+  const taalRegel = el('div', 'kg-menu-regel');
+  const taalLabel = el('label');
+  taalLabel.htmlFor = 'kg-hud-taal';
+  const taalSelect = el('select', 'kg-select');
+  taalSelect.id = 'kg-hud-taal';
+  for (const [lang, naam] of [['nl', 'Nederlands'], ['en', 'English']] as const) {
+    const opt = el('option', undefined, naam);
+    opt.value = lang;
+    taalSelect.appendChild(opt);
+  }
+  taalSelect.addEventListener('change', () => {
+    setLang(taalSelect.value as Lang);
+  });
+  taalRegel.append(taalLabel, taalSelect);
+  menu.appendChild(taalRegel);
+
   // Geluid: gereserveerd, nog niet aanwezig in deze versie.
   const geluidRegel = el('div', 'kg-menu-regel kg-menu-uit');
-  geluidRegel.appendChild(el('span', undefined, 'Geluid'));
-  geluidRegel.appendChild(el('span', 'kg-hint', 'komt later'));
+  const geluidLabel = el('span');
+  const geluidHint = el('span', 'kg-hint');
+  geluidRegel.append(geluidLabel, geluidHint);
   menu.appendChild(geluidRegel);
 
   menu.appendChild(el('hr', 'kg-divider'));
 
-  const stopKnop = el('button', 'kg-btn kg-btn--stil', 'Partij afbreken');
+  const stopKnop = el('button', 'kg-btn kg-btn--stil');
   stopKnop.type = 'button';
   stopKnop.style.width = '100%';
   stopKnop.addEventListener('click', () => {
-    if (window.confirm('Partij afbreken en terug naar het startscherm?')) {
+    if (window.confirm(t('hud.quitConfirm'))) {
       menu.hidden = true;
       emitUiEvent(root, { type: 'quitToSetup' });
     }
@@ -134,12 +154,11 @@ export function createHud(root: HTMLElement): Hud {
   });
 
   // --- Ondermidden: claim-knop (variant 'hand afleggen') ----------------
-  const claimKnop = el('button', 'kg-hud__claim kg-btn kg-btn--stil kg-klikbaar', '✋ Hand afleggen');
+  const claimKnop = el('button', 'kg-hud__claim kg-btn kg-btn--stil kg-klikbaar');
   claimKnop.type = 'button';
-  claimKnop.title = 'Leg je hand af en neem in één keer alle resterende strafpunten van deze ronde';
   claimKnop.hidden = true;
   claimKnop.addEventListener('click', () => {
-    if (window.confirm('Hand afleggen en alle resterende strafpunten van deze ronde op je nemen?')) {
+    if (window.confirm(t('hud.claimConfirm'))) {
       emitUiEvent(root, { type: 'claimRequested', seat: 0 });
     }
   });
@@ -148,33 +167,111 @@ export function createHud(root: HTMLElement): Hud {
   root.appendChild(hud);
 
   // ------------------------------------------------------------------
+  // (Her)tekenen vanuit de laatste state — ook na een taalwissel
+  // ------------------------------------------------------------------
+
+  function tekenRonde(): void {
+    if (huidigeRonde && huidigeRonde.kind) {
+      rondeLabel.textContent = roundKindName(huidigeRonde.kind);
+      rondeTeller.textContent = t('hud.roundOf', {
+        num: huidigeRonde.index + 1,
+        total: huidigeRonde.total,
+      });
+      tooltip.textContent = roundKindExplanation(huidigeRonde.kind);
+    } else {
+      rondeLabel.textContent = '—';
+      rondeTeller.textContent = '';
+      tooltip.textContent = '';
+    }
+  }
+
+  function tekenTroef(): void {
+    troefBadge.classList.toggle('is-leeg', huidigeTroef === null);
+    troefBadge.innerHTML = '';
+    if (huidigeTroef === null) return;
+    const sym = el('span',
+      `kg-troefsymbool ${isRedSuit(huidigeTroef) ? 'kg-suit-rood' : 'kg-suit-zwart'}`,
+      SUIT_SYMBOLS[huidigeTroef]);
+    troefBadge.append(el('span', undefined, t('hud.trumpPrefix')), sym,
+      el('span', undefined, suitName(huidigeTroef)));
+  }
+
+  function tekenChips(): void {
+    spelersStrip.innerHTML = '';
+    chips = huidigeNamen.map((naam, i) => {
+      const chip = el('div', 'kg-chip');
+      const initiaal = naam.trim().charAt(0).toUpperCase() || '?';
+      chip.appendChild(el('div', 'kg-chip__avatar', initiaal));
+      const tekst = el('div');
+      tekst.appendChild(el('div', 'kg-chip__naam', naam));
+      const soort = el('div', 'kg-chip__soort',
+        huidigeSoorten[i] === 'ai' ? t('hud.chipAi') : t('hud.chipHuman'));
+      tekst.appendChild(soort);
+      chip.appendChild(tekst);
+      const slagen = el('span', 'kg-chip__slagen', String(huidigeSlagen[i] ?? 0));
+      slagen.title = t('hud.tricksTitle');
+      chip.appendChild(slagen);
+      chip.classList.toggle('is-aan-beurt', huidigeBeurt !== null && i === huidigeBeurt);
+      spelersStrip.appendChild(chip);
+      return { chip, soort, slagen };
+    });
+  }
+
+  /** Statische teksten (knoppen, menu, tooltips) in de actieve taal zetten. */
+  function tekenStatisch(): void {
+    infoKnop.setAttribute('aria-label', t('hud.roundInfoAria'));
+    scoreKnop.textContent = t('hud.scoreboard');
+    scoreKnop.title = t('hud.scoreboardTitle');
+    instelKnop.textContent = t('hud.settings');
+    instelKnop.title = t('hud.settingsHeading');
+    menuKop.textContent = t('hud.settingsHeading');
+    omgevingLabel.textContent = t('hud.environment');
+    for (const opt of omgevingSelect.options) {
+      opt.textContent = environmentName(opt.value as EnvironmentId);
+    }
+    taalLabel.textContent = t('hud.language');
+    taalSelect.value = getLang();
+    geluidLabel.textContent = t('hud.sound');
+    geluidHint.textContent = t('hud.comingSoon');
+    stopKnop.textContent = t('hud.quit');
+    claimKnop.textContent = t('hud.claim');
+    claimKnop.title = t('hud.claimTitle');
+  }
+
+  function tekenAlles(): void {
+    tekenStatisch();
+    tekenRonde();
+    tekenTroef();
+    tekenChips();
+  }
+
+  tekenAlles();
+  onLangChange(() => tekenAlles());
+
+  // ------------------------------------------------------------------
   // Publieke API
   // ------------------------------------------------------------------
 
   return {
-    setRound(label: string, index: number, total: number): void {
-      rondeLabel.textContent = label;
-      rondeTeller.textContent = `Geving ${index + 1} van ${total}`;
-      tooltip.textContent = uitlegBijLabel(label);
+    setRound(kind: string, index: number, total: number): void {
+      huidigeRonde = { kind, index, total };
+      tekenRonde();
     },
 
     setTrump(trump: Suit | null): void {
-      troefBadge.classList.toggle('is-leeg', trump === null);
-      troefBadge.innerHTML = '';
-      if (trump === null) return;
-      const sym = el('span', `kg-troefsymbool ${isRedSuit(trump) ? 'kg-suit-rood' : 'kg-suit-zwart'}`,
-        SUIT_SYMBOLS[trump]);
-      troefBadge.append(el('span', undefined, 'Troef:'), sym,
-        el('span', undefined, SUIT_NAMES_NL[trump]));
+      huidigeTroef = trump;
+      tekenTroef();
     },
 
     setTurn(seat): void {
+      huidigeBeurt = seat;
       chips.forEach((refs, i) => {
         refs.chip.classList.toggle('is-aan-beurt', seat !== null && i === seat);
       });
     },
 
     setTrickCounts(counts: number[]): void {
+      huidigeSlagen = counts.slice();
       counts.forEach((aantal, i) => {
         const refs = chips[i];
         if (refs) refs.slagen.textContent = String(aantal);
@@ -182,21 +279,11 @@ export function createHud(root: HTMLElement): Hud {
     },
 
     setPlayers(names: string[], kinds: ('human' | 'ai')[]): void {
-      spelersStrip.innerHTML = '';
-      chips = names.map((naam, i) => {
-        const chip = el('div', 'kg-chip');
-        const initiaal = naam.trim().charAt(0).toUpperCase() || '?';
-        chip.appendChild(el('div', 'kg-chip__avatar', initiaal));
-        const tekst = el('div');
-        tekst.appendChild(el('div', 'kg-chip__naam', naam));
-        tekst.appendChild(el('div', 'kg-chip__soort', kinds[i] === 'ai' ? 'computer' : 'mens'));
-        chip.appendChild(tekst);
-        const slagen = el('span', 'kg-chip__slagen', '0');
-        slagen.title = 'Gewonnen slagen deze ronde';
-        chip.appendChild(slagen);
-        spelersStrip.appendChild(chip);
-        return { chip, slagen };
-      });
+      huidigeNamen = names.slice();
+      huidigeSoorten = kinds.slice();
+      huidigeSlagen = new Array<number>(names.length).fill(0);
+      huidigeBeurt = null;
+      tekenChips();
     },
 
     setClaimAvailable(beschikbaar: boolean): void {
