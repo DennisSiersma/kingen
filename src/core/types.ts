@@ -3,8 +3,9 @@
  * Spel-onafhankelijke kerntypes van de engine.
  * Dit bestand is het centrale contract: andere modules importeren hieruit.
  *
- * Conventie: code-identifiers in het Engels, alle naar de gebruiker zichtbare
- * teksten (labels, namen) in het NEDERLANDS.
+ * Conventie: code-identifiers in het Engels; de engine is taalneutraal en
+ * levert id's (roundKind, suit, ...). Zichtbare teksten maakt de UI zelf
+ * via src/ui/i18n.ts (NL/EN).
  */
 
 // ---------------------------------------------------------------------------
@@ -124,7 +125,7 @@ export interface Trick {
 export type GameEvent =
   /** Partij begint; volledige setup bekend. */
   | { type: 'gameStart'; gameId: string; players: PlayerConfig[]; seatCount: number }
-  /** Nieuwe geving/ronde begint. `roundKind` is game-specifiek (bijv. KingenRoundKind). */
+  /** Nieuwe ronde/ronde begint. `roundKind` is game-specifiek (bijv. KingenRoundKind). */
   | { type: 'roundStart'; roundIndex: number; roundKind: string; roundLabel: string; dealer: Seat }
   /** Kaarten gedeeld. `hands` bevat per stoel ALLEEN voor de ontvanger zichtbare handen; bij verzending over een transport wordt dit per speler gefilterd. */
   | { type: 'deal'; roundIndex: number; dealer: Seat; hands: Partial<Record<Seat, Card[]>>; handSizes: Record<number, number> }
@@ -184,7 +185,7 @@ export interface PublicGameView {
     index: number;
     /** Game-specifiek soort, bijv. KingenRoundKind. */
     kind: string;
-    /** Nederlands label voor de UI, bijv. "Geen hartenheer". */
+    /** Standaardlabel (NL) uit de engine; de UI toont zelf een i18n-naam op basis van `kind`. */
     label: string;
     dealer: Seat;
     /** Troefkleur; null in troefloze rondes of zolang nog niet gekozen. */

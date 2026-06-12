@@ -69,7 +69,7 @@ function naturalScores(state: KingenState): number[] {
   return scores;
 }
 
-/** Delta-scores van de zojuist afgeronde geving, per stoel (index = Seat). */
+/** Delta-scores van de zojuist afgeronde ronde, per stoel (index = Seat). */
 export function scoreRound(state: KingenState): number[] {
   const scores = naturalScores(state);
   return state.config.lowestWins ? scores.map((s) => -s) : scores;

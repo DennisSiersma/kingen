@@ -48,7 +48,11 @@ export const NEGATIVE_ROUND_KINDS: readonly KingenRoundKind[] = [
   'geenSlagen', 'geenHarten', 'geenHerenBoeren', 'geenDames', 'hartenheer', 'zevenLaatste',
 ];
 
-/** Nederlandse labels voor de UI/het scorebord. */
+/**
+ * Nederlandse standaardlabels die de engine meegeeft in events (roundLabel)
+ * en views. De UI toont deze NIET rechtstreeks: zij leidt de zichtbare naam
+ * taalbewust af uit de rondesoort via src/ui/i18n.ts.
+ */
 export const ROUND_LABELS_NL: Readonly<Record<KingenRoundKind, string>> = {
   geenSlagen: 'Geen slagen',
   geenHarten: 'Geen harten',
@@ -74,9 +78,9 @@ export type TrumpSelectionMode =
 
 /** Spelmodus. */
 export type KingenMode =
-  /** 10 gevingen in vaste volgorde (6 negatief, daarna 4x troef). */
+  /** 10 rondes in vaste volgorde (6 negatief, daarna 4x troef). */
   | 'standaard'
-  /** Dubbel/vrij kingen: 20 gevingen, deler kiest het spel; elk negatief spel max 2x, troef precies 2x per speler. */
+  /** Dubbel/vrij kingen: 20 rondes, deler kiest het spel; elk negatief spel max 2x, troef precies 2x per speler. */
   | 'dubbel';
 
 /** Strikte-afgooi-regels per negatief onderdeel (huisregels). */
@@ -158,9 +162,9 @@ export const DEFAULT_VARIANT: KingenVariantConfig = {
 };
 
 /**
- * Afgeleide partijparameters per spelersaantal (deck-stripping, telling, aantal gevingen).
- * 4 sp: 52 krt, 13 p.p., 10 gevingen. 3 sp: 51 krt (zonder ♠2), 17 p.p., 9 gevingen.
- * 5 sp: 50 krt (zonder ♠2+♣2), 10 p.p., 11 gevingen.
+ * Afgeleide partijparameters per spelersaantal (deck-stripping, telling, aantal rondes).
+ * 4 sp: 52 krt, 13 p.p., 10 rondes. 3 sp: 51 krt (zonder ♠2), 17 p.p., 9 rondes.
+ * 5 sp: 50 krt (zonder ♠2+♣2), 10 p.p., 11 rondes.
  */
 export interface KingenTableParams {
   playerCount: 3 | 4 | 5;
@@ -170,7 +174,7 @@ export interface KingenTableParams {
   tricksPerRound: number;
   /** Aantal troefrondes (= playerCount). */
   trumpRounds: number;
-  /** Totaal aantal gevingen in standaardmodus. */
+  /** Totaal aantal rondes in standaardmodus. */
   totalRounds: number;
   /** Strafpunt-parameters, aangepast per spelersaantal (zie variants-onderzoek). */
   penalties: {
@@ -196,7 +200,7 @@ export interface KingenTableParams {
 export type KingenMove =
   | { type: 'playCard'; card: Card }
   | { type: 'chooseTrump'; suit: Suit }
-  /** Alleen in dubbelkingen: deler kiest het speltype voor deze geving. */
+  /** Alleen in dubbelkingen: deler kiest het speltype voor deze ronde. */
   | { type: 'chooseRoundKind'; kind: KingenRoundKind }
   /** Alleen als claimingAllowed: hand afleggen, resterende strafpunten accepteren. */
   | { type: 'claimHand' };
@@ -205,7 +209,7 @@ export type KingenMove =
 // State
 // ---------------------------------------------------------------------------
 
-/** Fase binnen een geving. */
+/** Fase binnen een ronde. */
 export type KingenPhase =
   | 'choosingRoundKind'   // dubbelkingen: deler kiest spel
   | 'dealing'
@@ -234,7 +238,7 @@ export interface KingenState {
   seed: number;
 
   phase: KingenPhase;
-  roundIndex: number;       // 0-based geving-teller
+  roundIndex: number;       // 0-based ronde-teller
   roundKind: KingenRoundKind | null;
   dealer: Seat;
   trump: Suit | null;
@@ -248,7 +252,7 @@ export interface KingenState {
 
   turn: Seat | null;
 
-  /** Per-ronde scores: scoresPerRound[geving][stoel]. */
+  /** Per-ronde scores: scoresPerRound[ronde][stoel]. */
   scoresPerRound: number[][];
   totals: number[];         // index = Seat
 

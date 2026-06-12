@@ -72,13 +72,4 @@ export function must<T extends Element>(parent: ParentNode, selector: string): T
   return found;
 }
 
-/** Korte Nederlandse uitleg per Kingen-rondesoort (HUD-tooltip, dialogen, setup). */
-export const ROUND_EXPLANATIONS_NL: Readonly<Record<string, string>> = {
-  geenSlagen: 'Elke gewonnen slag kost 1 strafpunt. Vermijd dus elke slag.',
-  geenHarten: 'Elke hartenkaart in je gewonnen slagen kost 1 strafpunt.',
-  geenHerenBoeren: 'Elke heer of boer die je binnenhaalt kost 1 strafpunt.',
-  geenDames: 'Elke dame die je binnenhaalt kost 2 strafpunten.',
-  hartenheer: 'Wie de hartenheer (de King) pakt, krijgt de volle straf. De ronde kan stoppen zodra hij valt.',
-  zevenLaatste: 'De zevende slag kost 2 strafpunten, de allerlaatste slag 3.',
-  troef: 'Positieve ronde: elke gewonnen slag levert 1 punt op. Er geldt een troefkleur.',
-};
+// NB: de uitlegteksten per rondesoort staan in src/ui/i18n.ts (NL/EN).

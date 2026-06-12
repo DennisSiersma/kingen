@@ -328,7 +328,7 @@ export function createCardAnimator(
     herstelOpacity(mesh);
     scene.remove(mesh);
     // De CardRenderer maakt per mesh eigen materialen (voor highlight-status);
-    // die hier opruimen, anders lekken ze per geving. Geometrie en textures
+    // die hier opruimen, anders lekken ze per ronde. Geometrie en textures
     // zijn gedeeld via de renderer-cache en blijven bestaan.
     const materialen = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     for (const materiaal of new Set(materialen)) materiaal.dispose();

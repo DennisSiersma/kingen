@@ -14,6 +14,10 @@ npm run build      # productie-build
 npm run preview    # build lokaal bekijken
 ```
 
+## Taal (NL/EN)
+
+De interface is tweetalig. Rechtsboven in het setup-scherm staat een taalschakelaar (NL / EN); tijdens het spel kun je de taal ook wisselen via het HUD-instellingenmenu (⚙). De keuze wordt onthouden in `localStorage` (`kingen.lang`, standaard Nederlands). Alle teksten staan in `src/ui/i18n.ts`; de spel-engine zelf is taalneutraal.
+
 ## Architectuur
 
 ```
@@ -41,9 +45,10 @@ src/
 │   ├── environments.ts Bruin café, keukentafel, casino (procedureel)
 │   ├── animations.ts Delen/spelen/slag innemen als Promise-animaties
 │   └── scene.ts     Scene, camera, belichting, raycasting, render-loop
-├── ui/              DOM-overlay (#ui), alle teksten Nederlands
+├── ui/              DOM-overlay (#ui), teksten via i18n (NL/EN)
 │   ├── types.ts     SetupConfig, UiEvent, component-interfaces
-│   ├── setup.ts     Setup-scherm (spelers, variant, omgeving)
+│   ├── i18n.ts      Taallaag: t(), getLang/setLang, NL/EN-vertalingen
+│   ├── setup.ts     Setup-scherm (spelers, variant, omgeving, taal)
 │   ├── hud.ts       Ronde/troef/beurt/slagentellers
 │   ├── scoreboard.ts Scorebord-overlay
 │   └── notifications.ts Toasts, ronde-aankondigingen, keuzedialogen

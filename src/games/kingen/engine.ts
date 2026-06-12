@@ -54,13 +54,13 @@ function freshLedger(seatCount: number): ChoiceLedger {
   };
 }
 
-/** Welk spel hoort bij deze geving in standaardmodus (vaste volgorde)? */
+/** Welk spel hoort bij deze ronde in standaardmodus (vaste volgorde)? */
 function scheduledKind(state: KingenState): KingenRoundKind {
   const order = state.config.roundOrder;
   return state.roundIndex < order.length ? order[state.roundIndex]! : 'troef';
 }
 
-/** Deterministische sub-seed per geving. */
+/** Deterministische sub-seed per ronde. */
 function roundSeed(state: KingenState): number {
   return (state.seed + (state.roundIndex + 1) * 7919) >>> 0;
 }
@@ -93,12 +93,12 @@ function startPlaying(state: KingenState): GameEvent[] {
   return [{ type: 'turnStart', seat: state.turn, trickIndex: state.currentTrick.index }];
 }
 
-/** Het geschudde deck van deze geving (deterministisch uit de rondeseed). */
+/** Het geschudde deck van deze ronde (deterministisch uit de rondeseed). */
 function deckForRound(state: KingenState): ReturnType<typeof createDeck> {
   return shuffle(createDeck(state.params.removedCards), createRng(roundSeed(state)));
 }
 
-/** Schud en deel de kaarten voor deze geving (zonder fase-overgang). */
+/** Schud en deel de kaarten voor deze ronde (zonder fase-overgang). */
 function dealCards(state: KingenState): GameEvent[] {
   const n = state.params.playerCount;
   const hands = deal(deckForRound(state), n, state.dealer);
@@ -112,7 +112,7 @@ function dealCards(state: KingenState): GameEvent[] {
   return [dealEventFromState(state)];
 }
 
-/** Start de geving ná het delen: troef bepalen/kiezen of direct gaan spelen. */
+/** Start de ronde ná het delen: troef bepalen/kiezen of direct gaan spelen. */
 function startRoundAfterDeal(state: KingenState): GameEvent[] {
   const events: GameEvent[] = [];
   if (state.roundKind === 'troef') {
@@ -137,7 +137,7 @@ function startRoundAfterDeal(state: KingenState): GameEvent[] {
   return events;
 }
 
-/** Begin de geving met index state.roundIndex (deler doorschuiven, evt. spelkeuze). */
+/** Begin de ronde met index state.roundIndex (deler doorschuiven, evt. spelkeuze). */
 function beginRound(state: KingenState): GameEvent[] {
   const n = state.params.playerCount;
   state.dealer = (state.roundIndex % n) as Seat;
@@ -170,7 +170,7 @@ function computeWinners(state: KingenState): Seat[] {
   return winners;
 }
 
-/** Rond de geving af: scoren, totaliseren en doorschakelen naar de volgende. */
+/** Rond de ronde af: scoren, totaliseren en doorschakelen naar de volgende. */
 function finishRound(
   state: KingenState,
   claim?: { seat: Seat; penalty: number },
@@ -237,7 +237,7 @@ function applyChooseRoundKind(state: KingenState, seat: Seat, kind: KingenRoundK
     });
   }
 
-  // De kaarten zijn al gedeeld (vóór de keuze); alleen nog de geving starten.
+  // De kaarten zijn al gedeeld (vóór de keuze); alleen nog de ronde starten.
   state.roundKind = kind;
   events.push(roundStartEvent(state), ...startRoundAfterDeal(state));
   return events;

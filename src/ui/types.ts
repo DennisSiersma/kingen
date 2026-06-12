@@ -1,7 +1,7 @@
 /**
  * src/ui/types.ts
  * Contracten voor de DOM-overlay: setup-scherm, HUD, scorebord, meldingen.
- * Alle teksten in het Nederlands.
+ * Alle zichtbare teksten lopen via src/ui/i18n.ts (NL/EN).
  */
 
 import type { PlayerConfig, Seat, Suit } from '../core/types.ts';
@@ -57,7 +57,12 @@ export interface SetupScreen {
 
 /** HUD tijdens het spel: rondenaam, troef, beurtindicator, slagentellers, namen. */
 export interface Hud {
-  setRound(label: string, index: number, total: number): void;
+  /**
+   * Toon de huidige ronde. `kind` is de taalneutrale rondesoort
+   * (KingenRoundKind); de UI leidt daar zelf de zichtbare naam uit af (i18n).
+   * Een lege string toont de placeholder.
+   */
+  setRound(kind: string, index: number, total: number): void;
   setTrump(trump: Suit | null): void;
   setTurn(seat: Seat | null): void;
   setTrickCounts(counts: number[]): void;
@@ -81,7 +86,7 @@ export interface Scoreboard {
 
 /** Meldingen/toasts, bijv. "Dennis wint de slag", "De King is gevallen!". */
 export interface Notifications {
-  /** Toon een melding; resolves wanneer hij weer verdwenen is. */
+  /** Toon een melding (al vertaalde tekst); resolves wanneer hij weer verdwenen is. */
   toon(tekst: string, opts?: { duurMs?: number; soort?: 'info' | 'succes' | 'waarschuwing' }): Promise<void>;
   /** Grote ronde-aankondiging in beeld ("Ronde 5 — De King"). */
   kondigRondeAan(label: string): Promise<void>;

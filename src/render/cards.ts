@@ -148,7 +148,7 @@ export function createCardRenderer(options?: CardTextureOptions): CardRenderer {
     // verschillen; de (dure) textures worden gedeeld via de cache.
     // EIGENAARSCHAP: de materialen horen bij de mesh — wie de mesh uit de
     // scene verwijdert, dispose't ze (zie verwijderMesh in animations.ts);
-    // anders lekken er per geving tientallen materialen.
+    // anders lekken er per ronde tientallen materialen.
     const edge = makeEdgeMaterial();
     const front = makeCardMaterial(getFrontTexture(card));
     const back = makeCardMaterial(getBackTexture());

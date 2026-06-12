@@ -155,7 +155,7 @@ function simulate(config: KingenVariantConfig, seed: number): SimResult {
 
   // Aantal rondes en nulsom-controle.
   const roundEnds = events.filter((e) => e.type === 'roundEnd').length;
-  assert.equal(roundEnds, params.totalRounds, 'Aantal gespeelde gevingen klopt niet');
+  assert.equal(roundEnds, params.totalRounds, 'Aantal gespeelde rondes klopt niet');
   assert.equal(sheet.getGrandTotal(), 0, 'Partijtotaal moet 0 zijn (nulsom)');
   assert.deepEqual(sheet.getTotals(), totals, 'ScoreSheet-totalen != engine-totalen');
 
@@ -241,7 +241,7 @@ async function main(): Promise<void> {
         assert.ok(!params.removedCards.includes(e.card.id), `Gestripte kaart ${e.card.id} gespeeld`);
       }
     }
-    console.log(`OK  ${n} spelers — ${params.totalRounds} gevingen, eindstand [${totals.join(', ')}], som 0`);
+    console.log(`OK  ${n} spelers — ${params.totalRounds} rondes, eindstand [${totals.join(', ')}], som 0`);
   }
 
   // ------------------------------------------------------------------
@@ -256,7 +256,7 @@ async function main(): Promise<void> {
     const { events, totals } = simulate(config, 99);
     verifyFollowSuit(events, 4);
     const chosen = events.filter((e) => e.type === 'roundKindChosen');
-    assert.equal(chosen.length, 20, 'Dubbelkingen telt 20 gevingen');
+    assert.equal(chosen.length, 20, 'Dubbelkingen telt 20 rondes');
     for (const kind of NEGATIVE_ROUND_KINDS) {
       assert.equal(
         chosen.filter((e) => e.roundKind === kind).length,
@@ -269,7 +269,7 @@ async function main(): Promise<void> {
       if (e.roundKind === 'troef') trumpPerSeat[e.chooser] = (trumpPerSeat[e.chooser] ?? 0) + 1;
     }
     assert.deepEqual(trumpPerSeat, [2, 2, 2, 2], 'Elke speler kiest precies 2x troef');
-    console.log(`OK  dubbelkingen 4 spelers — 20 gevingen, eindstand [${totals.join(', ')}], som 0`);
+    console.log(`OK  dubbelkingen 4 spelers — 20 rondes, eindstand [${totals.join(', ')}], som 0`);
   }
 
   // ------------------------------------------------------------------
