@@ -92,7 +92,9 @@ export function startTween(opties: {
 /** Uitgebreide layout met runtime-aanpasbare afmetingen (omgevingswissel). */
 export interface KingenTableLayout extends TableLayout {
   setDimensions(tableSurfaceY: number, tableRadius: number): void;
-  /** Wereldhoek van een stoel rond de tafel (stoel 0 = bij de camera, +Z). */
+  /** Zet de kijker-stoel (komt onderaan, bij de camera); default 0. */
+  setViewerSeat(seat: Seat): void;
+  /** Wereldhoek van een stoel rond de tafel (kijker-stoel = bij de camera, +Z). */
   seatAngle(seat: Seat, seatCount: number): number;
   /** Plek van de delerstapel waar de kaarten vandaan vliegen. */
   deckPosition(dealer: Seat, seatCount: number): THREE.Vector3;
@@ -103,21 +105,30 @@ export interface KingenTableLayout extends TableLayout {
 export function createTableLayout(tableSurfaceY: number, tableRadius: number): KingenTableLayout {
   let opp = tableSurfaceY;
   let straal = tableRadius;
+  // De kijker zit altijd onderaan (+Z, bij de camera). Online kan dat een andere
+  // stoel dan 0 zijn; de tafel roteert dan zo dat jouw stoel onderaan komt.
+  let viewer = 0;
 
-  const seatAngle = (seat: Seat, seatCount: number): number =>
-    Math.PI / 2 + (seat / Math.max(seatCount, 1)) * Math.PI * 2;
+  const seatAngle = (seat: Seat, seatCount: number): number => {
+    const n = Math.max(seatCount, 1);
+    const rel = ((seat - viewer) % n + n) % n;
+    return Math.PI / 2 + (rel / n) * Math.PI * 2;
+  };
 
   return {
     setDimensions(y: number, r: number): void {
       opp = y;
       straal = r;
     },
+    setViewerSeat(seat: Seat): void {
+      viewer = seat;
+    },
     getSurfaceY: () => opp,
     seatAngle,
 
     handAnchor(seat: Seat, seatCount: number): { position: THREE.Vector3; rotationY: number } {
       const a = seatAngle(seat, seatCount);
-      const lokaal = seat === 0;
+      const lokaal = seat === viewer;
       // Eigen hand net buiten de rand, relatief laag (verder van de camera,
       // zodat tafel en tegenstanders de compositie domineren); tegenstanders
       // net binnen de rand met een compacte gesloten waaier.
@@ -219,6 +230,8 @@ const TAFEL_SCHAAL = 0.78;
 /** Uitgebreide animator met hulpmethodes voor de SceneManager. */
 export interface KingenCardAnimator extends CardAnimator {
   setSeatCount(n: number): void;
+  /** Zet de kijker-stoel (eigen hand onderaan, open gewaaierd); default 0. */
+  setViewerSeat(seat: Seat): void;
   /** Verwijder alle kaarten (handen, slag, stapels) van tafel. */
   clearTable(): void;
   /** Plaats alle handen direct (zonder animatie) opnieuw — na omgevingswissel. */
@@ -235,6 +248,8 @@ export function createCardAnimator(
   seatCount: number,
 ): KingenCardAnimator {
   let stoelen = Math.max(2, seatCount);
+  let kijker: Seat = 0;
+  const klayoutView = layout as Partial<KingenTableLayout>;
 
   const handen = new Map<number, THREE.Mesh[]>();
   const slag: { seat: Seat; card: Card; mesh: THREE.Mesh }[] = [];
@@ -311,7 +326,7 @@ export function createCardAnimator(
     const anker = layout.handAnchor(seat, stoelen);
     const ankerQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, anker.rotationY, 0));
     const ch = cardRenderer.cardSize.height;
-    const lokaal = seat === 0;
+    const lokaal = seat === kijker;
 
     // Eigen hand: open waaier (verkleind, zie EIGEN_HAND_SCHAAL);
     // tegenstanders: smalle gesloten waaier.
@@ -402,6 +417,11 @@ export function createCardAnimator(
   return {
     setSeatCount(n: number): void {
       stoelen = Math.max(2, n);
+    },
+
+    setViewerSeat(seat: Seat): void {
+      kijker = seat;
+      klayoutView.setViewerSeat?.(seat);
     },
 
     getHandMeshes(seat: Seat): THREE.Mesh[] {

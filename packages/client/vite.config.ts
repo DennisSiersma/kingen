@@ -16,5 +16,14 @@ export default defineConfig({
   server: {
     port: 5173,
     open: false,
+    // WebSocket-verkeer naar de dev-server (Fase 1: poort 8080) proxyen, zodat de
+    // client in dev én productie dezelfde same-origin URL (/ws) kan gebruiken.
+    proxy: {
+      '/ws': {
+        target: process.env.KINGEN_SERVER ?? 'http://localhost:8080',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
 });

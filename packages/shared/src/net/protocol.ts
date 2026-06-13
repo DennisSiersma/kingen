@@ -6,7 +6,7 @@
  * later de server.
  */
 
-import type { GameEvent, PlayerConfig, Seat } from '../core/types.ts';
+import type { Card, GameEvent, PlayerConfig, Seat, Suit } from '../core/types.ts';
 
 // ---------------------------------------------------------------------------
 // Protocol-typen (toekomstvast: serialiseerbaar als JSON)
@@ -43,9 +43,30 @@ export interface RoomInfo {
  * GameEvents reizen ingepakt zodat room-routering en chat ernaast passen.
  */
 export type NetMessage =
+  /** Client meldt zich aan na verbinden (gast-identiteit, voor reconnect). */
+  | { kind: 'hello'; clientId: string; name: string }
+  /** Server bevestigt de verbinding. */
+  | { kind: 'helloOk'; connectionId: string; clientId: string }
+  /** Host start de partij (lege stoelen worden door de server met AI gevuld). */
+  | { kind: 'startGame'; roomId: string }
   | { kind: 'gameEvent'; roomId: string; event: GameEvent }
+  /**
+   * Server vraagt de aan-zet-zijnde client om een zet. De server levert de
+   * legale opties mee zodat de client zelf geen regels hoeft te kennen.
+   */
+  | {
+      kind: 'requestMove';
+      roomId: string;
+      seat: Seat;
+      moveType: 'card' | 'trump' | 'roundKind';
+      legalCards?: Card[];
+      legalSuits?: Suit[];
+      legalKinds?: string[];
+    }
   /** Een zet van een client naar de host/server (host valideert). */
   | { kind: 'moveRequest'; roomId: string; seat: Seat; move: unknown }
+  /** Volledige toestand voor een (her)verbindende client. */
+  | { kind: 'snapshot'; roomId: string; seat: Seat; view: import('../core/types.ts').PublicGameView }
   | { kind: 'chat'; message: ChatMessage }
   | { kind: 'roomUpdate'; room: RoomInfo }
   | { kind: 'joinedRoom'; room: RoomInfo; yourSeat: Seat }

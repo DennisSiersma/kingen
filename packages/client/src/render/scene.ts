@@ -22,6 +22,8 @@ export interface KingenSceneManager extends SceneManager {
   setBrightness(percent: number): void;
   /** Muis-parallax van de camera aan/uit (staat altijd stil tijdens kaartkeuze). */
   setCameraMotion(enabled: boolean): void;
+  /** Zet de kijker-stoel (eigen hand onderaan); default 0. Voor online spelen. */
+  setViewerSeat(seat: Seat): void;
 }
 
 const wacht = (ms: number): Promise<void> => new Promise((res) => setTimeout(res, ms));
@@ -85,6 +87,8 @@ export async function createSceneManager(
   const cardRenderer = createCardRenderer();
   const layout = createTableLayout(env.tableSurfaceY, env.tableRadius);
   const animator = createCardAnimator(scene, cardRenderer, layout, 4);
+  // Welke stoel is "ik" (komt onderaan). Offline = 0; online = de eigen stoel.
+  let viewerSeat: Seat = 0;
 
   // Helderheid (50-160%) regelt zowel de tonemapping-exposure als de
   // intensiteit van de omgevingslichten (gemarkeerd met userData.omgevingslicht).
@@ -174,7 +178,7 @@ export async function createSceneManager(
       -((clientY - rect.top) / rect.height) * 2 + 1,
     );
     raycaster.setFromCamera(muisNdc, camera);
-    const treffers = raycaster.intersectObjects(animator.getHandMeshes(0), true);
+    const treffers = raycaster.intersectObjects(animator.getHandMeshes(viewerSeat), true);
     for (const treffer of treffers) {
       const mesh = vindKaartMesh(treffer.object);
       if (mesh) return String(mesh.userData['cardId']);
@@ -263,7 +267,7 @@ export async function createSceneManager(
     for (let seat = 0; seat < stoelen; seat++) {
       const echte = ev.hands[seat as Seat];
       if (echte) {
-        resultaat.push(seat === 0 ? sortHand(echte) : [...echte]);
+        resultaat.push(seat === viewerSeat ? sortHand(echte) : [...echte]);
         continue;
       }
       const grootte = ev.handSizes[seat] ?? 0;
@@ -330,7 +334,7 @@ export async function createSceneManager(
     plaatsCamera();
 
     // Hover-lift van speelbare kaarten in de eigen hand.
-    for (const mesh of animator.getHandMeshes(0)) {
+    for (const mesh of animator.getHandMeshes(viewerSeat)) {
       if (mesh.userData['animating'] === true) continue;
       const basis = mesh.userData['basePosition'] as THREE.Vector3 | undefined;
       if (!basis) continue;
@@ -371,7 +375,7 @@ export async function createSceneManager(
 
     setPlayableCards(cardIds: string[]): void {
       speelbaar = new Set(cardIds);
-      const handMeshes = animator.getHandMeshes(0);
+      const handMeshes = animator.getHandMeshes(viewerSeat);
       const inHand = new Set<THREE.Mesh>(handMeshes);
       // Verlopen dim-administratie opruimen (kaarten die de hand verlieten).
       for (const mesh of [...dimOrigineel.keys()]) {
@@ -394,6 +398,11 @@ export async function createSceneManager(
 
     setCameraMotion(enabled: boolean): void {
       cameraBeweging = enabled;
+    },
+
+    setViewerSeat(seat: Seat): void {
+      viewerSeat = seat;
+      animator.setViewerSeat(seat);
     },
 
     start(): void {

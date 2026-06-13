@@ -4,6 +4,103 @@
  * Donkere achtergrond, goudaccenten, serif-koppen. Responsive.
  */
 
+/* Online-modus: instapknop op het startscherm (Fase 1, beta). */
+#kg-online-knop {
+  position: fixed;
+  left: 12px;
+  bottom: 9px;
+  z-index: 60;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  background: rgba(20, 16, 12, 0.85);
+  color: var(--kg-gold-bright, #e8c75a);
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 130ms ease, background 130ms ease;
+}
+#kg-online-knop:hover {
+  border-color: var(--kg-gold-bright, #e8c75a);
+  background: rgba(40, 32, 20, 0.92);
+}
+
+/* Online-lobby/wachtkamer-overlay. */
+.kg-online-lobby {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(10, 8, 12, 0.86), rgba(5, 4, 6, 0.96));
+  pointer-events: auto;
+}
+.kg-online-kaart {
+  width: min(420px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px 28px;
+  background: var(--kg-panel, rgba(20, 16, 12, 0.94));
+  border: 1px solid var(--kg-panel-line, rgba(201, 162, 39, 0.3));
+  border-radius: 14px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
+}
+.kg-online-kaart h2 {
+  margin: 0;
+  font-family: var(--kg-serif, Georgia, serif);
+  color: var(--kg-gold-bright, #e8c75a);
+}
+.kg-online-status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--kg-muted, #b9ad93);
+}
+.kg-online-rij {
+  display: flex;
+  gap: 8px;
+}
+.kg-online-input {
+  flex: 1;
+  padding: 8px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--kg-panel-line, rgba(201, 162, 39, 0.3));
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--kg-text, #efe7d6);
+  font-size: 0.95rem;
+}
+.kg-online-stoelen {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--kg-text, #efe7d6);
+  font-size: 0.92rem;
+}
+.kg-online-stoelen li {
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 7px;
+}
+.kg-online-terug {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--kg-muted, #b9ad93);
+  text-decoration: none;
+  align-self: flex-start;
+}
+.kg-online-terug:hover {
+  color: var(--kg-gold-bright, #e8c75a);
+}
+.kg-btn--primair {
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.34), rgba(150, 116, 20, 0.22));
+  border-color: var(--kg-gold-bright, #e8c75a);
+  color: #fff;
+}
+
 /* Subtiele ontwerper-signatuur, altijd rechtsonder (setup én spel). */
 #kg-credit {
   position: fixed;

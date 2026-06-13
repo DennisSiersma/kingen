@@ -394,6 +394,9 @@ siersma.farcon.cloud {
 - Updaten = `docker compose build && docker compose up -d`.
 - Past in een Proxmox-LXC/VM met Docker. (Aandachtspunt: WebSockets willen sticky
   verbindingen; bij later >1 instance komt Redis erbij — niet nu.)
+- **Omgevingen (besloten):** de Proxmox-server is **dev** (lokaal/intern testen);
+  **productie** draait online op `siersma.farcon.cloud`. Zelfde Docker-image, andere
+  compose/env per omgeving.
 
 ### 8.3 Config via env
 - `PORT` (8080), `PUBLIC_DIR`, `MAX_ROOMS` (**4**), `MOVE_TIMEOUT_MS` (**60000**;

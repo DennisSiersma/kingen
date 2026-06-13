@@ -211,6 +211,20 @@ const nl = {
   'toast.trumpForce': 'Derde keuzebeurt zonder troef: de volgende twee keuzes zijn verplicht troef.',
   'toast.illegalMove': 'Die zet is hier niet toegestaan.',
   'toast.hotseat': 'Meerdere menselijke spelers aan één scherm komt later; de computer speelt die stoelen.',
+
+  // Online (Fase 1)
+  'online.title': 'Online spelen',
+  'online.disconnected': 'Niet verbonden',
+  'online.connecting': 'Verbinden…',
+  'online.connected': 'Verbonden',
+  'online.connect': 'Verbinden',
+  'online.start': 'Start de partij',
+  'online.namePlaceholder': 'Je naam',
+  'online.defaultName': 'Speler',
+  'online.joined': 'Je zit op stoel {num}. Wacht op spelers of start.',
+  'online.backLocal': '← Lokaal spelen',
+  'online.gameOver': 'Partij voorbij — winnaar: {winner}',
+  'online.connectFailed': 'Verbinden met de server mislukt.',
 } as const;
 
 export type TranslationKey = keyof typeof nl;
@@ -403,6 +417,20 @@ const en: Record<TranslationKey, string> = {
   'toast.trumpForce': 'Third pick without trumps: the next two picks must be trumps.',
   'toast.illegalMove': 'That move is not allowed here.',
   'toast.hotseat': 'Multiple human players on one screen is coming later; the computer plays those seats.',
+
+  // Online (Fase 1)
+  'online.title': 'Play online',
+  'online.disconnected': 'Not connected',
+  'online.connecting': 'Connecting…',
+  'online.connected': 'Connected',
+  'online.connect': 'Connect',
+  'online.start': 'Start the game',
+  'online.namePlaceholder': 'Your name',
+  'online.defaultName': 'Player',
+  'online.joined': "You're in seat {num}. Wait for players or start.",
+  'online.backLocal': '← Play local',
+  'online.gameOver': 'Game over — winner: {winner}',
+  'online.connectFailed': 'Could not connect to the server.',
 };
 
 const DICTIONARIES: Record<Lang, Record<TranslationKey, string>> = { nl, en };

@@ -8,8 +8,11 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @kingen/client",
+    "dev:server": "npm run dev -w @kingen/server",
     "build": "npm run build -w @kingen/client",
-    "check": "npm run check -w @kingen/shared && npm run check -w @kingen/client",
+    "build:all": "npm run build -w @kingen/client && npm run build -w @kingen/server",
+    "check": "npm run check -w @kingen/shared && npm run check -w @kingen/client && npm run check -w @kingen/server",
+    "test:server": "npm run test -w @kingen/server",
     "preview": "npm run preview -w @kingen/client"
   },
   "devDependencies": {
