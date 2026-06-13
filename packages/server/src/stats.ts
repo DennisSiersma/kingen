@@ -7,7 +7,7 @@
  * herstart — dat hoort zo).
  */
 
-import { existsSync, readFileSync, writeFile } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 
 export interface StatsSnapshot {
   gestartLaatsteUur: number;
@@ -64,15 +64,37 @@ export class Stats {
     if (!this.file || this.opslaanTimer) return;
     this.opslaanTimer = setTimeout(() => {
       this.opslaanTimer = null;
-      const data = JSON.stringify({
-        totaalGestart: this.totaalGestart,
-        voltooid: this.voltooid,
-        startTijden: this.startTijden,
-      });
-      writeFile(this.file!, data, (err) => {
-        if (err) console.error('[stats] opslaan mislukt:', err.message);
-      });
+      this.schrijfNu();
     }, 1000);
+  }
+
+  /**
+   * Schrijf atomair: eerst naar een temp-bestand, dan rename. Zo blijft bij een
+   * crash midden in de schrijf het oude bestand intact (geen half/corrupt JSON
+   * dat de volgende boot niet kan parsen).
+   */
+  private schrijfNu(): void {
+    if (!this.file) return;
+    const data = JSON.stringify({
+      totaalGestart: this.totaalGestart,
+      voltooid: this.voltooid,
+      startTijden: this.startTijden,
+    });
+    try {
+      const tmp = `${this.file}.tmp`;
+      writeFileSync(tmp, data);
+      renameSync(tmp, this.file);
+    } catch (err) {
+      console.error('[stats] opslaan mislukt:', (err as Error).message);
+    }
+  }
+
+  /** Schrijf eventueel uitgestelde data direct weg (bij nette shutdown). */
+  flush(): void {
+    if (!this.opslaanTimer) return;
+    clearTimeout(this.opslaanTimer);
+    this.opslaanTimer = null;
+    this.schrijfNu();
   }
 
   snapshot(): StatsSnapshot {

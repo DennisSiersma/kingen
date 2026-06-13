@@ -61,6 +61,8 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
   let huidigeRoomId = '';
   let huidigeRoom: import('@shared/net/protocol.ts').RoomInfo | null = null;
   let inRoom = false;
+  // Terug-naar-wachtkamer-timer na een partij; annuleerbaar als de speler eerder weggaat.
+  let replayTimer: ReturnType<typeof setTimeout> | null = null;
   const leesOpgeslagen = (key: string): string => {
     try {
       return localStorage.getItem(key) ?? '';
@@ -190,7 +192,9 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
           void scene.waitForIdle().then(() => {
             void notifications.toon(t('online.gameOver', { winner: winnaars }), { soort: 'succes', duurMs: 8000 });
             // Terug naar de wachtkamer zodat de host opnieuw kan starten (anderen wachten).
-            window.setTimeout(() => {
+            if (replayTimer) clearTimeout(replayTimer);
+            replayTimer = setTimeout(() => {
+              replayTimer = null;
               hud.hide();
               if (huidigeRoom) lobby.toonWachtkamer(huidigeRoom, mySeat);
             }, 5000);
@@ -259,6 +263,11 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
     transport.send({ kind: 'leaveRoom' });
     inRoom = false;
     huidigeRoomId = '';
+    huidigeRoom = null;
+    if (replayTimer) {
+      clearTimeout(replayTimer);
+      replayTimer = null;
+    }
     bewaar('kingen.roomCode', '');
     chat.verberg();
     hud.hide();

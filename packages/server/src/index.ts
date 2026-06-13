@@ -88,19 +88,28 @@ const manager = new RoomManager({
   onGameEnd: () => stats.recordFinish(),
 });
 
+const isStr = (v: unknown): v is string => typeof v === 'string';
+
 function verwerk(sessie: Sessie, msg: NetMessage): void {
   switch (msg.kind) {
     case 'hello':
-      sessie.clientId = msg.clientId;
+      // Velden komen van een onvertrouwde client: valideer voor we ze gebruiken.
+      if (!isStr(msg.clientId) || !isStr(msg.name)) return;
+      sessie.clientId = msg.clientId.slice(0, 64);
       sessie.name = msg.name;
-      sessie.conn.send({ kind: 'helloOk', connectionId: sessie.conn.id, clientId: msg.clientId });
+      sessie.conn.send({ kind: 'helloOk', connectionId: sessie.conn.id, clientId: sessie.clientId });
       sessie.conn.send({ kind: 'roomList', rooms: manager.openList() });
       break;
     case 'listRooms':
       sessie.conn.send({ kind: 'roomList', rooms: manager.openList() });
       break;
     case 'createRoom': {
-      const room = manager.create(msg.naam, msg.maxPlayers, msg.zichtbaarheid);
+      if (!isStr(msg.naam) || typeof msg.maxPlayers !== 'number' || !Number.isFinite(msg.maxPlayers)) {
+        sessie.conn.send({ kind: 'error', code: 'ongeldig', melding: 'Ongeldige tafelgegevens' });
+        break;
+      }
+      const zicht = msg.zichtbaarheid === 'prive' ? 'prive' : 'open';
+      const room = manager.create(msg.naam, msg.maxPlayers, zicht);
       if (!room) {
         sessie.conn.send({ kind: 'error', code: 'max-tafels', melding: 'Maximaal aantal tafels bereikt' });
         break;
@@ -109,6 +118,10 @@ function verwerk(sessie: Sessie, msg: NetMessage): void {
       break;
     }
     case 'joinRoom': {
+      if (!isStr(msg.code)) {
+        sessie.conn.send({ kind: 'error', code: 'geen-tafel', melding: 'Geen tafel met die code' });
+        break;
+      }
       const room = manager.byCode(msg.code);
       if (!room) {
         sessie.conn.send({ kind: 'error', code: 'geen-tafel', melding: 'Geen tafel met die code' });
@@ -157,7 +170,12 @@ wss.on('connection', (ws: WebSocket) => {
     } catch {
       return;
     }
-    verwerk(sessie, msg);
+    // Eén kapot bericht mag nooit de hele server (alle tafels) neerhalen.
+    try {
+      verwerk(sessie, msg);
+    } catch (err) {
+      console.error(`[verwerk] fout bij bericht van ${id}:`, (err as Error).message);
+    }
   });
 
   const sluit = (): void => {
@@ -172,3 +190,19 @@ server.listen(PORT, () => {
   console.log(`Kingen-server luistert op http://localhost:${PORT} (WebSocket op /ws)`);
   console.log(serveStatic ? `Serveert client uit ${PUBLIC_DIR}` : 'Geen client-build (dev-modus)');
 });
+
+// Vangnet: een onverwachte fout (bijv. in een room-timer) mag de server niet
+// fataal neerhalen tijdens een potje — log en blijf draaien.
+process.on('uncaughtException', (err) => console.error('[uncaughtException]', err));
+process.on('unhandledRejection', (reason) => console.error('[unhandledRejection]', reason));
+
+// Nette shutdown: schrijf uitgestelde stats weg vóór het proces stopt
+// (docker stop stuurt SIGTERM), zodat de laatste tellers niet verloren gaan.
+const shutdown = (sig: string): void => {
+  console.log(`${sig} ontvangen — stats wegschrijven en afsluiten…`);
+  stats.flush();
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 2000).unref();
+};
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

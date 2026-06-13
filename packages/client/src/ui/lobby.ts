@@ -176,7 +176,11 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
     nlKnop.classList.toggle('is-actief', getLang() === 'nl');
     enKnop.classList.toggle('is-actief', getLang() === 'en');
     tekenTafels(huidigeRooms);
-    if (huidigeRoom) codeRegel.textContent = t('lobby.shareCode', { code: huidigeRoom.code ?? '' });
+    if (huidigeRoom) {
+      codeRegel.textContent = t('lobby.shareCode', { code: huidigeRoom.code ?? '' });
+      // Ook de wachtkamer (host-/jij-tags + "wacht op host") in de nieuwe taal.
+      tekenStoelen(huidigeRoom, mijnStoel);
+    }
   }
 
   // --- gedrag ---
