@@ -12,8 +12,11 @@ services:
       - MAX_ROOMS=4
       - MOVE_TIMEOUT_MS=60000
       - RECONNECT_GRACE_MS=120000
+      - STATS_FILE=/data/stats.json
     expose:
       - "8080"
+    volumes:
+      - kingen_data:/data
 
   caddy:
     image: caddy:2
@@ -30,5 +33,6 @@ services:
       - kingen
 
 volumes:
+  kingen_data:
   caddy_data:
   caddy_config:

@@ -12,5 +12,11 @@ services:
       - MAX_ROOMS=4
       - MOVE_TIMEOUT_MS=60000
       - RECONNECT_GRACE_MS=120000
+      - STATS_FILE=/data/stats.json
     ports:
       - "8080:8080"
+    volumes:
+      - kingen_data:/data
+
+volumes:
+  kingen_data:

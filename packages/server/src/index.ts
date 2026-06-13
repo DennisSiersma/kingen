@@ -24,7 +24,8 @@ const maxRooms = Number(process.env.MAX_ROOMS ?? 4);
 const serveStatic =
   existsSync(PUBLIC_DIR) ? sirv(PUBLIC_DIR, { single: true, gzip: true, brotli: true }) : null;
 
-const stats = new Stats();
+// STATS_FILE (op een Docker-volume) maakt de cijfers persistent over herstarts.
+const stats = new Stats(process.env.STATS_FILE);
 
 const server = http.createServer((req, res) => {
   if (req.url === '/health') {
