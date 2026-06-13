@@ -626,7 +626,21 @@
   50% { box-shadow: 0 0 20px rgba(201, 162, 39, 0.7), inset 0 0 8px rgba(201, 162, 39, 0.3); }
 }
 
-.kg-hud__troef.is-leeg { display: none; }
+/* "Geen troef" (negatieve rondes): rustige, gedempte chip zonder puls/gloed,
+   zodat duidelijk is dát er geen troef is. */
+.kg-hud__troef.is-geen {
+  border-color: var(--kg-panel-line);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  color: var(--kg-muted);
+  animation: none;
+}
+
+.kg-hud__troef.is-geen .kg-troefsymbool {
+  font-size: 1.1rem;
+  filter: none;
+  color: var(--kg-muted);
+}
 
 /* Spelerschips */
 .kg-hud__spelers {
@@ -687,16 +701,54 @@
   color: var(--kg-muted);
 }
 
+.kg-chip__tellers {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Totaal (straf)punten: prominent, kleur volgt het teken. */
+.kg-chip__punten {
+  min-width: 2em;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--kg-panel-line);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--kg-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.kg-chip__punten.is-positief {
+  color: #7ee0a0;
+  border-color: rgba(126, 224, 160, 0.5);
+  background: rgba(126, 224, 160, 0.12);
+}
+
+.kg-chip__punten.is-negatief {
+  color: #ff8a8a;
+  border-color: rgba(255, 138, 138, 0.5);
+  background: rgba(255, 138, 138, 0.12);
+}
+
+/* Gewonnen slagen deze ronde: kleiner, secundair. */
 .kg-chip__slagen {
-  min-width: 1.6em;
+  min-width: 1.4em;
   text-align: center;
   background: rgba(201, 162, 39, 0.14);
   border: 1px solid rgba(201, 162, 39, 0.3);
   border-radius: 999px;
-  padding: 1px 7px;
-  font-size: 0.8rem;
+  padding: 1px 6px;
+  font-size: 0.72rem;
   color: var(--kg-gold-bright);
   font-variant-numeric: tabular-nums;
+}
+
+.kg-chip__slagen::before {
+  content: '♠ ';
+  opacity: 0.7;
 }
 
 .kg-chip.is-aan-beurt {

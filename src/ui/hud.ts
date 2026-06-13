@@ -10,6 +10,7 @@
 import '../styles.css';
 import type { Seat, Suit } from '../core/types.ts';
 import { SUIT_SYMBOLS } from '../core/types.ts';
+import type { SnelheidNiveau } from '../core/speed.ts';
 import type { EnvironmentId } from '../render/types.ts';
 import { ENVIRONMENT_IDS } from '../render/types.ts';
 import type { Lang } from './i18n.ts';
@@ -30,10 +31,31 @@ function isRedSuit(suit: Suit): boolean {
   return suit === 'hearts' || suit === 'diamonds';
 }
 
+/** Totaalscore met expliciet teken: strafpunten (negatief) vs bonus (positief). */
+function scoreTekst(score: number): string {
+  if (score > 0) return `+${score}`;
+  if (score < 0) return `−${Math.abs(score)}`; // echte min-teken
+  return '0';
+}
+
 // Persistente HUD-instellingen (best-effort; localStorage kan geblokkeerd zijn).
 const HELDERHEID_KEY = 'kingen.brightness';
 const CAMERA_KEY = 'kingen.cameraMotion';
 const RONDE_UITLEG_KEY = 'kingen.roundHelp';
+const SNELHEID_KEY = 'kingen.speed';
+
+const SNELHEID_NIVEAUS: SnelheidNiveau[] = ['langzaam', 'normaal', 'snel', 'direct'];
+
+/** Het opgeslagen snelheidsniveau (default 'normaal'). */
+export function leesSnelheidNiveau(): SnelheidNiveau {
+  try {
+    const v = window.localStorage.getItem(SNELHEID_KEY) as SnelheidNiveau | null;
+    if (v && SNELHEID_NIVEAUS.includes(v)) return v;
+  } catch {
+    // val terug op default
+  }
+  return 'normaal';
+}
 
 function leesOpgeslagen(key: string): string | null {
   try {
@@ -77,7 +99,7 @@ export function createHud(root: HTMLElement): Hud {
   const infoKnop = el('button', 'kg-hud__info kg-klikbaar', '?');
   infoKnop.type = 'button';
 
-  const troefBadge = el('div', 'kg-hud__troef is-leeg');
+  const troefBadge = el('div', 'kg-hud__troef is-geen');
 
   rondePaneel.append(rondeBlok, infoKnop, troefBadge);
   hud.appendChild(rondePaneel);
@@ -104,8 +126,10 @@ export function createHud(root: HTMLElement): Hud {
     chip: HTMLDivElement;
     soort: HTMLDivElement;
     slagen: HTMLSpanElement;
+    punten: HTMLSpanElement;
   }
   let chips: ChipRefs[] = [];
+  let huidigeScores: number[] = [];
 
   // --- Rechtsboven: knoppen + instellingenmenu -------------------------
   const knoppen = el('div', 'kg-hud__knoppen');
@@ -202,6 +226,26 @@ export function createHud(root: HTMLElement): Hud {
   cameraRegel.append(cameraLabel, cameraToggle);
   menu.appendChild(cameraRegel);
 
+  // Speelsnelheid: schaalt AI-denktijd en animaties; persist in localStorage.
+  const snelheidRegel = el('div', 'kg-menu-regel');
+  const snelheidLabel = el('label');
+  snelheidLabel.htmlFor = 'kg-hud-snelheid';
+  const snelheidSelect = el('select', 'kg-select');
+  snelheidSelect.id = 'kg-hud-snelheid';
+  for (const niveau of SNELHEID_NIVEAUS) {
+    const opt = el('option');
+    opt.value = niveau;
+    snelheidSelect.appendChild(opt);
+  }
+  snelheidSelect.value = leesSnelheidNiveau();
+  snelheidSelect.addEventListener('change', () => {
+    const niveau = snelheidSelect.value as SnelheidNiveau;
+    bewaar(SNELHEID_KEY, niveau);
+    emitUiEvent(root, { type: 'speedChanged', niveau });
+  });
+  snelheidRegel.append(snelheidLabel, snelheidSelect);
+  menu.appendChild(snelheidRegel);
+
   // Geluid: gereserveerd, nog niet aanwezig in deze versie.
   const geluidRegel = el('div', 'kg-menu-regel kg-menu-uit');
   const geluidLabel = el('span');
@@ -269,9 +313,17 @@ export function createHud(root: HTMLElement): Hud {
   }
 
   function tekenTroef(): void {
-    troefBadge.classList.toggle('is-leeg', huidigeTroef === null);
     troefBadge.innerHTML = '';
-    if (huidigeTroef === null) return;
+    // Ook in de negatieve rondes (geen troef) tonen we de badge expliciet, zodat
+    // de speler ziet dát er geen troef is in plaats van zich af te vragen waar
+    // de troefindicator bleef.
+    if (huidigeTroef === null) {
+      troefBadge.classList.add('is-geen');
+      troefBadge.append(el('span', 'kg-troefsymbool', '∅'),
+        el('span', undefined, t('hud.noTrump')));
+      return;
+    }
+    troefBadge.classList.remove('is-geen');
     const sym = el('span',
       `kg-troefsymbool ${isRedSuit(huidigeTroef) ? 'kg-suit-rood' : 'kg-suit-zwart'}`,
       SUIT_SYMBOLS[huidigeTroef]);
@@ -291,12 +343,21 @@ export function createHud(root: HTMLElement): Hud {
         huidigeSoorten[i] === 'ai' ? t('hud.chipAi') : t('hud.chipHuman'));
       tekst.appendChild(soort);
       chip.appendChild(tekst);
+      // Tellers rechts in de chip: totaal (straf)punten (prominent) en
+      // gewonnen slagen deze ronde (klein), zoals in het scorebord.
+      const tellers = el('div', 'kg-chip__tellers');
+      const score = huidigeScores[i] ?? 0;
+      const punten = el('span', 'kg-chip__punten', scoreTekst(score));
+      punten.classList.toggle('is-positief', score > 0);
+      punten.classList.toggle('is-negatief', score < 0);
+      punten.title = t('hud.pointsTitle');
       const slagen = el('span', 'kg-chip__slagen', String(huidigeSlagen[i] ?? 0));
       slagen.title = t('hud.tricksTitle');
-      chip.appendChild(slagen);
+      tellers.append(punten, slagen);
+      chip.appendChild(tellers);
       chip.classList.toggle('is-aan-beurt', huidigeBeurt !== null && i === huidigeBeurt);
       spelersStrip.appendChild(chip);
-      return { chip, soort, slagen };
+      return { chip, soort, slagen, punten };
     });
   }
 
@@ -318,6 +379,11 @@ export function createHud(root: HTMLElement): Hud {
     helderLabel.textContent = t('hud.brightness');
     cameraLabel.textContent = t('hud.cameraMotion');
     cameraRegel.title = t('hud.cameraMotionHint');
+    snelheidLabel.textContent = t('hud.speed');
+    for (const opt of snelheidSelect.options) {
+      const niveau = opt.value as SnelheidNiveau;
+      opt.textContent = t(`hud.speed${niveau.charAt(0).toUpperCase()}${niveau.slice(1)}` as Parameters<typeof t>[0]);
+    }
     geluidLabel.textContent = t('hud.sound');
     geluidHint.textContent = t('hud.comingSoon');
     stopKnop.textContent = t('hud.quit');
@@ -369,10 +435,22 @@ export function createHud(root: HTMLElement): Hud {
       });
     },
 
+    setScores(totals: number[]): void {
+      huidigeScores = totals.slice();
+      totals.forEach((score, i) => {
+        const refs = chips[i];
+        if (!refs) return;
+        refs.punten.textContent = scoreTekst(score);
+        refs.punten.classList.toggle('is-positief', score > 0);
+        refs.punten.classList.toggle('is-negatief', score < 0);
+      });
+    },
+
     setPlayers(names: string[], kinds: ('human' | 'ai')[]): void {
       huidigeNamen = names.slice();
       huidigeSoorten = kinds.slice();
       huidigeSlagen = new Array<number>(names.length).fill(0);
+      huidigeScores = new Array<number>(names.length).fill(0);
       huidigeBeurt = null;
       tekenChips();
     },
