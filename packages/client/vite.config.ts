@@ -24,6 +24,11 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
       },
+      // Stats-endpoint naar de game-server proxyen (zodat /stats.html in dev werkt).
+      '/api': {
+        target: process.env.KINGEN_SERVER ?? 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
 });

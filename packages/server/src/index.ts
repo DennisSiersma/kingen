@@ -13,6 +13,7 @@ import sirv from 'sirv';
 import type { NetMessage } from '@kingen/shared/net/protocol.ts';
 import type { ClientConn, Room } from './room.ts';
 import { RoomManager } from './roomManager.ts';
+import { Stats } from './stats.ts';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const PUBLIC_DIR = process.env.PUBLIC_DIR ?? './public';
@@ -23,10 +24,22 @@ const maxRooms = Number(process.env.MAX_ROOMS ?? 4);
 const serveStatic =
   existsSync(PUBLIC_DIR) ? sirv(PUBLIC_DIR, { single: true, gzip: true, brotli: true }) : null;
 
+const stats = new Stats();
+
 const server = http.createServer((req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'content-type': 'text/plain' });
     res.end('ok');
+    return;
+  }
+  if (req.url === '/api/stats') {
+    const body = JSON.stringify({
+      live: { ...manager.liveStats(), spelersOnline: sessies.size },
+      ...stats.snapshot(),
+      tijd: Date.now(),
+    });
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.end(body);
     return;
   }
   if (serveStatic) {
@@ -63,6 +76,8 @@ const manager = new RoomManager({
   aiThinkDelayMs: aiDelay,
   moveTimeoutMs,
   onLobbyChange: stuurLobbyLijst,
+  onGameStart: () => stats.recordStart(),
+  onGameEnd: () => stats.recordFinish(),
 });
 
 function verwerk(sessie: Sessie, msg: NetMessage): void {

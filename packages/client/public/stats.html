@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kingen — statistieken</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='2' width='24' height='28' rx='3' fill='%23fdfdf6' stroke='%23333' stroke-width='1'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='%23c0392b' font-family='Georgia,serif' font-weight='bold'%3EK%3C/text%3E%3C/svg%3E" />
+    <style>
+      :root {
+        --bg: #0c0a0f;
+        --panel: rgba(22, 18, 13, 0.95);
+        --line: rgba(201, 162, 39, 0.28);
+        --gold: #e8c75a;
+        --text: #efe7d6;
+        --muted: #b1a78f;
+        --serif: 'Palatino', 'Book Antiqua', Georgia, serif;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(ellipse at top, #18130c, var(--bg));
+        color: var(--text);
+        font-family: system-ui, -apple-system, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 32px 16px 48px;
+      }
+      h1 { font-family: var(--serif); color: var(--gold); margin: 0 0 4px; font-size: 1.8rem; }
+      .sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; }
+      .blok { width: min(680px, 100%); margin-bottom: 22px; }
+      .blok h2 {
+        font-family: var(--serif); color: var(--gold); font-size: 1rem;
+        letter-spacing: 0.04em; margin: 0 0 10px; font-weight: 600;
+      }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+      .kaart {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px 18px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      }
+      .kaart .waarde { font-family: var(--serif); font-size: 2rem; color: var(--gold); line-height: 1.1; }
+      .kaart .waarde.is-live { color: #7ee0a0; }
+      .kaart .label { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
+      .voet { color: var(--muted); font-size: 0.78rem; margin-top: 8px; }
+      a { color: var(--gold); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .stip {
+        display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+        background: #7ee0a0; margin-right: 6px; vertical-align: middle;
+        box-shadow: 0 0 8px #7ee0a0; animation: pols 1.6s ease-in-out infinite;
+      }
+      @keyframes pols { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+    </style>
+  </head>
+  <body>
+    <h1>♛ Kingen — statistieken</h1>
+    <div class="sub"><span class="stip"></span><span id="status">verbinden…</span></div>
+
+    <div class="blok">
+      <h2>Nu live</h2>
+      <div class="grid">
+        <div class="kaart"><div class="waarde is-live" id="bezig">–</div><div class="label">partijen bezig</div></div>
+        <div class="kaart"><div class="waarde is-live" id="spelersOnline">–</div><div class="label">spelers online</div></div>
+        <div class="kaart"><div class="waarde" id="tafels">–</div><div class="label">tafels totaal</div></div>
+        <div class="kaart"><div class="waarde" id="wachtend">–</div><div class="label">wachtkamers</div></div>
+      </div>
+    </div>
+
+    <div class="blok">
+      <h2>Gespeelde partijen</h2>
+      <div class="grid">
+        <div class="kaart"><div class="waarde" id="uur">–</div><div class="label">afgelopen uur</div></div>
+        <div class="kaart"><div class="waarde" id="dag">–</div><div class="label">afgelopen 24 uur</div></div>
+        <div class="kaart"><div class="waarde" id="totaal">–</div><div class="label">sinds serverstart</div></div>
+        <div class="kaart"><div class="waarde" id="voltooid">–</div><div class="label">uitgespeeld</div></div>
+      </div>
+      <div class="voet">Server-uptime: <span id="uptime">–</span> · <a href="/">← naar het spel</a></div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      function uptimeTekst(sec) {
+        const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+        if (d > 0) return `${d}d ${h}u ${m}m`;
+        if (h > 0) return `${h}u ${m}m`;
+        return `${m}m`;
+      }
+      async function ververs() {
+        try {
+          const r = await fetch('/api/stats', { cache: 'no-store' });
+          if (!r.ok) throw new Error('http ' + r.status);
+          const s = await r.json();
+          $('bezig').textContent = s.live.bezig;
+          $('spelersOnline').textContent = s.live.spelersOnline;
+          $('tafels').textContent = s.live.tafels;
+          $('wachtend').textContent = s.live.wachtend;
+          $('uur').textContent = s.gestartLaatsteUur;
+          $('dag').textContent = s.gestartLaatste24u;
+          $('totaal').textContent = s.gestartTotaal;
+          $('voltooid').textContent = s.voltooid;
+          $('uptime').textContent = uptimeTekst(s.uptimeSec);
+          $('status').textContent = 'live · ververst elke 3s';
+        } catch (e) {
+          $('status').textContent = 'kan stats niet laden';
+        }
+      }
+      ververs();
+      setInterval(ververs, 3000);
+    </script>
+  </body>
+</html>

@@ -14,6 +14,16 @@ export interface RoomManagerOpts {
   moveTimeoutMs?: number;
   /** Aangeroepen wanneer de lobbylijst verandert (tafel erbij/af/gewijzigd). */
   onLobbyChange?: () => void;
+  onGameStart?: () => void;
+  onGameEnd?: () => void;
+}
+
+/** Momentopname van de live-toestand (voor de stats-pagina). */
+export interface LiveStats {
+  tafels: number;
+  wachtend: number;
+  bezig: number;
+  spelersAanTafel: number;
 }
 
 const CODE_ALFABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // zonder verwarrende tekens
@@ -42,6 +52,8 @@ export class RoomManager {
       aiThinkDelayMs: this.opts.aiThinkDelayMs,
       moveTimeoutMs: this.opts.moveTimeoutMs,
       onChange: () => this.opRoomWijziging(room),
+      onGameStart: this.opts.onGameStart,
+      onGameEnd: this.opts.onGameEnd,
     });
     this.rooms.set(id, room);
     this.opts.onLobbyChange?.();
@@ -50,6 +62,22 @@ export class RoomManager {
 
   get(id: string): Room | undefined {
     return this.rooms.get(id);
+  }
+
+  /** Live-momentopname over alle tafels. */
+  liveStats(): LiveStats {
+    let bezig = 0;
+    let spelers = 0;
+    for (const room of this.rooms.values()) {
+      if (room.bezig) bezig++;
+      spelers += room.aantalVerbonden;
+    }
+    return {
+      tafels: this.rooms.size,
+      wachtend: this.rooms.size - bezig,
+      bezig,
+      spelersAanTafel: spelers,
+    };
   }
 
   byCode(code: string): Room | undefined {

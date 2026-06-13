@@ -31,6 +31,10 @@ export interface RoomOpts {
   moveTimeoutMs?: number;
   /** Aangeroepen bij elke wijziging die de lobbylijst raakt (join/leave/start/eind). */
   onChange?: () => void;
+  /** Aangeroepen wanneer een partij start (voor statistiek). */
+  onGameStart?: () => void;
+  /** Aangeroepen wanneer een partij eindigt (voor statistiek). */
+  onGameEnd?: () => void;
 }
 
 export class Room {
@@ -56,6 +60,8 @@ export class Room {
   private readonly aiThinkDelayMs: [number, number] | undefined;
   private readonly moveTimeoutMs: number;
   private readonly onChange: (() => void) | undefined;
+  private readonly onGameStart: (() => void) | undefined;
+  private readonly onGameEnd: (() => void) | undefined;
 
   constructor(opts: RoomOpts) {
     this.id = opts.id;
@@ -67,6 +73,8 @@ export class Room {
     this.aiThinkDelayMs = opts.aiThinkDelayMs;
     this.moveTimeoutMs = opts.moveTimeoutMs ?? 60000;
     this.onChange = opts.onChange;
+    this.onGameStart = opts.onGameStart;
+    this.onGameEnd = opts.onGameEnd;
   }
 
   /** Aantal verbonden mensen (voor opruimen lege tafels). */
@@ -179,6 +187,7 @@ export class Room {
     if (this.inProgress) return;
     if (this.connBySeat.size === 0) return; // minstens één mens
     this.inProgress = true;
+    this.onGameStart?.();
 
     const humanSeats = new Set<Seat>(this.connBySeat.keys());
     const gebruikt = new Set<string>([...this.names.values()].map((n) => n.toLowerCase()));
@@ -296,6 +305,7 @@ export class Room {
   private partijAfgelopen(): void {
     this.inProgress = false;
     this.host = null;
+    this.onGameEnd?.();
     // Stoelen waarvan de speler weg is (geen live verbinding) helemaal vrijgeven.
     for (const [clientId, seat] of [...this.seatByClientId]) {
       if (!this.connBySeat.has(seat)) {
