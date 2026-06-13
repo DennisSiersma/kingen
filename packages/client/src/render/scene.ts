@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import type { Card, GameEvent, Seat } from '@shared/core/types.ts';
+import type { Card, GameEvent, PublicGameView, Seat } from '@shared/core/types.ts';
 import { createDeck, sortHand } from '@shared/core/deck.ts';
 import type { GameEventBus } from '@shared/core/events.ts';
 import { createCardRenderer } from './cards.ts';
@@ -24,6 +24,8 @@ export interface KingenSceneManager extends SceneManager {
   setCameraMotion(enabled: boolean): void;
   /** Zet de kijker-stoel (eigen hand onderaan); default 0. Voor online spelen. */
   setViewerSeat(seat: Seat): void;
+  /** Herbouw de tafel direct uit een momentopname (reconnect). */
+  toonSnapshot(view: PublicGameView): void;
 }
 
 const wacht = (ms: number): Promise<void> => new Promise((res) => setTimeout(res, ms));
@@ -255,7 +257,7 @@ export async function createSceneManager(
 
   /** Bouw per stoel een kaartenlijst voor de deal-animatie. Onbekende handen
    *  (tegenstanders) krijgen unieke placeholder-kaarten — ze liggen toch verdekt. */
-  const bouwHanden = (ev: DealEvent): Card[][] => {
+  const bouwHanden = (ev: { hands: Partial<Record<Seat, Card[]>>; handSizes: Record<number, number> }): Card[][] => {
     const bekend = new Set<string>();
     for (let seat = 0; seat < stoelen; seat++) {
       const hand = ev.hands[seat as Seat];
@@ -403,6 +405,14 @@ export async function createSceneManager(
     setViewerSeat(seat: Seat): void {
       viewerSeat = seat;
       animator.setViewerSeat(seat);
+    },
+
+    toonSnapshot(view: PublicGameView): void {
+      stoelen = view.seatCount;
+      animator.setSeatCount(view.seatCount);
+      const handen = bouwHanden({ hands: { [view.seat]: view.hand }, handSizes: view.handSizes });
+      const trick = view.currentTrick.plays.map((p) => ({ seat: p.seat, card: p.card }));
+      staart = staart.then(() => animator.toonSnapshot(handen, trick)).catch(() => {});
     },
 
     start(): void {

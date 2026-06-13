@@ -235,6 +235,8 @@ const nl = {
   'chat.sysJoined': '{name} is erbij',
   'chat.sysLeft': '{name} heeft de tafel verlaten',
   'chat.sysAiTakeover': '{name} is even weg — de computer speelt',
+  'chat.sysAway': '{name} is weg — de computer neemt het over',
+  'chat.sysBack': '{name} is terug',
 } as const;
 
 export type TranslationKey = keyof typeof nl;
@@ -451,6 +453,8 @@ const en: Record<TranslationKey, string> = {
   'chat.sysJoined': '{name} joined',
   'chat.sysLeft': '{name} left the table',
   'chat.sysAiTakeover': '{name} is away — the computer is playing',
+  'chat.sysAway': '{name} is away — the computer takes over',
+  'chat.sysBack': '{name} is back',
 };
 
 const DICTIONARIES: Record<Lang, Record<TranslationKey, string>> = { nl, en };

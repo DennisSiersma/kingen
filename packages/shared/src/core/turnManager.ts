@@ -161,4 +161,9 @@ export class TurnManager<TState, TMove, TConfig> {
   getCurrentActor(): Seat | null {
     return this.state === null ? null : this.opts.definition.currentActor(this.state);
   }
+
+  /** Huidige (geheime) spelstate, of null vóór de start. Voor host-snapshots. */
+  getState(): TState | null {
+    return this.state;
+  }
 }

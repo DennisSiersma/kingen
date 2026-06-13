@@ -10,7 +10,7 @@
 
 import { createGameEventBus } from '@shared/core/events.ts';
 import { ScoreSheet } from '@shared/core/scoresheet.ts';
-import { SUITS, SUIT_SYMBOLS, type Card, type GameEvent, type Seat, type Suit } from '@shared/core/types.ts';
+import { SUITS, SUIT_SYMBOLS, type Card, type GameEvent, type PublicGameView, type Seat, type Suit } from '@shared/core/types.ts';
 import { DEFAULT_VARIANT, type KingenRoundKind } from '@shared/games/kingen/types.ts';
 import { getTableParams } from '@shared/games/kingen/params.ts';
 import type { RoomInfo } from '@shared/net/protocol.ts';
@@ -153,6 +153,12 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
           );
         }
         break;
+      case 'snapshot':
+        mySeat = msg.seat;
+        scene.setViewerSeat(mySeat);
+        chat.setEigenStoel(mySeat);
+        toepassenSnapshot(msg.view);
+        break;
       case 'requestMove':
         void handleRequest(msg);
         break;
@@ -164,21 +170,49 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
     }
   });
 
+  // Bewaar het hello-bericht en (her)stuur het bij elke verbinding, zodat de
+  // server na een reconnect je stoel op je clientId herkent en herstelt.
+  let laatsteHello: Extract<import('@shared/net/protocol.ts').NetMessage, { kind: 'hello' }> | null = null;
+  let alEensVerbonden = false;
+
   transport.onStateChange((state) => {
     lobby.setStatus(state);
-    if (state === 'connected') chat.setStatus(null);
-    else if (state === 'connecting') chat.setStatus(t('online.connecting'));
-    else chat.setStatus(t('online.disconnected'));
+    if (state === 'connected') {
+      chat.setStatus(null);
+      if (laatsteHello) transport.send(laatsteHello);
+      if (alEensVerbonden) void notifications.toon(t('online.reconnected'), { soort: 'succes', duurMs: 2500 });
+      alEensVerbonden = true;
+    } else if (state === 'connecting') {
+      chat.setStatus(alEensVerbonden ? t('online.reconnecting') : t('online.connecting'));
+    } else {
+      chat.setStatus(t('online.disconnected'));
+    }
   });
 
-  lobby.onVerbinden(async (naam) => {
+  const verbind = async (naam: string): Promise<void> => {
+    laatsteHello = { kind: 'hello', clientId: clientId(), name: naam };
+    try {
+      localStorage.setItem('kingen.name', naam);
+    } catch {
+      // best-effort
+    }
     try {
       await transport.connect();
-      transport.send({ kind: 'hello', clientId: clientId(), name: naam });
     } catch {
       void notifications.toon(t('online.connectFailed'), { soort: 'waarschuwing', duurMs: 4000 });
     }
-  });
+  };
+  lobby.onVerbinden(verbind);
+
+  // Bij herladen (reconnect) automatisch opnieuw verbinden met de bewaarde naam,
+  // zodat je via je clientId je stoel + een snapshot terugkrijgt.
+  let bewaardeNaam = '';
+  try {
+    bewaardeNaam = localStorage.getItem('kingen.name') ?? '';
+  } catch {
+    bewaardeNaam = '';
+  }
+  if (bewaardeNaam) void verbind(bewaardeNaam);
   lobby.onStart(() => transport.send({ kind: 'startGame', roomId: ROOM_ID }));
 
   // Dev-only hook: speel de eerste legale kaart als het jouw beurt is (voor
@@ -192,6 +226,24 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
       }
       return false;
     };
+  }
+
+  /** Herstel de hele weergave uit een reconnect-snapshot (HUD + 3D-tafel). */
+  function toepassenSnapshot(view: PublicGameView): void {
+    n = view.seatCount;
+    names = view.playerNames.slice();
+    if (!sheet) sheet = new ScoreSheet(n);
+    lobby.verberg();
+    hud.show();
+    // Soort per stoel is in de view niet bekend; eigen stoel = mens, rest = computer
+    // (best-effort label; weggevallen mensen worden toch door de AI gedekt).
+    hud.setPlayers(names, names.map((_, i) => (i === mySeat ? 'human' : 'ai')));
+    hud.setRound(view.round.kind, view.round.index, totalRondes);
+    hud.setTrump(view.round.trump);
+    hud.setTrickCounts(view.trickCounts);
+    hud.setScores(view.totals);
+    hud.setTurn(view.turn);
+    scene.toonSnapshot(view);
   }
 
   async function handleRequest(msg: Extract<import('@shared/net/protocol.ts').NetMessage, { kind: 'requestMove' }>): Promise<void> {
@@ -258,7 +310,11 @@ function maakLobby(ui: HTMLElement): Lobby {
   naamInput.type = 'text';
   naamInput.maxLength = 16;
   naamInput.placeholder = t('online.namePlaceholder');
-  naamInput.value = '';
+  try {
+    naamInput.value = localStorage.getItem('kingen.name') ?? '';
+  } catch {
+    naamInput.value = '';
+  }
   naamRij.appendChild(naamInput);
   const verbindKnop = el('button', 'kg-btn', t('online.connect')) as HTMLButtonElement;
   naamRij.appendChild(verbindKnop);

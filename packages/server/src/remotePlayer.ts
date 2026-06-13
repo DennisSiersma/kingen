@@ -42,6 +42,7 @@ export class RemotePlayerController implements PlayerController {
   private readonly request: (payload: MoveRequestPayload) => void;
   private readonly opts: RemotePlayerOpts;
   private pending: Pending | null = null;
+  private lastPayload: MoveRequestPayload | null = null;
 
   constructor(
     seat: Seat,
@@ -73,20 +74,30 @@ export class RemotePlayerController implements PlayerController {
     });
   }
 
+  private vraag(payload: MoveRequestPayload): void {
+    this.lastPayload = payload;
+    this.request(payload);
+  }
+
   chooseCard(view: PublicGameView): Promise<Card> {
-    this.request({ moveType: 'card', legalCards: view.legalCards });
+    this.vraag({ moveType: 'card', legalCards: view.legalCards });
     const veilig = view.legalCards[0]!; // er is altijd minstens één legale kaart
     return this.wacht<Card>('card', veilig);
   }
 
   chooseTrump(_view: PublicGameView): Promise<Suit> {
-    this.request({ moveType: 'trump', legalSuits: [...SUITS] });
+    this.vraag({ moveType: 'trump', legalSuits: [...SUITS] });
     return this.wacht<Suit>('trump', SUITS[0]!);
   }
 
   chooseRoundKind(_view: PublicGameView, available: string[]): Promise<string> {
-    this.request({ moveType: 'roundKind', legalKinds: available });
+    this.vraag({ moveType: 'roundKind', legalKinds: available });
     return this.wacht<string>('roundKind', available[0] ?? '');
+  }
+
+  /** Stuur het lopende zet-verzoek opnieuw (na een reconnect). */
+  resend(): void {
+    if (this.pending && this.lastPayload) this.request(this.lastPayload);
   }
 
   /** Verwerk een binnengekomen moveRequest van de client. */

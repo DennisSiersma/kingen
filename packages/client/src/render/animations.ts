@@ -243,6 +243,8 @@ export interface KingenCardAnimator extends CardAnimator {
   clearTable(): void;
   /** Plaats alle handen direct (zonder animatie) opnieuw — na omgevingswissel. */
   relayout(): void;
+  /** Herbouw de tafel direct uit een momentopname (reconnect): handen + lopende slag. */
+  toonSnapshot(handsBySeat: Card[][], trick: { seat: Seat; card: Card }[]): void;
   /** Meshes in de hand van een stoel (voor raycast/hover in de scene). */
   getHandMeshes(seat: Seat): THREE.Mesh[];
 }
@@ -441,6 +443,41 @@ export function createCardAnimator(
       for (let seat = 0; seat < stoelen; seat++) {
         void legHandNeer(seat as Seat, false);
       }
+    },
+
+    toonSnapshot(handsBySeat: Card[][], trick: { seat: Seat; card: Card }[]): void {
+      clearTable();
+      if (handsBySeat.length > 0) stoelen = handsBySeat.length;
+      // Handen direct op hun eindplek zetten (geen deel-animatie).
+      for (let seat = 0; seat < stoelen; seat++) {
+        const kaarten = handsBySeat[seat] ?? [];
+        const doelen = handTransforms(seat as Seat, kaarten.length);
+        const arr: THREE.Mesh[] = [];
+        kaarten.forEach((card, i) => {
+          const doel = doelen[i];
+          if (!doel) return;
+          const mesh = maakMesh(card);
+          mesh.position.copy(doel.pos);
+          mesh.quaternion.copy(doel.quat);
+          mesh.scale.setScalar(doel.schaal ?? 1);
+          scene.add(mesh);
+          onthoudBasis(mesh, doel);
+          arr[i] = mesh;
+        });
+        handen.set(seat, arr);
+      }
+      // Lopende slag terugleggen in het midden.
+      trick.forEach((p, i) => {
+        const slot = layout.trickSlot(p.seat, stoelen).clone();
+        slot.y += 0.0016 + i * 0.004;
+        const mesh = maakMesh(p.card);
+        mesh.position.copy(slot);
+        mesh.quaternion.copy(vlakkeQuat(slagYaw(p.seat), true));
+        mesh.scale.setScalar(TAFEL_SCHAAL);
+        mesh.renderOrder = 10 + i;
+        scene.add(mesh);
+        slag.push({ seat: p.seat, card: p.card, mesh });
+      });
     },
 
     async animateDeal(handsBySeat: Card[][], dealer: Seat): Promise<void> {

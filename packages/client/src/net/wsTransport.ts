@@ -23,8 +23,50 @@ export class WebSocketTransport implements Transport {
   private readonly messageHandlers = new Set<MessageHandler>();
   private readonly stateHandlers = new Set<(state: ConnectionState) => void>();
   private readonly chatHandlers = new Set<(message: ChatMessage) => void>();
+  private gewildDicht = false;
+  private herverbindTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly url: string) {}
+
+  /** Open de socket en zet de listeners. Bij onverwacht verlies: auto-herverbinden. */
+  private open(onOpen?: () => void, onError?: (e: Error) => void): void {
+    const ws = new WebSocket(this.url);
+    this.ws = ws;
+    ws.addEventListener('open', () => {
+      this.setState('connected');
+      onOpen?.();
+    });
+    ws.addEventListener('message', (ev) => {
+      let msg: NetMessage;
+      try {
+        msg = JSON.parse(String(ev.data)) as NetMessage;
+      } catch {
+        return;
+      }
+      for (const handler of [...this.messageHandlers]) handler(msg);
+      if (msg.kind === 'chat') {
+        for (const handler of [...this.chatHandlers]) handler(msg.message);
+      }
+    });
+    ws.addEventListener('close', () => {
+      this.setState('disconnected');
+      if (!this.gewildDicht) this.plotsHerverbinden();
+    });
+    ws.addEventListener('error', () => {
+      if (this.connectionState === 'connecting') onError?.(new Error('WebSocket-verbinding mislukt'));
+    });
+  }
+
+  /** Probeer na een onverwacht verlies opnieuw te verbinden (vaste interval). */
+  private plotsHerverbinden(): void {
+    if (this.herverbindTimer || this.gewildDicht) return;
+    this.setState('connecting');
+    this.herverbindTimer = setTimeout(() => {
+      this.herverbindTimer = null;
+      if (this.gewildDicht) return;
+      this.open(undefined, () => this.plotsHerverbinden());
+    }, 1500);
+  }
 
   get state(): ConnectionState {
     return this.connectionState;
@@ -38,35 +80,19 @@ export class WebSocketTransport implements Transport {
 
   connect(): Promise<void> {
     if (this.connectionState === 'connected') return Promise.resolve();
+    this.gewildDicht = false;
     this.setState('connecting');
     return new Promise<void>((resolve, reject) => {
-      const ws = new WebSocket(this.url);
-      this.ws = ws;
-      ws.addEventListener('open', () => {
-        this.setState('connected');
-        resolve();
-      });
-      ws.addEventListener('message', (ev) => {
-        let msg: NetMessage;
-        try {
-          msg = JSON.parse(String(ev.data)) as NetMessage;
-        } catch {
-          return;
-        }
-        for (const handler of [...this.messageHandlers]) handler(msg);
-        if (msg.kind === 'chat') {
-          for (const handler of [...this.chatHandlers]) handler(msg.message);
-        }
-      });
-      ws.addEventListener('close', () => this.setState('disconnected'));
-      ws.addEventListener('error', () => {
-        if (this.connectionState === 'connecting') reject(new Error('WebSocket-verbinding mislukt'));
-        this.setState('disconnected');
-      });
+      this.open(resolve, reject);
     });
   }
 
   async disconnect(): Promise<void> {
+    this.gewildDicht = true;
+    if (this.herverbindTimer) {
+      clearTimeout(this.herverbindTimer);
+      this.herverbindTimer = null;
+    }
     this.ws?.close();
     this.ws = null;
     this.setState('disconnected');

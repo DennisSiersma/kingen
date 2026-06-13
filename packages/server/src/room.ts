@@ -32,6 +32,10 @@ export class Room {
   private readonly seatByConn = new Map<string, Seat>();
   private readonly connBySeat = new Map<Seat, string>();
   private readonly names = new Map<Seat, string>();
+  // clientId-administratie voor reconnect: een stoel hoort bij een clientId en
+  // blijft bij een korte disconnect gereserveerd (AI dekt de beurten af).
+  private readonly clientIdByConn = new Map<string, string>();
+  private readonly seatByClientId = new Map<string, Seat>();
   private host: GameHost | null = null;
   private inProgress = false;
   private chatTeller = 0;
@@ -63,12 +67,23 @@ export class Room {
     const seat = this.seatByConn.get(connId);
     if (seat !== undefined) {
       const naam = this.names.get(seat) ?? 'Een speler';
+      const clientId = this.clientIdByConn.get(connId);
       this.connBySeat.delete(seat);
       this.seatByConn.delete(connId);
       this.broadcast({ kind: 'leftRoom', roomId: this.id, seat });
       this.broadcastRoomUpdate();
-      this.systeemChat('chat.sysLeft', { name: naam }, `${naam} heeft de tafel verlaten`);
+      if (this.inProgress) {
+        // Stoel blijft gereserveerd op de clientId; de zet-time-out laat de AI
+        // de beurten spelen tot de speler terugkomt.
+        this.systeemChat('chat.sysAway', { name: naam }, `${naam} is weg — de computer neemt het over`);
+      } else {
+        // Buiten een partij: stoel helemaal vrijgeven.
+        if (clientId) this.seatByClientId.delete(clientId);
+        this.names.delete(seat);
+        this.systeemChat('chat.sysLeft', { name: naam }, `${naam} heeft de tafel verlaten`);
+      }
     }
+    this.clientIdByConn.delete(connId);
     this.conns.delete(connId);
   }
 
@@ -96,6 +111,27 @@ export class Room {
 
   private onHello(conn: ClientConn, clientId: string, name: string): void {
     conn.send({ kind: 'helloOk', connectionId: conn.id, clientId });
+    this.clientIdByConn.set(conn.id, clientId);
+
+    // Reconnect: kent deze clientId al een stoel, dan herbinden we (ook midden
+    // in een partij) en sturen een snapshot zodat de tafel direct herstelt.
+    const bestaandeStoel = this.seatByClientId.get(clientId);
+    if (bestaandeStoel !== undefined) {
+      this.connBySeat.set(bestaandeStoel, conn.id);
+      this.seatByConn.set(conn.id, bestaandeStoel);
+      conn.send({ kind: 'joinedRoom', room: this.toRoomInfo(), yourSeat: bestaandeStoel });
+      this.broadcastRoomUpdate();
+      const naam = this.names.get(bestaandeStoel) ?? `Speler ${bestaandeStoel + 1}`;
+      if (this.inProgress && this.host) {
+        const view = this.host.getView(bestaandeStoel);
+        if (view) conn.send({ kind: 'snapshot', roomId: this.id, seat: bestaandeStoel, view });
+        // Was het zijn beurt? Stuur het zet-verzoek opnieuw naar de nieuwe verbinding.
+        this.host.resendRequest(bestaandeStoel);
+        this.systeemChat('chat.sysBack', { name: naam }, `${naam} is terug`);
+      }
+      return;
+    }
+
     if (this.inProgress) {
       conn.send({ kind: 'error', code: 'in-uitvoering', melding: 'De partij is al bezig' });
       return;
@@ -107,6 +143,7 @@ export class Room {
     }
     this.seatByConn.set(conn.id, seat);
     this.connBySeat.set(seat, conn.id);
+    this.seatByClientId.set(clientId, seat);
     this.names.set(seat, name.trim() || `Speler ${seat + 1}`);
     conn.send({ kind: 'joinedRoom', room: this.toRoomInfo(), yourSeat: seat });
     this.broadcastRoomUpdate();
@@ -228,6 +265,21 @@ export class Room {
       const conn = this.conns.get(connId);
       if (conn) conn.send({ kind: 'gameEvent', roomId: this.id, event: this.personalize(event, seat) });
     }
+    if (event.type === 'gameEnd') this.partijAfgelopen();
+  }
+
+  /** Partij voorbij: tafel terug naar wachtkamer, weggevallen stoelen vrijgeven. */
+  private partijAfgelopen(): void {
+    this.inProgress = false;
+    this.host = null;
+    // Stoelen waarvan de speler weg is (geen live verbinding) helemaal vrijgeven.
+    for (const [clientId, seat] of [...this.seatByClientId]) {
+      if (!this.connBySeat.has(seat)) {
+        this.seatByClientId.delete(clientId);
+        this.names.delete(seat);
+      }
+    }
+    this.broadcastRoomUpdate();
   }
 
   /** Verberg andermans handen: alleen de eigen hand blijft in het deal-event. */

@@ -36,10 +36,11 @@ export interface GameHostDeps {
 export class GameHost {
   private readonly remotes = new Map<Seat, RemotePlayerController>();
   private readonly manager;
+  private readonly definition = createKingenDefinition();
   private running = false;
 
   constructor(private readonly deps: GameHostDeps, seed: number) {
-    const definition = createKingenDefinition();
+    const definition = this.definition;
     const bus = createGameEventBus();
     bus.onAny((ev) => this.deps.forwardEvent(ev));
 
@@ -87,5 +88,16 @@ export class GameHost {
   /** Lever een client-zet af bij de juiste stoel. */
   deliverMove(seat: Seat, move: { type?: string; card?: Card; suit?: Suit; kind?: string }): boolean {
     return this.remotes.get(seat)?.deliver(move) ?? false;
+  }
+
+  /** Publieke view voor een stoel (voor een reconnect-snapshot), of null. */
+  getView(seat: Seat) {
+    const state = this.manager.getState();
+    return state ? this.definition.getView(state, seat) : null;
+  }
+
+  /** Stuur het lopende zet-verzoek voor een stoel opnieuw (na reconnect). */
+  resendRequest(seat: Seat): void {
+    this.remotes.get(seat)?.resend();
   }
 }
