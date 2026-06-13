@@ -4,6 +4,22 @@
  * Donkere achtergrond, goudaccenten, serif-koppen. Responsive.
  */
 
+/* Subtiele ontwerper-signatuur, altijd rechtsonder (setup én spel). */
+#kg-credit {
+  position: fixed;
+  right: 12px;
+  bottom: 9px;
+  z-index: 60;
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: rgba(201, 162, 39, 0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
 :root {
   --kg-bg-deep: #0a0a0f;
   --kg-panel: rgba(20, 16, 12, 0.94);

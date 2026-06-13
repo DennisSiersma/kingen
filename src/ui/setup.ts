@@ -32,8 +32,36 @@ import { el, emitUiEvent } from './uiBus.ts';
 // Vaste teksten en icoontjes
 // ---------------------------------------------------------------------------
 
-/** Stoel 0 krijgt een taalafhankelijke naam ("Jij"/"You") in defaultPlayers(). */
-const DEFAULT_AI_NAMES = ['Anna', 'Bram', 'Carla', 'Daan'] as const;
+/**
+ * Stoel 0 krijgt een taalafhankelijke naam ("Jij"/"You") in defaultPlayers().
+ * Computerspelers krijgen een willekeurige naam uit deze pool (zie kiesAiNamen),
+ * met uitsluiting van namen die een menselijke speler al gekozen heeft.
+ */
+const AI_NAME_POOL = [
+  'Ada', 'Kaia', 'Chrystal', 'Casheen', 'Jameel', 'Rafique', 'Zain', 'Tillie',
+  'Chris', 'Thom', 'Ali', 'Geeta', 'Myrna', 'Lola', 'Bastian',
+] as const;
+
+/**
+ * Kies `aantal` unieke, willekeurige namen uit AI_NAME_POOL. Namen in `bezet`
+ * (hoofdletterongevoelig) worden uitgesloten — zo botst een computernaam nooit
+ * met de naam die een mens koos. Fisher-Yates-shuffle; valt netjes terug als de
+ * pool ooit te klein zou zijn (komt bij max. 4 computerspelers niet voor).
+ */
+function kiesAiNamen(aantal: number, bezet: Iterable<string> = []): string[] {
+  const verboden = new Set([...bezet].map((n) => n.trim().toLowerCase()));
+  const kandidaten: string[] = AI_NAME_POOL.filter((n) => !verboden.has(n.toLowerCase()));
+  for (let i = kandidaten.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = kandidaten[i]!;
+    kandidaten[i] = kandidaten[j]!;
+    kandidaten[j] = tmp;
+  }
+  const uit = kandidaten.slice(0, Math.max(0, aantal));
+  let n = 1;
+  while (uit.length < aantal) uit.push(`Speler ${n++}`);
+  return uit;
+}
 
 /** Procedurele SVG-icoontjes (geen externe assets). */
 const ENV_ICONS: Record<EnvironmentId, string> = {
@@ -96,9 +124,12 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
   });
 
   function defaultPlayers(): PlayerConfig[] {
+    // Vier computerspelers (genoeg voor max. 5 stoelen) met willekeurige,
+    // unieke namen uit de pool; stoel 0 ("Jij"/"You") staat daar los van.
+    const aiNamen = kiesAiNamen(4);
     return [
       { name: t('setup.you'), kind: 'human' },
-      ...DEFAULT_AI_NAMES.map((name): PlayerConfig =>
+      ...aiNamen.map((name): PlayerConfig =>
         ({ name, kind: 'ai', aiDifficulty: 'gemiddeld' })),
     ];
   }
@@ -534,6 +565,22 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
             ? { name: naam, kind: 'ai', aiDifficulty: p.aiDifficulty ?? 'gemiddeld' }
             : { name: naam, kind: 'human' },
         );
+      }
+
+      // Computernamen uniek houden én niet gelijk aan een mensennaam: koos een
+      // mens een naam uit de pool, dan krijgt die computerspeler een andere.
+      const bezetteNamen = new Set<string>();
+      for (const s of spelers) {
+        if (s.kind === 'human') bezetteNamen.add(s.name.trim().toLowerCase());
+      }
+      for (const s of spelers) {
+        if (s.kind !== 'ai') continue;
+        const huidig = s.name.trim().toLowerCase();
+        if (huidig === '' || bezetteNamen.has(huidig)) {
+          const [nieuw] = kiesAiNamen(1, bezetteNamen);
+          if (nieuw) s.name = nieuw;
+        }
+        bezetteNamen.add(s.name.trim().toLowerCase());
       }
       const config: SetupConfig = {
         spelers,
