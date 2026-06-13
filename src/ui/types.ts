@@ -5,6 +5,7 @@
  */
 
 import type { PlayerConfig, Seat, Suit } from '../core/types.ts';
+import type { SnelheidNiveau } from '../core/speed.ts';
 import type { KingenRoundKind, KingenVariantConfig } from '../games/kingen/types.ts';
 import type { EnvironmentId } from '../render/types.ts';
 
@@ -41,6 +42,8 @@ export type UiEvent =
   | { type: 'brightnessChanged'; percent: number }
   /** Camerabeweging (muis-parallax) aan/uit gezet via het HUD-menu. */
   | { type: 'cameraMotionChanged'; enabled: boolean }
+  // Speelsnelheid gewijzigd (schaalt AI-denktijd en animaties).
+  | { type: 'speedChanged'; niveau: SnelheidNiveau }
   /** Terug naar het setup-scherm (partij afbreken). */
   | { type: 'quitToSetup' }
   /** Nieuwe partij met dezelfde instellingen. */
@@ -70,6 +73,8 @@ export interface Hud {
   setTrump(trump: Suit | null): void;
   setTurn(seat: Seat | null): void;
   setTrickCounts(counts: number[]): void;
+  /** Toon de cumulatieve totaalscores (straf-/bonuspunten) per stoel in de chips. */
+  setScores(totals: number[]): void;
   setPlayers(names: string[], kinds: ('human' | 'ai')[]): void;
   /**
    * Toon/verberg de knop 'Hand afleggen' (variant claimen). Een klik emit het

@@ -16,6 +16,7 @@ import { createGameEventBus, type GameEventBus } from './core/events.ts';
 import { ScoreSheet } from './core/scoresheet.ts';
 import { AiPlayer, type PlayerController } from './core/player.ts';
 import { TurnManager } from './core/turnManager.ts';
+import { setSnelheidNiveau } from './core/speed.ts';
 
 import { createKingenDefinition } from './games/kingen/engine.ts';
 import { getTableParams } from './games/kingen/params.ts';
@@ -27,7 +28,7 @@ import { createSceneManager, type KingenSceneManager } from './render/scene.ts';
 import type { KingenCardAnimator } from './render/animations.ts';
 
 import { createSetupScreen } from './ui/setup.ts';
-import { createHud } from './ui/hud.ts';
+import { createHud, leesSnelheidNiveau } from './ui/hud.ts';
 import { roundKindName, suitName, t } from './ui/i18n.ts';
 import { createScoreboard } from './ui/scoreboard.ts';
 import { createChoiceDialogs, createNotifications } from './ui/notifications.ts';
@@ -241,6 +242,8 @@ async function speelPartij(ctx: AppContext, setup: SetupConfig): Promise<'opnieu
         const scores = naarArray(ev.scores, n);
         sheet.addRound(ev.roundIndex, ev.roundKind, roundKindName(ev.roundKind), scores);
         scoreboard.update([...sheet.getRows()], namen);
+        // Lopende totaal-(straf)punten ook in de spelerschips bovenin tonen.
+        hud.setScores(sheet.getTotals());
         break;
       }
       case 'illegalMove':
@@ -391,7 +394,11 @@ async function main(): Promise<void> {
   onUiEvent(ui, (ev) => {
     if (ev.type === 'brightnessChanged') scene?.setBrightness(ev.percent);
     if (ev.type === 'cameraMotionChanged') scene?.setCameraMotion(ev.enabled);
+    if (ev.type === 'speedChanged') setSnelheidNiveau(ev.niveau);
   });
+
+  // Opgeslagen speelsnelheid meteen toepassen (AI-denktijd + animaties).
+  setSnelheidNiveau(leesSnelheidNiveau());
 
   for (;;) {
     const setup = await setupScreen.show(vorige);
