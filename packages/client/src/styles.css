@@ -4,25 +4,25 @@
  * Donkere achtergrond, goudaccenten, serif-koppen. Responsive.
  */
 
-/* Online-modus: instapknop op het startscherm (Fase 1, beta). */
-#kg-online-knop {
-  position: fixed;
-  left: 12px;
-  bottom: 9px;
-  z-index: 60;
-  padding: 7px 13px;
+/* Prominente "Online spelen"-knop in de kop van het startscherm. */
+.kg-setup__online {
+  margin-top: 14px;
+  padding: 11px 26px;
   border-radius: 999px;
-  border: 1px solid rgba(201, 162, 39, 0.5);
-  background: rgba(20, 16, 12, 0.85);
-  color: var(--kg-gold-bright, #e8c75a);
+  border: 1px solid var(--kg-gold-bright, #e8c75a);
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.34), rgba(150, 116, 20, 0.2));
+  color: #fff8e6;
   font-family: var(--kg-serif, Georgia, serif);
-  font-size: 0.8rem;
+  font-size: 1.02rem;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: border-color 130ms ease, background 130ms ease;
+  box-shadow: 0 4px 18px rgba(201, 162, 39, 0.3);
+  transition: transform 130ms ease, box-shadow 130ms ease, background 130ms ease;
 }
-#kg-online-knop:hover {
-  border-color: var(--kg-gold-bright, #e8c75a);
-  background: rgba(40, 32, 20, 0.92);
+.kg-setup__online:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, rgba(232, 199, 90, 0.42), rgba(180, 140, 30, 0.26));
+  box-shadow: 0 6px 24px rgba(232, 199, 90, 0.45);
 }
 
 /* Online-lobby/wachtkamer-overlay. */

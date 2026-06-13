@@ -365,18 +365,6 @@ async function speelPartij(ctx: AppContext, setup: SetupConfig): Promise<'opnieu
 // App-lus: setup -> partij(en) -> terug naar setup
 // ---------------------------------------------------------------------------
 
-/** Kleine knop op het startscherm naar de online-modus (Fase 1, beta). */
-function toonOnlineKnop(): void {
-  const btn = document.createElement('button');
-  btn.id = 'kg-online-knop';
-  btn.type = 'button';
-  btn.textContent = '🌐 Online (beta)';
-  btn.addEventListener('click', () => {
-    location.search = '?online';
-  });
-  document.body.appendChild(btn);
-}
-
 async function main(): Promise<void> {
   const app = document.querySelector<HTMLDivElement>('#app');
   const ui = document.querySelector<HTMLDivElement>('#ui');
@@ -388,8 +376,6 @@ async function main(): Promise<void> {
     await runOnlineGame(app, ui);
     return;
   }
-  // Knop op het startscherm om naar de online-modus te gaan.
-  toonOnlineKnop();
 
   // UI-componenten (eenmalig aangemaakt, hergebruikt over partijen heen).
   const setupScreen = createSetupScreen(ui);

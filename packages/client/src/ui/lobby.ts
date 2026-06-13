@@ -165,6 +165,7 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
     optPrive.textContent = t('lobby.private');
     maakKnop.textContent = t('lobby.create');
     kopCode.textContent = t('lobby.joinByCode');
+    naamTafelInput.placeholder = t('lobby.defaultTableName', { name: naam });
     codeInput.placeholder = t('lobby.codePlaceholder');
     codeKnop.textContent = t('lobby.join');
     wachtKop.textContent = t('lobby.waitingRoom');
@@ -210,7 +211,6 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
     tafelLijst.innerHTML = '';
     if (rooms.length === 0) {
       tafelLijst.appendChild(el('li', 'kg-lobby-leeg', t('lobby.noTables')));
-      naamTafelInput.value = naamTafelInput.value || t('lobby.defaultTableName', { name: naam });
       return;
     }
     for (const room of rooms) {
@@ -264,6 +264,7 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
       toonFase('naam');
     },
     toonBrowser() {
+      naamTafelInput.placeholder = t('lobby.defaultTableName', { name: naam });
       toonFase('browser');
     },
     updateRoomList(rooms) {

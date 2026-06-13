@@ -76,6 +76,7 @@ const nl = {
   // Setup-scherm
   'setup.you': 'Jij',
   'setup.subtitle': 'Het klassieke Nederlandse kaartspel — nu in 3D',
+  'setup.playOnline': '🌐 Online spelen met anderen',
   'setup.language': 'Taal',
   'setup.playerCount': 'Aantal spelers',
   'setup.playersN': '{n} spelers',
@@ -313,6 +314,7 @@ const en: Record<TranslationKey, string> = {
   // Setup screen
   'setup.you': 'You',
   'setup.subtitle': 'The classic Dutch card game — now in 3D',
+  'setup.playOnline': '🌐 Play online with others',
   'setup.language': 'Language',
   'setup.playerCount': 'Number of players',
   'setup.playersN': '{n} players',

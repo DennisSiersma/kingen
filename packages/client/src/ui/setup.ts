@@ -309,6 +309,14 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
     titel.innerHTML = '<span class="kg-suit-deco">♠</span>Kingen<span class="kg-suit-deco">♥</span>';
     kop.appendChild(titel);
     kop.appendChild(el('p', 'kg-setup__ondertitel', t('setup.subtitle')));
+
+    // Duidelijke keuze: online spelen (naar de lobby) naast het lokale spel hieronder.
+    const onlineKnop = el('button', 'kg-setup__online', t('setup.playOnline'));
+    onlineKnop.type = 'button';
+    onlineKnop.addEventListener('click', () => {
+      location.search = '?online';
+    });
+    kop.appendChild(onlineKnop);
     panel.appendChild(kop);
 
     const body = el('div', 'kg-setup__body');
