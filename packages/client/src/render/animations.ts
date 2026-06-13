@@ -150,9 +150,9 @@ export function createTableLayout(tableSurfaceY: number, tableRadius: number): K
 
     wonPile(seat: Seat, seatCount: number): THREE.Vector3 {
       const a = seatAngle(seat, seatCount) + 0.5;
-      // Iets naar binnen (0.52) zodat de gewonnen stapels niet over de
-      // tafelrand steken, ook niet met de schuine stapeling.
-      return new THREE.Vector3(Math.cos(a) * straal * 0.52, opp + 0.006, Math.sin(a) * straal * 0.52);
+      // Ver naar de rand toe (0.74) zodat de gewonnen stapels buiten de centrale
+      // slag-zone liggen en die niet overlappen/bedekken.
+      return new THREE.Vector3(Math.cos(a) * straal * 0.74, opp + 0.004, Math.sin(a) * straal * 0.74);
     },
 
     deckPosition(dealer: Seat, seatCount: number): THREE.Vector3 {
@@ -222,6 +222,13 @@ const EIGEN_HAND_SCHAAL = 0.58;
  * rand steken; tegelijk groot genoeg om vanaf elke stoel leesbaar te blijven.
  */
 const TAFEL_SCHAAL = 0.78;
+
+/**
+ * Schaal van de gewonnen-slag-stapels: kleiner dan de slag, en aan de rand
+ * geplaatst (zie layout.wonPile) zodat ze de centrale slag niet overlappen of
+ * bedekken.
+ */
+const WON_SCHAAL = 0.6;
 
 // ---------------------------------------------------------------------------
 // CardAnimator
@@ -549,7 +556,7 @@ export function createCardAnimator(
               .clone()
               .add(new THREE.Vector3((Math.random() - 0.5) * 0.02, i * dikte * 1.2, (Math.random() - 0.5) * 0.02)),
             quat: vlakkeQuat(winnaarYaw + (Math.random() - 0.5) * 0.3, false),
-            schaal: TAFEL_SCHAAL,
+            schaal: WON_SCHAAL,
           },
           { duur: 600, vertraging: i * 40, fade: true, ease: easeInOutCubic },
         ),
@@ -565,11 +572,13 @@ export function createCardAnimator(
         // veilig kan opruimen; hij ligt gedekt, dus de voorkant is onzichtbaar.
         const marker = maakMesh(eerste.card);
         marker.userData = { pijlerVanStapel: true };
-        marker.scale.setScalar(TAFEL_SCHAAL);
+        marker.scale.setScalar(WON_SCHAAL);
         marker.renderOrder = 0;
+        // Stapel blijft bewust laag (gecapt) zodat hij nooit boven de centrale
+        // slag uitkomt en die niet bedekt; alleen een lichte x/z-spreiding.
         marker.position.set(
           stapelBasis.x + (Math.random() - 0.5) * 0.012,
-          stapelBasis.y + teller * dikte * 1.3,
+          stapelBasis.y + Math.min(teller, 10) * 0.0004,
           stapelBasis.z + (Math.random() - 0.5) * 0.012,
         );
         marker.quaternion.copy(vlakkeQuat(winnaarYaw + (Math.random() - 0.5) * 0.2, false));
