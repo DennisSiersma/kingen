@@ -315,6 +315,32 @@ function applyClaimHand(state: KingenState, seat: Seat): GameEvent[] {
 // GameDefinition
 // ---------------------------------------------------------------------------
 
+/** Legale zetten voor een stoel (gedeeld door getLegalMoves en getView.legalMoves). */
+function kingenLegalMoves(state: KingenState, seat: Seat): KingenMove[] {
+  switch (state.phase) {
+    case 'choosingRoundKind':
+      return kingenRules
+        .legalRoundKinds(state, seat)
+        .map((kind) => ({ type: 'chooseRoundKind', kind }) as KingenMove);
+    case 'choosingTrump':
+      return kingenRules
+        .legalTrumps(state, seat)
+        .map((suit) => ({ type: 'chooseTrump', suit }) as KingenMove);
+    case 'playing': {
+      if (state.turn !== seat) return [];
+      const moves: KingenMove[] = kingenRules
+        .legalCards(state, seat)
+        .map((card) => ({ type: 'playCard', card }) as KingenMove);
+      if (state.config.claimingAllowed && state.roundKind !== 'troef' && moves.length > 0) {
+        moves.push({ type: 'claimHand' });
+      }
+      return moves;
+    }
+    default:
+      return [];
+  }
+}
+
 /**
  * Fabrieksfunctie voor de Kingen-GameDefinition.
  * Gebruikt params.ts (tafelparameters), rules.ts (legale zetten) en
@@ -426,32 +452,12 @@ export function createKingenDefinition(): KingenDefinition {
         scoresPerRound: state.scoresPerRound.map((row) => row.slice()),
         playerNames: state.players.map((p) => p.name),
         legalCards: legalCards.map((c) => ({ ...c })),
+        legalMoves: kingenLegalMoves(state, seat),
       };
     },
 
     getLegalMoves(state: KingenState, seat: Seat): KingenMove[] {
-      switch (state.phase) {
-        case 'choosingRoundKind':
-          return kingenRules
-            .legalRoundKinds(state, seat)
-            .map((kind) => ({ type: 'chooseRoundKind', kind }) as KingenMove);
-        case 'choosingTrump':
-          return kingenRules
-            .legalTrumps(state, seat)
-            .map((suit) => ({ type: 'chooseTrump', suit }) as KingenMove);
-        case 'playing': {
-          if (state.turn !== seat) return [];
-          const moves: KingenMove[] = kingenRules
-            .legalCards(state, seat)
-            .map((card) => ({ type: 'playCard', card }) as KingenMove);
-          if (state.config.claimingAllowed && state.roundKind !== 'troef' && moves.length > 0) {
-            moves.push({ type: 'claimHand' });
-          }
-          return moves;
-        }
-        default:
-          return [];
-      }
+      return kingenLegalMoves(state, seat);
     },
 
     applyMove(state: KingenState, seat: Seat, move: KingenMove) {

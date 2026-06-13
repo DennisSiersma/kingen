@@ -18,6 +18,18 @@ import { createDeck, trickWinner } from '../core/deck.ts';
 import type { KingenRoundKind } from '../games/kingen/types.ts';
 import type { AiDifficulty, AiStrategy } from './types.ts';
 
+/**
+ * Kingen is een slagenspel, dus zijn views hebben altijd de slag-velden gevuld.
+ * De interne helpers werken op deze view met vereiste slag-velden; de publieke
+ * AiStrategy-methodes (die de generieke PublicGameView krijgen) casten ernaar.
+ */
+type KingenView = PublicGameView & {
+  currentTrick: Trick;
+  completedTricks: Trick[];
+  playedCards: Card[];
+  trickCounts: number[];
+};
+
 // ---------------------------------------------------------------------------
 // Denkvertraging
 // ---------------------------------------------------------------------------
@@ -128,7 +140,7 @@ function currentWinningCard(trick: Trick, trump: Suit | null): Card | null {
  * eigen hand, gespeelde kaarten en de lopende slag. Bij 3/5 spelers worden de
  * gestripte lage zwarte kaarten meegeschrapt (afgeleid uit seatCount).
  */
-function unseenCards(view: PublicGameView): Card[] {
+function unseenCards(view: KingenView): Card[] {
   const seen = new Set<string>();
   for (const c of view.hand) seen.add(c.id);
   for (const c of view.playedCards) seen.add(c.id);
@@ -143,18 +155,18 @@ function unseenCards(view: PublicGameView): Card[] {
 }
 
 /** Totaal aantal slagen in deze ronde (voltooid + nog te spelen vanaf nu). */
-function totalTricksThisRound(view: PublicGameView): number {
+function totalTricksThisRound(view: KingenView): number {
   return view.completedTricks.length + view.hand.length;
 }
 
 /** Gevaarlijke slag in 'zevenLaatste': de 7e (index 6) of de allerlaatste. */
-function isDangerTrick(view: PublicGameView): boolean {
+function isDangerTrick(view: KingenView): boolean {
   const idx = view.currentTrick.index;
   return idx === 6 || idx === totalTricksThisRound(view) - 1;
 }
 
 /** Heeft een tegenstander aantoonbaar geen kaarten meer in `suit` (renonce getoond)? */
-function someOpponentShownVoid(view: PublicGameView, suit: Suit): boolean {
+function someOpponentShownVoid(view: KingenView, suit: Suit): boolean {
   const tricks: Trick[] = [...view.completedTricks, view.currentTrick];
   for (const trick of tricks) {
     const first = trick.plays[0];
@@ -191,7 +203,7 @@ function discardPriority(card: Card, kind: KingenRoundKind): number {
 // Kaartkeuze — negatieve rondes
 // ---------------------------------------------------------------------------
 
-function chooseNegativeRoundCard(view: PublicGameView, kind: KingenRoundKind, counting: boolean): Card {
+function chooseNegativeRoundCard(view: KingenView, kind: KingenRoundKind, counting: boolean): Card {
   const legal = view.legalCards;
   const trick = view.currentTrick;
   const leading = trick.plays.length === 0;
@@ -263,7 +275,7 @@ function chooseNegativeRoundCard(view: PublicGameView, kind: KingenRoundKind, co
 // Kaartkeuze — troefronde
 // ---------------------------------------------------------------------------
 
-function chooseTrumpRoundCard(view: PublicGameView, counting: boolean): Card {
+function chooseTrumpRoundCard(view: KingenView, counting: boolean): Card {
   const legal = view.legalCards;
   const trump = view.round.trump;
   const trick = view.currentTrick;
@@ -341,7 +353,7 @@ function chooseTrumpRoundCard(view: PublicGameView, counting: boolean): Card {
   return minBy(winners, (c) => c.rank);
 }
 
-function chooseCardCore(view: PublicGameView, counting: boolean): Card {
+function chooseCardCore(view: KingenView, counting: boolean): Card {
   const legal = view.legalCards;
   const first = legal[0];
   if (first === undefined) throw new Error('AI: geen legale kaarten beschikbaar');
@@ -441,7 +453,7 @@ export function createHeuristicStrategy(): AiStrategy {
     naam: 'Gemiddeld',
     difficulty: 'gemiddeld',
     chooseCard(view) {
-      return chooseCardCore(view, false);
+      return chooseCardCore(view as KingenView, false);
     },
     chooseTrump(view, legal) {
       return bestTrumpSuit(view, legal);
@@ -463,7 +475,7 @@ export function createSmartStrategy(): AiStrategy {
     naam: 'Slim',
     difficulty: 'moeilijk',
     chooseCard(view) {
-      return chooseCardCore(view, true);
+      return chooseCardCore(view as KingenView, true);
     },
     chooseTrump(view, legal) {
       return bestTrumpSuit(view, legal);
@@ -480,9 +492,10 @@ export function createSmartStrategy(): AiStrategy {
       // onvermijdelijke straf en versnelt alleen het spel.
       if (roundKindOf(view) === 'troef') return false;
       if (view.turn !== view.seat) return false;
-      if (view.currentTrick.plays.length > 0) return false;
-      if (view.hand.length === 0) return false;
-      const unseen = unseenCards(view);
+      const v = view as KingenView;
+      if (v.currentTrick.plays.length > 0) return false;
+      if (v.hand.length === 0) return false;
+      const unseen = unseenCards(v);
       return view.hand.every((c) =>
         unseen.every((u) => u.suit !== c.suit || u.rank < c.rank),
       );

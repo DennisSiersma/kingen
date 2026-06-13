@@ -310,7 +310,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
     scene.setSeatNames(names);
     hud.setRound(view.round.kind, view.round.index, totalRondes);
     hud.setTrump(view.round.trump);
-    hud.setTrickCounts(view.trickCounts);
+    hud.setTrickCounts(view.trickCounts ?? []);
     hud.setScores(view.totals);
     hud.setTurn(view.turn);
     scene.toonSnapshot(view);

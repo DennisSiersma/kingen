@@ -460,7 +460,7 @@ export async function createSceneManager(
       stoelen = view.seatCount;
       animator.setSeatCount(view.seatCount);
       const handen = bouwHanden({ hands: { [view.seat]: view.hand }, handSizes: view.handSizes });
-      const trick = view.currentTrick.plays.map((p) => ({ seat: p.seat, card: p.card }));
+      const trick = (view.currentTrick?.plays ?? []).map((p) => ({ seat: p.seat, card: p.card }));
       staart = staart.then(() => animator.toonSnapshot(handen, trick)).catch(() => {});
     },
 

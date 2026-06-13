@@ -172,29 +172,34 @@ export type GameEventType = GameEvent['type'];
 export interface PublicGameView {
   /** Stoel van de kijker. */
   seat: Seat;
-  /** Aantal stoelen in dit spel (3-5). */
+  /** Aantal stoelen in dit spel. */
   seatCount: number;
   /** Eigen hand, gesorteerd. */
   hand: Card[];
   /** Aantal kaarten per stoel (eigen hand incluis). Index = Seat. */
   handSizes: number[];
-  /** De lopende slag op tafel. */
-  currentTrick: Trick;
-  /** Alle voltooide slagen van de huidige ronde (openbare informatie). */
-  completedTricks: Trick[];
+  /**
+   * Slag-specifieke velden (currentTrick/completedTricks/playedCards/trickCounts)
+   * zijn OPTIONEEL: alleen slagenspellen vullen ze. Afleg-/match-/party-spellen
+   * laten ze weg en zetten hun eigen toestand in `viewExtras`.
+   */
+  /** De lopende slag op tafel (alleen slagenspellen). */
+  currentTrick?: Trick;
+  /** Alle voltooide slagen van de huidige ronde (alleen slagenspellen). */
+  completedTricks?: Trick[];
   /** Alle in deze ronde reeds gespeelde kaarten (afgeleid, voor AI-gemak). */
-  playedCards: Card[];
+  playedCards?: Card[];
   /** Aantal gewonnen slagen per stoel in deze ronde. Index = Seat. */
-  trickCounts: number[];
-  /** Huidige ronde. */
+  trickCounts?: number[];
+  /** Huidige ronde/gift. */
   round: {
     index: number;
-    /** Game-specifiek soort, bijv. KingenRoundKind. */
+    /** Game-specifiek soort, bijv. KingenRoundKind. '' als niet van toepassing. */
     kind: string;
     /** Standaardlabel (NL) uit de engine; de UI toont zelf een i18n-naam op basis van `kind`. */
     label: string;
     dealer: Seat;
-    /** Troefkleur; null in troefloze rondes of zolang nog niet gekozen. */
+    /** Troefkleur; null in troefloze rondes/spellen of zolang nog niet gekozen. */
     trump: Suit | null;
   };
   /** Totaal aantal rondes in de partij. */
@@ -207,8 +212,16 @@ export interface PublicGameView {
   scoresPerRound: number[][];
   /** Spelersnamen per stoel. Index = Seat. */
   playerNames: string[];
-  /** Legale kaarten voor de kijker als die aan de beurt is, anders []. */
+  /** Legale kaarten voor de kijker als die aan de beurt is, anders [] (slagenspel-gemak). */
   legalCards: Card[];
+  /**
+   * Generieke legale zetten voor de kijker als die aan de beurt is (zoals
+   * getLegalMoves teruggeeft), anders []. Spel-onafhankelijk; vervangt op termijn
+   * `legalCards`.
+   */
+  legalMoves: unknown[];
+  /** Spel-specifieke extra toestand (trekstapel, melds, inzet, rollen, ...). */
+  viewExtras?: unknown;
 }
 
 // ---------------------------------------------------------------------------
