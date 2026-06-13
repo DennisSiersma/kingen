@@ -76,12 +76,16 @@ export interface Card {
 // ---------------------------------------------------------------------------
 
 /**
- * Stoelindex aan tafel, met de klok mee. Maximaal 5 stoelen (3-5 spelers).
- * Stoel 0 is altijd de stoel van de lokale (menselijke) hoofdspeler in de UI.
+ * Stoelindex aan tafel (0-gebaseerd, met de klok mee). Het aantal stoelen
+ * hangt van het spel af (Kingen 3-5, Pesten 2-8, Kingsen tot 12, ...), dus Seat
+ * is een gewone `number`. Stoel 0 is in de UI de stoel van de lokale speler.
  */
-export type Seat = 0 | 1 | 2 | 3 | 4;
+export type Seat = number;
 
-export const ALL_SEATS: readonly Seat[] = [0, 1, 2, 3, 4];
+/** De stoelen 0..count-1 voor een tafel met `count` spelers. */
+export function seats(count: number): Seat[] {
+  return Array.from({ length: count }, (_, i) => i);
+}
 
 /** Soort speler op een stoel. */
 export type PlayerKind = 'human' | 'ai';
