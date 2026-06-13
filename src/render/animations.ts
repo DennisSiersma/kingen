@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import type { Card, Seat } from '../core/types.ts';
+import { snelheidsFactor } from '../core/speed.ts';
 import type { CardAnimator, CardRenderer, TableLayout } from './types.ts';
 
 // ---------------------------------------------------------------------------
@@ -68,10 +69,12 @@ export function startTween(opties: {
   const promise = new Promise<void>((res) => {
     resolveFn = res;
   });
+  // Globale speelsnelheid schaalt elke animatieduur (en vertraging) mee.
+  const f = snelheidsFactor();
   const tw: ActieveTween = {
     start: performance.now(),
-    vertraging: opties.vertraging ?? 0,
-    duur: opties.duur,
+    vertraging: (opties.vertraging ?? 0) * f,
+    duur: Math.max(1, opties.duur * f),
     ease: opties.ease ?? easeInOutCubic,
     onUpdate: opties.onUpdate,
     resolve: resolveFn,
@@ -495,11 +498,11 @@ export function createCardAnimator(
       const slot = layout.trickSlot(from, stoelen).clone();
       slot.x += (Math.random() - 0.5) * 0.03;
       slot.z += (Math.random() - 0.5) * 0.03;
-      // Stap groter dan de kaartdikte (6 mm) zodat opeenvolgende slagkaarten
-      // niet in elkaar steken (z-fighting); later gespeelde kaart ligt bovenop.
-      slot.y += slag.length * 0.012;
+      // Laag op tafel houden: net iets meer dan de kaartdikte (3,5 mm) per kaart
+      // zodat ze niet in elkaar steken (z-fighting) maar ook niet zweven.
+      slot.y += 0.0016 + slag.length * 0.004;
       const yaw = slagYaw(from) + (Math.random() - 0.5) * 0.18;
-      // Tekenvolgorde sluit aan op de speelvolgorde: nieuwste kaart vóór.
+      // Tekenvolgorde sluit aan op de speelvolgorde: nieuwste kaart bovenop.
       mesh.renderOrder = 10 + slag.length;
 
       slag.push({ seat: from, card, mesh });

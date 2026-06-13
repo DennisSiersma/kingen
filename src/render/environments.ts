@@ -458,6 +458,9 @@ function stelSchaduwIn(licht: THREE.SpotLight | THREE.DirectionalLight, formaat 
   licht.castShadow = true;
   licht.shadow.mapSize.set(formaat, formaat);
   licht.shadow.bias = -0.0004;
+  // normalBias voorkomt "peter-panning": de lichte spleet tussen een kaart en
+  // zijn eigen slagschaduw waar de gebruiker over klaagde.
+  licht.shadow.normalBias = 0.02;
   licht.shadow.radius = 5;
   if ((licht as THREE.SpotLight).isSpotLight) {
     licht.shadow.camera.near = 0.4;
