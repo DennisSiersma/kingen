@@ -61,7 +61,14 @@ interface Sessie {
   clientId: string;
   name: string;
   room: Room | null;
+  /** Rate-limiter: tellervenster van 1s. */
+  msgVensterStart: number;
+  msgTeller: number;
 }
+
+// Hardening: weiger absurd grote frames en begrens berichten per seconde.
+const MAX_MSG_BYTES = 32 * 1024;
+const MAX_MSG_PER_SEC = 40;
 
 const sessies = new Map<string, Sessie>();
 
@@ -122,7 +129,7 @@ function verwerk(sessie: Sessie, msg: NetMessage): void {
   }
 }
 
-const wss = new WebSocketServer({ server, path: '/ws' });
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: MAX_MSG_BYTES });
 let teller = 0;
 wss.on('connection', (ws: WebSocket) => {
   const id = `c${++teller}`;
@@ -132,10 +139,18 @@ wss.on('connection', (ws: WebSocket) => {
       if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
     },
   };
-  const sessie: Sessie = { conn, clientId: '', name: '', room: null };
+  const sessie: Sessie = { conn, clientId: '', name: '', room: null, msgVensterStart: 0, msgTeller: 0 };
   sessies.set(id, sessie);
 
   ws.on('message', (data) => {
+    // Rate-limit: te veel berichten in 1s → stilletjes negeren (beschermt de tafels).
+    const nu = Date.now();
+    if (nu - sessie.msgVensterStart > 1000) {
+      sessie.msgVensterStart = nu;
+      sessie.msgTeller = 0;
+    }
+    if (++sessie.msgTeller > MAX_MSG_PER_SEC) return;
+
     let msg: NetMessage;
     try {
       msg = JSON.parse(String(data)) as NetMessage;

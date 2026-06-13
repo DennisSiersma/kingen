@@ -47,6 +47,8 @@ export interface RoomInfo {
   code?: string;
   /** Open tafels staan in de lobbylijst; privé tafels alleen joinbaar via code. */
   zichtbaarheid?: 'open' | 'prive';
+  /** Stoel van de host (mag als enige de partij starten); laagste verbonden stoel. */
+  hostSeat?: Seat;
 }
 
 /**

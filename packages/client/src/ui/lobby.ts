@@ -138,8 +138,9 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
   const stoelenLijst = el('ul', 'kg-online-stoelen');
   wachtFase.appendChild(stoelenLijst);
   const startKnop = el('button', 'kg-btn kg-btn--primair') as HTMLButtonElement;
+  const wachtHostRegel = el('p', 'kg-lobby-wacht-host');
   const verlaatKnop = el('button', 'kg-btn kg-btn--stil') as HTMLButtonElement;
-  wachtFase.append(startKnop, verlaatKnop);
+  wachtFase.append(startKnop, wachtHostRegel, verlaatKnop);
   kaart.appendChild(wachtFase);
 
   const terugLink = el('a', 'kg-online-terug') as HTMLAnchorElement;
@@ -228,10 +229,19 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
   function tekenStoelen(room: RoomInfo, mySeat?: Seat): void {
     stoelenLijst.innerHTML = '';
     for (const p of room.players) {
-      stoelenLijst.appendChild(
-        el('li', undefined, `${p.seat + 1}. ${p.config.name}${p.seat === mySeat ? ' (jij)' : ''}`),
-      );
+      const merk = [
+        p.seat === mySeat ? t('lobby.youTag') : '',
+        p.seat === room.hostSeat ? t('lobby.hostTag') : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+      stoelenLijst.appendChild(el('li', undefined, `${p.seat + 1}. ${p.config.name}${merk ? ' ' + merk : ''}`));
     }
+    // Alleen de host ziet de Start-knop; de rest wacht.
+    const benHost = mySeat !== undefined && mySeat === room.hostSeat;
+    startKnop.hidden = !benHost;
+    wachtHostRegel.hidden = benHost;
+    if (!benHost) wachtHostRegel.textContent = t('lobby.waitingForHost');
   }
 
   let mijnStoel: Seat | undefined;

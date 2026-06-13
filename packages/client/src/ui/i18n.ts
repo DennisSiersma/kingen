@@ -247,6 +247,10 @@ const nl = {
   'lobby.tableFull': 'vol',
   'lobby.inProgress': 'bezig',
   'lobby.defaultTableName': 'Tafel van {name}',
+  'lobby.youTag': '(jij)',
+  'lobby.hostTag': '★ host',
+  'lobby.waitingForHost': 'Wacht tot de host de partij start…',
+  'lobby.playAgain': 'Opnieuw spelen',
 
   // Chat
   'chat.title': 'Chat',
@@ -485,6 +489,10 @@ const en: Record<TranslationKey, string> = {
   'lobby.tableFull': 'full',
   'lobby.inProgress': 'in progress',
   'lobby.defaultTableName': "{name}'s table",
+  'lobby.youTag': '(you)',
+  'lobby.hostTag': '★ host',
+  'lobby.waitingForHost': 'Waiting for the host to start…',
+  'lobby.playAgain': 'Play again',
 
   // Chat
   'chat.title': 'Chat',

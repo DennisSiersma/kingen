@@ -122,7 +122,7 @@ export class Room {
     if (!conn) return;
     switch (msg.kind) {
       case 'startGame':
-        this.onStartGame();
+        this.onStartGame(connId);
         break;
       case 'moveRequest':
         this.onMove(connId, msg.seat, msg.move);
@@ -183,9 +183,28 @@ export class Room {
     return true;
   }
 
-  private onStartGame(): void {
+  /** De host is de laagste verbonden stoel; mag als enige starten. Schuift door als de host weggaat. */
+  private hostSeat(): Seat | null {
+    let laagste: Seat | null = null;
+    for (const seat of this.connBySeat.keys()) {
+      if (laagste === null || seat < laagste) laagste = seat;
+    }
+    return laagste;
+  }
+
+  private onStartGame(connId: string): void {
     if (this.inProgress) return;
     if (this.connBySeat.size === 0) return; // minstens één mens
+    // Alleen de host mag de partij starten (voorkomt dat een late joiner per ongeluk start).
+    const seat = this.seatByConn.get(connId);
+    if (seat === undefined || seat !== this.hostSeat()) {
+      this.conns.get(connId)?.send({
+        kind: 'error',
+        code: 'geen-host',
+        melding: 'Alleen de host kan de partij starten',
+      });
+      return;
+    }
     this.inProgress = true;
     this.onGameStart?.();
 
@@ -367,6 +386,7 @@ export class Room {
       inProgress: this.inProgress,
       code: this.code,
       zichtbaarheid: this.zichtbaarheid,
+      hostSeat: this.hostSeat() ?? undefined,
     };
   }
 }

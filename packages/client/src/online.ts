@@ -59,6 +59,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
   // --- spelstate (afgeleid uit events) ---
   let mySeat: Seat = 0;
   let huidigeRoomId = '';
+  let huidigeRoom: import('@shared/net/protocol.ts').RoomInfo | null = null;
   let inRoom = false;
   const leesOpgeslagen = (key: string): string => {
     try {
@@ -167,6 +168,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
       case 'joinedRoom':
         inRoom = true;
         huidigeRoomId = msg.room.id;
+        huidigeRoom = msg.room;
         bewaar('kingen.roomCode', msg.room.code ?? '');
         mySeat = msg.yourSeat;
         scene.setViewerSeat(mySeat);
@@ -175,16 +177,24 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
         lobby.toonWachtkamer(msg.room, mySeat);
         break;
       case 'roomUpdate':
-        if (msg.room.id === huidigeRoomId) lobby.updateRoom(msg.room);
+        if (msg.room.id === huidigeRoomId) {
+          huidigeRoom = msg.room;
+          lobby.updateRoom(msg.room);
+        }
         break;
       case 'gameEvent':
         if (msg.event.type === 'gameStart') lobby.verberg();
         bus.emit(msg.event);
         if (msg.event.type === 'gameEnd') {
           const winnaars = msg.event.winners.map((s) => naamVan(s)).join(', ');
-          void scene.waitForIdle().then(() =>
-            notifications.toon(t('online.gameOver', { winner: winnaars }), { soort: 'succes', duurMs: 8000 }),
-          );
+          void scene.waitForIdle().then(() => {
+            void notifications.toon(t('online.gameOver', { winner: winnaars }), { soort: 'succes', duurMs: 8000 });
+            // Terug naar de wachtkamer zodat de host opnieuw kan starten (anderen wachten).
+            window.setTimeout(() => {
+              hud.hide();
+              if (huidigeRoom) lobby.toonWachtkamer(huidigeRoom, mySeat);
+            }, 5000);
+          });
         }
         break;
       case 'snapshot':
