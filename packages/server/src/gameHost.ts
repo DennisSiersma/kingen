@@ -12,7 +12,7 @@ import { AiPlayer, type PlayerController } from '@kingen/shared/core/player.ts';
 import { getStrategyForDifficulty } from '@kingen/shared/ai/strategies.ts';
 import { createKingenDefinition } from '@kingen/shared/games/kingen/engine.ts';
 import type { KingenVariantConfig } from '@kingen/shared/games/kingen/types.ts';
-import type { Card, GameEvent, PlayerConfig, Seat, Suit } from '@kingen/shared/core/types.ts';
+import type { GameEvent, PlayerConfig, Seat } from '@kingen/shared/core/types.ts';
 import { RemotePlayerController, type MoveRequestPayload } from './remotePlayer.ts';
 
 export interface GameHostDeps {
@@ -85,8 +85,8 @@ export class GameHost {
     this.manager.stop();
   }
 
-  /** Lever een client-zet af bij de juiste stoel. */
-  deliverMove(seat: Seat, move: { type?: string; card?: Card; suit?: Suit; kind?: string }): boolean {
+  /** Lever een client-zet af bij de juiste stoel (de controller valideert hem). */
+  deliverMove(seat: Seat, move: unknown): boolean {
     return this.remotes.get(seat)?.deliver(move) ?? false;
   }
 

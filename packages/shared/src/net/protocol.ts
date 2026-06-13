@@ -6,7 +6,7 @@
  * later de server.
  */
 
-import type { Card, GameEvent, PlayerConfig, Seat, Suit } from '../core/types.ts';
+import type { GameEvent, PlayerConfig, Seat } from '../core/types.ts';
 
 // ---------------------------------------------------------------------------
 // Protocol-typen (toekomstvast: serialiseerbaar als JSON)
@@ -74,17 +74,20 @@ export type NetMessage =
   | { kind: 'startGame'; roomId: string }
   | { kind: 'gameEvent'; roomId: string; event: GameEvent }
   /**
-   * Server vraagt de aan-zet-zijnde client om een zet. De server levert de
-   * legale opties mee zodat de client zelf geen regels hoeft te kennen.
+   * Server vraagt de aan-zet-zijnde client om een zet. `legalMoves` zijn de
+   * (geserialiseerde) legale zetten zoals GameDefinition.getLegalMoves
+   * teruggeeft — de client kiest er één en stuurt die ONGEWIJZIGD terug in een
+   * moveRequest, zodat de client geen spelregels hoeft te kennen. `moveType` is
+   * een hint (het `type`-veld van de zetten) waarop de client de juiste
+   * invoer-UI kiest. Spel-agnostisch: werkt voor kaart/troef/rondekeuze net zo
+   * goed als voor bieden/trekken/afleggen in toekomstige spellen.
    */
   | {
       kind: 'requestMove';
       roomId: string;
       seat: Seat;
-      moveType: 'card' | 'trump' | 'roundKind';
-      legalCards?: Card[];
-      legalSuits?: Suit[];
-      legalKinds?: string[];
+      moveType: string;
+      legalMoves: unknown[];
     }
   /** Een zet van een client naar de host/server (host valideert). */
   | { kind: 'moveRequest'; roomId: string; seat: Seat; move: unknown }

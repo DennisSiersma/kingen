@@ -11,14 +11,12 @@
  */
 
 import type { PlayerController } from '@kingen/shared/core/player.ts';
-import type { Card, PlayerConfig, PublicGameView, Seat, Suit } from '@kingen/shared/core/types.ts';
-import { SUITS } from '@kingen/shared/core/types.ts';
+import type { PlayerConfig, PublicGameView, Seat } from '@kingen/shared/core/types.ts';
 
+/** Spel-agnostisch zet-verzoek voor de client: hint + de legale zetten zelf. */
 export interface MoveRequestPayload {
-  moveType: 'card' | 'trump' | 'roundKind';
-  legalCards?: Card[];
-  legalSuits?: Suit[];
-  legalKinds?: string[];
+  moveType: string;
+  legalMoves: unknown[];
 }
 
 export interface RemotePlayerOpts {
@@ -29,10 +27,9 @@ export interface RemotePlayerOpts {
 }
 
 interface Pending {
-  type: 'card' | 'trump' | 'roundKind';
-  resolve: (value: Card | Suit | string) => void;
-  /** Veilige standaardzet bij time-out. */
-  fallback: Card | Suit | string;
+  resolve: (move: unknown) => void;
+  /** Veilige standaardzet bij time-out (een legale zet). */
+  fallback: unknown;
   timer: ReturnType<typeof setTimeout> | null;
 }
 
@@ -43,6 +40,8 @@ export class RemotePlayerController implements PlayerController {
   private readonly opts: RemotePlayerOpts;
   private pending: Pending | null = null;
   private lastPayload: MoveRequestPayload | null = null;
+  /** De zetten die nu aan de client zijn aangeboden (om het antwoord te valideren). */
+  private pendingLegal: unknown[] = [];
 
   constructor(
     seat: Seat,
@@ -56,11 +55,17 @@ export class RemotePlayerController implements PlayerController {
     this.opts = opts;
   }
 
-  private wacht<T extends Card | Suit | string>(
-    type: Pending['type'],
-    fallback: T,
-  ): Promise<T> {
-    return new Promise<T>((resolve) => {
+  /**
+   * Spel-onafhankelijke zetkeuze: vraag de client om een zet en wacht op het
+   * antwoord. Bij time-out (speler weg) speelt de server de eerste legale zet.
+   */
+  chooseMove(_view: PublicGameView, legalMoves: readonly unknown[]): Promise<unknown> {
+    const moves = [...legalMoves];
+    this.pendingLegal = moves;
+    const moveType = (moves[0] as { type?: string } | undefined)?.type ?? 'move';
+    this.vraag({ moveType, legalMoves: moves });
+    const fallback = moves[0]; // eerste legale zet = veilige standaard
+    return new Promise<unknown>((resolve) => {
       const timer =
         this.opts.timeoutMs && this.opts.timeoutMs > 0
           ? setTimeout(() => {
@@ -70,7 +75,7 @@ export class RemotePlayerController implements PlayerController {
               resolve(fallback);
             }, this.opts.timeoutMs)
           : null;
-      this.pending = { type, resolve: resolve as Pending['resolve'], fallback, timer };
+      this.pending = { resolve, fallback, timer };
     });
   }
 
@@ -79,39 +84,27 @@ export class RemotePlayerController implements PlayerController {
     this.request(payload);
   }
 
-  chooseCard(view: PublicGameView): Promise<Card> {
-    this.vraag({ moveType: 'card', legalCards: view.legalCards });
-    const veilig = view.legalCards[0]!; // er is altijd minstens één legale kaart
-    return this.wacht<Card>('card', veilig);
-  }
-
-  chooseTrump(_view: PublicGameView): Promise<Suit> {
-    this.vraag({ moveType: 'trump', legalSuits: [...SUITS] });
-    return this.wacht<Suit>('trump', SUITS[0]!);
-  }
-
-  chooseRoundKind(_view: PublicGameView, available: string[]): Promise<string> {
-    this.vraag({ moveType: 'roundKind', legalKinds: available });
-    return this.wacht<string>('roundKind', available[0] ?? '');
-  }
-
   /** Stuur het lopende zet-verzoek opnieuw (na een reconnect). */
   resend(): void {
     if (this.pending && this.lastPayload) this.request(this.lastPayload);
   }
 
-  /** Verwerk een binnengekomen moveRequest van de client. */
-  deliver(move: { type?: string; card?: Card; suit?: Suit; kind?: string }): boolean {
+  /**
+   * Verwerk een binnengekomen moveRequest van de client. De zet moet exact één
+   * van de aangeboden legale zetten zijn (waarde-vergelijking); zo niet, dan
+   * wordt hij genegeerd. We resolven met het SERVER-object zodat de engine
+   * gegarandeerd een gevalideerde, legale zet toepast.
+   */
+  deliver(move: unknown): boolean {
     const p = this.pending;
     if (!p) return false;
-    let waarde: Card | Suit | string | undefined;
-    if (p.type === 'card' && move.card) waarde = move.card;
-    else if (p.type === 'trump' && move.suit) waarde = move.suit;
-    else if (p.type === 'roundKind' && move.kind) waarde = move.kind;
-    if (waarde === undefined) return false;
+    const gevraagd = JSON.stringify(move);
+    const match = this.pendingLegal.find((lm) => JSON.stringify(lm) === gevraagd);
+    if (match === undefined) return false;
     if (p.timer) clearTimeout(p.timer);
     this.pending = null;
-    p.resolve(waarde);
+    this.pendingLegal = [];
+    p.resolve(match);
     return true;
   }
 

@@ -316,23 +316,38 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
     scene.toonSnapshot(view);
   }
 
+  // Kingen-zetvormen zoals de server ze in legalMoves aanlevert. De client
+  // kiest er één en stuurt die ONGEWIJZIGD terug (de server matcht op waarde).
+  type KingenMoveJSON =
+    | { type: 'playCard'; card: Card }
+    | { type: 'chooseTrump'; suit: Suit }
+    | { type: 'chooseRoundKind'; kind: string }
+    | { type: 'claimHand' };
+
   async function handleRequest(msg: Extract<import('@shared/net/protocol.ts').NetMessage, { kind: 'requestMove' }>): Promise<void> {
     // Wacht tot de animaties bij zijn, zodat de keuze-UI synchroon loopt.
     await scene.waitForIdle();
     if (msg.seat !== mySeat) return;
-    if (msg.moveType === 'card') {
-      const legaal = new Map<string, Card>((msg.legalCards ?? []).map((c) => [c.id, c]));
-      scene.setPlayableCards([...legaal.keys()]);
+    const legalMoves = (msg.legalMoves ?? []) as KingenMoveJSON[];
+    const stuur = (move: KingenMoveJSON): void => {
+      transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move });
+    };
+
+    // moveType is het `type` van de aangeboden zetten (spel-agnostische hint).
+    if (msg.moveType === 'playCard') {
+      const kaartZetten = new Map<string, KingenMoveJSON>();
+      for (const m of legalMoves) if (m.type === 'playCard') kaartZetten.set(m.card.id, m);
+      scene.setPlayableCards([...kaartZetten.keys()]);
       let klaar = false;
       const kies = (id: string): void => {
-        const kaart = legaal.get(id);
-        if (klaar || !kaart) return;
+        const move = kaartZetten.get(id);
+        if (klaar || !move) return;
         klaar = true;
         stopScene();
         stopUi();
         scene.setPlayableCards([]);
         kaartKeuze = null;
-        transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move: { type: 'playCard', card: kaart } });
+        stuur(move);
       };
       const stopScene = scene.onCardClicked(kies);
       // Ook via een UiEvent (toegankelijkheid + test), net als de offline LokaleMens.
@@ -341,13 +356,17 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
       });
       // Dev-hook (alleen in dev) zodat een geautomatiseerde test een legale
       // kaart kan spelen zonder op de 3D-kaart te hoeven klikken.
-      kaartKeuze = { legaal: [...legaal.keys()], kies };
-    } else if (msg.moveType === 'trump') {
-      const suit = await dialogs.vraagTroef((msg.legalSuits as Suit[]) ?? [...SUITS]);
-      transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move: { type: 'chooseTrump', suit } });
-    } else {
-      const kind = await dialogs.vraagRondeKeuze((msg.legalKinds ?? []) as KingenRoundKind[]);
-      transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move: { type: 'chooseRoundKind', kind } });
+      kaartKeuze = { legaal: [...kaartZetten.keys()], kies };
+    } else if (msg.moveType === 'chooseTrump') {
+      const suits = legalMoves.flatMap((m) => (m.type === 'chooseTrump' ? [m.suit] : []));
+      const suit = await dialogs.vraagTroef(suits.length ? suits : [...SUITS]);
+      const move = legalMoves.find((m) => m.type === 'chooseTrump' && m.suit === suit) ?? legalMoves[0];
+      if (move) stuur(move);
+    } else if (msg.moveType === 'chooseRoundKind') {
+      const kinds = legalMoves.flatMap((m) => (m.type === 'chooseRoundKind' ? [m.kind] : [])) as KingenRoundKind[];
+      const kind = await dialogs.vraagRondeKeuze(kinds);
+      const move = legalMoves.find((m) => m.type === 'chooseRoundKind' && m.kind === kind) ?? legalMoves[0];
+      if (move) stuur(move);
     }
   }
 }

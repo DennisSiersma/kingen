@@ -265,7 +265,7 @@ export class Room {
       });
       return;
     }
-    this.host?.deliverMove(seat, (move ?? {}) as Record<string, never>);
+    this.host?.deliverMove(seat, move ?? {});
   }
 
   // --- Uitgaand -------------------------------------------------------------

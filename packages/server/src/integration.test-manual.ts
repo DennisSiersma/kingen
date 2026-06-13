@@ -43,18 +43,11 @@ function maakClient(id: string, naam: string, room: Room): TestClient {
           break;
         case 'requestMove': {
           if (msg.seat !== client.seat) break;
-          // Speel de eerste legale optie; netwerk-async nabootsen met setImmediate.
+          // Speel de eerste legale zet en stuur hem ongewijzigd terug
+          // (netwerk-async nabootsen met setImmediate).
           setImmediate(() => {
-            let move: { type: string; card?: Card; suit?: Suit; kind?: string };
-            if (msg.moveType === 'card') {
-              const c = (msg.legalCards ?? [])[0];
-              if (!c) return;
-              move = { type: 'playCard', card: c };
-            } else if (msg.moveType === 'trump') {
-              move = { type: 'chooseTrump', suit: (msg.legalSuits ?? [])[0] as Suit };
-            } else {
-              move = { type: 'chooseRoundKind', kind: (msg.legalKinds ?? [])[0] as string };
-            }
+            const move = (msg.legalMoves ?? [])[0];
+            if (move === undefined) return;
             room.handleMessage(id, { kind: 'moveRequest', roomId: ROOM_ID, seat: client.seat as Seat, move });
           });
           break;
