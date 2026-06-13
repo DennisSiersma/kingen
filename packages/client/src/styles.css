@@ -1,0 +1,1284 @@
+/**
+ * src/styles.css
+ * Volledige styling van de DOM-overlay: warm, kaarttafel-chic.
+ * Donkere achtergrond, goudaccenten, serif-koppen. Responsive.
+ */
+
+/* Subtiele ontwerper-signatuur, altijd rechtsonder (setup én spel). */
+#kg-credit {
+  position: fixed;
+  right: 12px;
+  bottom: 9px;
+  z-index: 60;
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: rgba(201, 162, 39, 0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+:root {
+  --kg-bg-deep: #0a0a0f;
+  --kg-panel: rgba(20, 16, 12, 0.94);
+  --kg-panel-soft: rgba(30, 24, 18, 0.88);
+  --kg-panel-line: rgba(201, 162, 39, 0.28);
+  --kg-gold: #c9a227;
+  --kg-gold-bright: #e8c75a;
+  --kg-gold-dim: #8a7020;
+  --kg-cream: #f3e9d2;
+  --kg-text: #e8e0cf;
+  --kg-muted: #a39577;
+  --kg-felt: #1d4d33;
+  --kg-red: #b8412f;
+  --kg-green: #4f9d62;
+  --kg-shadow: 0 18px 50px rgba(0, 0, 0, 0.65);
+  --kg-serif: 'Palatino', 'Palatino Linotype', 'Book Antiqua', Georgia, 'Times New Roman', serif;
+  --kg-sans: 'Avenir Next', 'Segoe UI', 'Helvetica Neue', system-ui, sans-serif;
+  --kg-radius: 14px;
+}
+
+#ui {
+  font-family: var(--kg-sans);
+  color: var(--kg-text);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+#ui *,
+#ui *::before,
+#ui *::after {
+  box-sizing: border-box;
+}
+
+/* `hidden` wint altijd, ook van display:flex-regels hieronder. */
+#ui [hidden] {
+  display: none !important;
+}
+
+#ui h1, #ui h2, #ui h3, #ui h4 {
+  font-family: var(--kg-serif);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0;
+  color: var(--kg-cream);
+}
+
+#ui button {
+  font: inherit;
+  cursor: pointer;
+}
+
+#ui input,
+#ui select {
+  font: inherit;
+}
+
+/* ---------------------------------------------------------------------------
+ * Gedeelde bouwstenen
+ * ------------------------------------------------------------------------ */
+
+.kg-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(201, 162, 39, 0.08), transparent 60%),
+    rgba(5, 4, 3, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 60;
+  animation: kg-fade-in 240ms ease-out;
+  padding: 18px;
+}
+
+@keyframes kg-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes kg-rise-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.kg-panel {
+  background: linear-gradient(160deg, rgba(34, 27, 19, 0.97), rgba(16, 13, 10, 0.97));
+  border: 1px solid var(--kg-panel-line);
+  border-radius: var(--kg-radius);
+  box-shadow: var(--kg-shadow), inset 0 1px 0 rgba(232, 199, 90, 0.12);
+  animation: kg-rise-in 300ms cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+.kg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  padding: 0.62em 1.5em;
+  border-radius: 10px;
+  border: 1px solid var(--kg-gold-dim);
+  background: linear-gradient(180deg, #e3bf4b, #b8901f 55%, #9c7818);
+  color: #241b08;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 0 rgba(255, 240, 190, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 235, 170, 0.55);
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+.kg-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.kg-btn:active { transform: translateY(0); filter: brightness(0.95); }
+
+.kg-btn:disabled {
+  filter: grayscale(0.7) brightness(0.6);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.kg-btn--groot {
+  font-family: var(--kg-serif);
+  font-size: 1.18rem;
+  padding: 0.7em 2.4em;
+}
+
+.kg-btn--stil {
+  background: rgba(201, 162, 39, 0.08);
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  color: var(--kg-gold-bright);
+  text-shadow: none;
+  box-shadow: none;
+}
+
+.kg-btn--stil:hover { background: rgba(201, 162, 39, 0.18); }
+
+.kg-btn--mini {
+  padding: 0.2em 0.55em;
+  font-size: 0.85rem;
+  border-radius: 7px;
+}
+
+.kg-veld input[type='text'],
+.kg-veld select,
+#ui .kg-select {
+  width: 100%;
+  background: rgba(8, 6, 4, 0.7);
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  border-radius: 8px;
+  color: var(--kg-cream);
+  padding: 0.45em 0.7em;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.kg-veld input[type='text']:focus,
+.kg-veld select:focus,
+#ui .kg-select:focus {
+  border-color: var(--kg-gold-bright);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.18);
+}
+
+#ui select option { background: #1c160f; color: var(--kg-cream); }
+
+.kg-hint {
+  font-size: 0.8rem;
+  color: var(--kg-muted);
+  margin: 0.15em 0 0;
+}
+
+.kg-divider {
+  border: none;
+  border-top: 1px solid rgba(201, 162, 39, 0.18);
+  margin: 14px 0;
+}
+
+/* Suit-kleuren */
+.kg-suit-rood { color: #e0584a; }
+.kg-suit-zwart { color: var(--kg-cream); }
+
+/* ---------------------------------------------------------------------------
+ * Setup-scherm
+ * ------------------------------------------------------------------------ */
+
+.kg-setup {
+  width: min(1060px, 96vw);
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.kg-setup__kop {
+  position: relative;
+  text-align: center;
+  padding: 26px 28px 14px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.18);
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(201, 162, 39, 0.12), transparent 70%);
+}
+
+/* Taalschakelaar (NL/EN) rechtsboven in het setup-scherm */
+.kg-taalwissel {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  display: flex;
+  gap: 0;
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.kg-taalwissel__knop {
+  padding: 0.35em 0.85em;
+  background: rgba(201, 162, 39, 0.05);
+  color: var(--kg-muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  border: none;
+  transition: all 130ms ease;
+}
+
+.kg-taalwissel__knop + .kg-taalwissel__knop {
+  border-left: 1px solid rgba(201, 162, 39, 0.35);
+}
+
+.kg-taalwissel__knop:hover { color: var(--kg-gold-bright); }
+
+.kg-taalwissel__knop.is-actief {
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.32), rgba(201, 162, 39, 0.14));
+  color: var(--kg-gold-bright);
+}
+
+.kg-setup__titel {
+  font-size: clamp(2rem, 5vw, 2.9rem);
+  letter-spacing: 0.08em;
+  color: var(--kg-gold-bright);
+  text-shadow: 0 2px 18px rgba(201, 162, 39, 0.35);
+}
+
+.kg-setup__titel .kg-suit-deco {
+  font-size: 0.6em;
+  vertical-align: 0.25em;
+  margin: 0 0.4em;
+  color: var(--kg-gold);
+}
+
+.kg-setup__ondertitel {
+  margin: 4px 0 0;
+  color: var(--kg-muted);
+  font-style: italic;
+  font-family: var(--kg-serif);
+}
+
+.kg-setup__body {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.kg-setup__kolom {
+  padding: 20px 26px 24px;
+  min-width: 0;
+}
+
+.kg-setup__kolom + .kg-setup__kolom {
+  border-left: 1px solid rgba(201, 162, 39, 0.14);
+}
+
+.kg-setup__sectiekop {
+  font-size: 1.12rem;
+  color: var(--kg-gold-bright);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+}
+
+.kg-setup__sectiekop::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(201, 162, 39, 0.35), transparent);
+  align-self: center;
+}
+
+.kg-setup__sectie { margin-bottom: 22px; }
+
+.kg-setup__voet {
+  padding: 14px 26px;
+  border-top: 1px solid rgba(201, 162, 39, 0.18);
+  display: flex;
+  justify-content: center;
+  background: rgba(10, 8, 6, 0.6);
+}
+
+/* Aantal spelers */
+.kg-aantal {
+  display: flex;
+  gap: 10px;
+}
+
+.kg-aantal__knop {
+  flex: 1;
+  padding: 0.55em 0;
+  border-radius: 10px;
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  background: rgba(201, 162, 39, 0.05);
+  color: var(--kg-text);
+  font-family: var(--kg-serif);
+  font-size: 1.1rem;
+  transition: all 130ms ease;
+}
+
+.kg-aantal__knop:hover { border-color: var(--kg-gold); }
+
+.kg-aantal__knop.is-actief {
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.3), rgba(201, 162, 39, 0.12));
+  border-color: var(--kg-gold-bright);
+  color: var(--kg-gold-bright);
+  box-shadow: inset 0 1px 0 rgba(232, 199, 90, 0.25);
+}
+
+/* Stoelen */
+.kg-stoel {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 0;
+}
+
+.kg-stoel__nr {
+  font-family: var(--kg-serif);
+  color: var(--kg-gold);
+  text-align: center;
+  font-size: 1.05rem;
+}
+
+.kg-stoel__naam input { width: 100%; }
+
+.kg-soort {
+  display: inline-flex;
+  border: 1px solid rgba(201, 162, 39, 0.32);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.kg-soort__knop {
+  padding: 0.34em 0.7em;
+  background: transparent;
+  border: none;
+  color: var(--kg-muted);
+  font-size: 0.85rem;
+  transition: all 120ms ease;
+}
+
+.kg-soort__knop.is-actief {
+  background: rgba(201, 162, 39, 0.25);
+  color: var(--kg-gold-bright);
+}
+
+.kg-soort__knop:disabled { cursor: default; }
+
+.kg-stoel select { min-width: 108px; }
+
+/* Variantopties */
+.kg-variant-regel {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.kg-variant-regel input[type='checkbox'] {
+  margin-top: 0.3em;
+  width: 17px;
+  height: 17px;
+  accent-color: var(--kg-gold);
+  flex-shrink: 0;
+}
+
+.kg-variant-regel__tekst { min-width: 0; }
+
+.kg-variant-regel__label {
+  color: var(--kg-cream);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kg-variant-groepkop {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--kg-gold);
+  margin: 14px 0 4px;
+}
+
+.kg-variant-rij {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.kg-variant-rij select { min-width: 180px; width: auto; }
+
+.kg-preset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(201, 162, 39, 0.06);
+  border: 1px dashed rgba(201, 162, 39, 0.35);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+/* Rondevolgorde */
+.kg-volgorde { list-style: none; margin: 0; padding: 0; }
+
+.kg-volgorde li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--kg-text);
+}
+
+.kg-volgorde__nr {
+  width: 1.4em;
+  color: var(--kg-gold);
+  font-family: var(--kg-serif);
+  text-align: right;
+}
+
+.kg-volgorde__naam { flex: 1; }
+
+.kg-volgorde.is-uit { opacity: 0.4; pointer-events: none; }
+
+/* Omgevingskaarten */
+.kg-omgevingen {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.kg-omgeving {
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  border-radius: 12px;
+  background: rgba(8, 6, 4, 0.55);
+  padding: 12px 10px;
+  text-align: center;
+  color: var(--kg-text);
+  transition: all 140ms ease;
+}
+
+.kg-omgeving:hover { border-color: var(--kg-gold); transform: translateY(-2px); }
+
+.kg-omgeving.is-actief {
+  border-color: var(--kg-gold-bright);
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.18), rgba(201, 162, 39, 0.05));
+  box-shadow: 0 0 0 1px var(--kg-gold-bright), 0 6px 20px rgba(201, 162, 39, 0.15);
+}
+
+.kg-omgeving__icoon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 6px;
+  display: block;
+}
+
+.kg-omgeving__naam {
+  font-family: var(--kg-serif);
+  font-size: 1.02rem;
+  color: var(--kg-cream);
+}
+
+.kg-omgeving__tekst {
+  font-size: 0.76rem;
+  color: var(--kg-muted);
+  margin-top: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+ * HUD
+ * ------------------------------------------------------------------------ */
+
+#ui div.kg-hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.kg-hud .kg-klikbaar { pointer-events: auto; }
+
+.kg-hud__ronde {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--kg-panel);
+  border: 1px solid var(--kg-panel-line);
+  border-radius: 12px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+}
+
+.kg-hud__rondelabel {
+  font-family: var(--kg-serif);
+  font-size: 1.12rem;
+  color: var(--kg-gold-bright);
+}
+
+.kg-hud__rondeteller {
+  font-size: 0.78rem;
+  color: var(--kg-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kg-hud__info {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  background: rgba(201, 162, 39, 0.1);
+  color: var(--kg-gold-bright);
+  font-family: var(--kg-serif);
+  font-size: 0.85rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 130ms ease;
+}
+
+.kg-hud__info:hover { border-color: var(--kg-gold-bright); }
+
+.kg-hud__info.is-actief {
+  background: rgba(201, 162, 39, 0.32);
+  border-color: var(--kg-gold-bright);
+}
+
+/* Togglebaar paneel met het doel van de huidige ronde (onder het rondepaneel) */
+.kg-hud__uitleg {
+  position: absolute;
+  top: 84px;
+  left: 14px;
+  width: 252px;
+  background: var(--kg-panel);
+  border: 1px solid var(--kg-panel-line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  animation: kg-fade-in 160ms ease-out;
+}
+
+.kg-hud__uitlegkop {
+  font-family: var(--kg-serif);
+  font-size: 0.82rem;
+  color: var(--kg-gold-bright);
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+}
+
+.kg-hud__uitlegtekst {
+  font-size: 0.82rem;
+  color: var(--kg-text);
+}
+
+.kg-hud__troef {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--kg-gold-bright);
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.28), rgba(201, 162, 39, 0.14));
+  box-shadow: 0 0 14px rgba(201, 162, 39, 0.45), inset 0 0 6px rgba(201, 162, 39, 0.2);
+  font-size: 0.96rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--kg-gold-bright);
+  animation: kg-troef-puls 2.4s ease-in-out infinite;
+}
+
+.kg-hud__troef .kg-troefsymbool {
+  font-size: 1.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+
+/* Rode troefkleuren (harten/ruiten) krijgen een rode chip, zwarte een witte. */
+.kg-hud__troef:has(.kg-suit-rood) {
+  border-color: #ff6b6b;
+  background: linear-gradient(180deg, rgba(220, 60, 60, 0.34), rgba(180, 40, 40, 0.18));
+  box-shadow: 0 0 14px rgba(220, 60, 60, 0.5), inset 0 0 6px rgba(220, 60, 60, 0.25);
+  color: #ffd9d9;
+}
+
+.kg-hud__troef .kg-suit-rood { color: #ff5a5a; }
+.kg-hud__troef .kg-suit-zwart { color: #1a1a1a; text-shadow: 0 0 2px rgba(255, 255, 255, 0.8); }
+
+@keyframes kg-troef-puls {
+  0%, 100% { box-shadow: 0 0 12px rgba(201, 162, 39, 0.4), inset 0 0 6px rgba(201, 162, 39, 0.18); }
+  50% { box-shadow: 0 0 20px rgba(201, 162, 39, 0.7), inset 0 0 8px rgba(201, 162, 39, 0.3); }
+}
+
+/* "Geen troef" (negatieve rondes): rustige, gedempte chip zonder puls/gloed,
+   zodat duidelijk is dát er geen troef is. */
+.kg-hud__troef.is-geen {
+  border-color: var(--kg-panel-line);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  color: var(--kg-muted);
+  animation: none;
+}
+
+.kg-hud__troef.is-geen .kg-troefsymbool {
+  font-size: 1.1rem;
+  filter: none;
+  color: var(--kg-muted);
+}
+
+/* Spelerschips */
+.kg-hud__spelers {
+  /* Eigen rij onder de bovenbalk, zodat hij nooit met het rondepaneel
+     of de knoppen rechtsboven botst. */
+  position: absolute;
+  top: 82px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  /* Absoluut + gecentreerd: zonder max-content klemt de breedte op de
+     ruimte rechts van left:50%. */
+  width: max-content;
+  max-width: min(880px, 92vw);
+}
+
+.kg-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--kg-panel-soft);
+  border: 1px solid rgba(201, 162, 39, 0.22);
+  border-radius: 999px;
+  padding: 6px 14px 6px 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  transition: all 180ms ease;
+}
+
+.kg-chip__avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #3a2f1d, #181208);
+  border: 1px solid rgba(201, 162, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--kg-serif);
+  color: var(--kg-gold-bright);
+  font-size: 0.95rem;
+}
+
+.kg-chip__naam {
+  font-weight: 600;
+  color: var(--kg-cream);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.kg-chip__soort {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--kg-muted);
+}
+
+.kg-chip__tellers {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Totaal (straf)punten: prominent, kleur volgt het teken. */
+.kg-chip__punten {
+  min-width: 2em;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--kg-panel-line);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--kg-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.kg-chip__punten.is-positief {
+  color: #7ee0a0;
+  border-color: rgba(126, 224, 160, 0.5);
+  background: rgba(126, 224, 160, 0.12);
+}
+
+.kg-chip__punten.is-negatief {
+  color: #ff8a8a;
+  border-color: rgba(255, 138, 138, 0.5);
+  background: rgba(255, 138, 138, 0.12);
+}
+
+/* Gewonnen slagen deze ronde: kleiner, secundair. */
+.kg-chip__slagen {
+  min-width: 1.4em;
+  text-align: center;
+  background: rgba(201, 162, 39, 0.14);
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 0.72rem;
+  color: var(--kg-gold-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+.kg-chip__slagen::before {
+  content: '♠ ';
+  opacity: 0.7;
+}
+
+.kg-chip.is-aan-beurt {
+  border-color: var(--kg-gold-bright);
+  box-shadow: 0 0 0 1px var(--kg-gold-bright), 0 0 22px rgba(232, 199, 90, 0.45);
+  transform: translateY(-2px);
+}
+
+.kg-chip.is-aan-beurt .kg-chip__avatar {
+  background: radial-gradient(circle at 32% 28%, #6d5414, #2c2008);
+  animation: kg-pols 1.4s ease-in-out infinite;
+}
+
+@keyframes kg-pols {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 199, 90, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(232, 199, 90, 0); }
+}
+
+/* HUD-knoppen rechtsboven */
+.kg-hud__knoppen {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.kg-hud__knop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--kg-panel);
+  border: 1px solid var(--kg-panel-line);
+  border-radius: 10px;
+  color: var(--kg-gold-bright);
+  font-size: 0.88rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  transition: all 130ms ease;
+}
+
+.kg-hud__knop:hover { border-color: var(--kg-gold-bright); background: rgba(40, 32, 22, 0.96); }
+
+/* Claim-knop (variant 'hand afleggen'): ondermidden, boven de eigen hand */
+.kg-hud__claim {
+  position: absolute;
+  bottom: 30vh;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(16, 13, 10, 0.88);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.kg-hud__claim:hover { transform: translateX(-50%) translateY(-1px); }
+.kg-hud__claim:active { transform: translateX(-50%); }
+
+/* Instellingenmenu */
+.kg-hud__menu {
+  position: absolute;
+  top: 60px;
+  right: 14px;
+  width: 250px;
+  background: var(--kg-panel);
+  border: 1px solid var(--kg-panel-line);
+  border-radius: 12px;
+  box-shadow: var(--kg-shadow);
+  padding: 12px 14px;
+  pointer-events: auto;
+  animation: kg-rise-in 160ms ease-out;
+}
+
+.kg-hud__menu h4 { font-size: 0.95rem; margin-bottom: 8px; }
+
+.kg-hud__menu .kg-menu-regel { margin-bottom: 10px; }
+
+.kg-hud__menu .kg-menu-regel label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--kg-muted);
+  margin-bottom: 3px;
+}
+
+.kg-menu-uit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--kg-muted);
+}
+
+/* Helderheid-slider in het instellingenmenu */
+.kg-slider-rij {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#ui .kg-slider {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--kg-gold);
+  cursor: pointer;
+}
+
+.kg-slider-waarde {
+  min-width: 3em;
+  text-align: right;
+  font-size: 0.82rem;
+  color: var(--kg-gold-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Schakelregel (label + checkbox) in het instellingenmenu */
+.kg-hud__menu .kg-menu-schakel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.kg-hud__menu .kg-menu-schakel label {
+  margin-bottom: 0;
+  font-size: 0.85rem;
+  color: var(--kg-text);
+  cursor: pointer;
+}
+
+.kg-menu-schakel input[type='checkbox'] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--kg-gold);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Meldingen / toasts
+ * ------------------------------------------------------------------------ */
+
+#ui div.kg-toasts {
+  position: fixed;
+  top: 146px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.kg-toast {
+  background: var(--kg-panel);
+  border: 1px solid var(--kg-panel-line);
+  border-left: 3px solid var(--kg-gold);
+  border-radius: 10px;
+  padding: 9px 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  font-size: 0.95rem;
+  color: var(--kg-cream);
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 220ms ease, transform 220ms ease;
+  max-width: min(440px, 86vw);
+  text-align: center;
+}
+
+.kg-toast.is-zichtbaar { opacity: 1; transform: translateY(0); }
+
+.kg-toast--succes { border-left-color: var(--kg-green); }
+.kg-toast--waarschuwing { border-left-color: var(--kg-red); }
+
+/* Ronde-aankondiging */
+#ui div.kg-aankondiging {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 45;
+}
+
+.kg-aankondiging__tekst {
+  font-family: var(--kg-serif);
+  font-size: clamp(1.7rem, 5vw, 3.2rem);
+  color: var(--kg-gold-bright);
+  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.8), 0 0 60px rgba(201, 162, 39, 0.4);
+  letter-spacing: 0.06em;
+  padding: 18px 46px;
+  border-top: 1px solid rgba(201, 162, 39, 0.55);
+  border-bottom: 1px solid rgba(201, 162, 39, 0.55);
+  background: linear-gradient(90deg, transparent, rgba(10, 8, 5, 0.82) 18%, rgba(10, 8, 5, 0.82) 82%, transparent);
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 320ms ease, transform 380ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  text-align: center;
+}
+
+.kg-aankondiging__tekst.is-zichtbaar { opacity: 1; transform: scale(1); }
+
+/* ---------------------------------------------------------------------------
+ * Keuzedialogen
+ * ------------------------------------------------------------------------ */
+
+/* Doorkijk-variant: dialoog hoog in beeld, tafel (en eigen hand) zichtbaar —
+   gebruikt voor troef- en spelkeuze ná het delen. */
+.kg-overlay--kijkdoor {
+  align-items: flex-start;
+  padding-top: 56px;
+  background: rgba(5, 4, 3, 0.32);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.kg-dialoog {
+  width: min(520px, 94vw);
+  padding: 26px 30px;
+  text-align: center;
+}
+
+.kg-dialoog h3 {
+  font-size: 1.5rem;
+  color: var(--kg-gold-bright);
+  margin-bottom: 4px;
+}
+
+.kg-dialoog__sub { color: var(--kg-muted); margin: 0 0 18px; font-size: 0.9rem; }
+
+.kg-troefkeuze {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.kg-troefknop {
+  width: 92px;
+  padding: 14px 0 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  background: linear-gradient(180deg, #f7f1e0, #e2d7bd);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 #fff;
+  transition: all 140ms ease;
+}
+
+.kg-troefknop:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6), 0 0 0 2px var(--kg-gold-bright);
+}
+
+.kg-troefknop:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.kg-troefknop__symbool { display: block; font-size: 2.3rem; line-height: 1.1; }
+.kg-troefknop__naam { display: block; font-size: 0.8rem; color: #4a3c22; font-weight: 700; }
+
+.kg-troefknop .kg-suit-zwart { color: #1c1a16; }
+.kg-troefknop .kg-suit-rood { color: #c0392b; }
+
+/* Rondekeuze (dubbelkingen) */
+.kg-rondekeuze {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.kg-rondeknop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  background: rgba(201, 162, 39, 0.05);
+  color: var(--kg-text);
+  transition: all 130ms ease;
+  text-align: left;
+}
+
+.kg-rondeknop:hover:not(:disabled) {
+  border-color: var(--kg-gold-bright);
+  background: rgba(201, 162, 39, 0.14);
+  transform: translateX(3px);
+}
+
+.kg-rondeknop:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.kg-rondeknop__naam { font-family: var(--kg-serif); font-size: 1.05rem; color: var(--kg-cream); }
+.kg-rondeknop__uitleg { font-size: 0.78rem; color: var(--kg-muted); }
+.kg-rondeknop__status { font-size: 0.72rem; color: var(--kg-red); white-space: nowrap; }
+
+/* Eindstand */
+.kg-eindstand { width: min(560px, 94vw); padding: 30px 34px; text-align: center; }
+
+.kg-eindstand__kroon {
+  font-size: 2.6rem;
+  color: var(--kg-gold-bright);
+  text-shadow: 0 0 30px rgba(232, 199, 90, 0.6);
+  margin-bottom: 2px;
+}
+
+.kg-eindstand h3 { font-size: 1.9rem; color: var(--kg-gold-bright); }
+
+.kg-eindstand__winnaar {
+  font-family: var(--kg-serif);
+  font-size: 1.15rem;
+  color: var(--kg-cream);
+  margin: 4px 0 20px;
+}
+
+.kg-eindstand__lijst { list-style: none; margin: 0 0 24px; padding: 0; }
+
+.kg-eindstand__rij {
+  display: grid;
+  grid-template-columns: 2.2em 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: rgba(201, 162, 39, 0.05);
+  border: 1px solid rgba(201, 162, 39, 0.15);
+  text-align: left;
+}
+
+.kg-eindstand__rij.is-winnaar {
+  background: linear-gradient(90deg, rgba(201, 162, 39, 0.25), rgba(201, 162, 39, 0.08));
+  border-color: var(--kg-gold-bright);
+}
+
+.kg-eindstand__plek { font-family: var(--kg-serif); color: var(--kg-gold); font-size: 1.1rem; }
+.kg-eindstand__naam { font-weight: 600; color: var(--kg-cream); }
+.kg-eindstand__punten { font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+
+.kg-eindstand__knoppen { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* ---------------------------------------------------------------------------
+ * Scorebord (zijpaneel)
+ * ------------------------------------------------------------------------ */
+
+#ui aside.kg-scorebord {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(440px, 94vw);
+  background: linear-gradient(200deg, rgba(28, 22, 15, 0.97), rgba(13, 10, 8, 0.98));
+  border-left: 1px solid var(--kg-panel-line);
+  box-shadow: -16px 0 50px rgba(0, 0, 0, 0.6);
+  transform: translateX(102%);
+  transition: transform 280ms cubic-bezier(0.22, 0.9, 0.3, 1);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+
+#ui aside.kg-scorebord.is-open { transform: translateX(0); }
+
+.kg-scorebord__kop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 10px;
+}
+
+.kg-scorebord__kop h3 { font-size: 1.35rem; color: var(--kg-gold-bright); }
+
+.kg-scorebord__sluit {
+  background: none;
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  border-radius: 8px;
+  color: var(--kg-gold-bright);
+  width: 32px;
+  height: 32px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.kg-scorebord__sluit:hover { background: rgba(201, 162, 39, 0.15); }
+
+.kg-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.2);
+}
+
+.kg-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--kg-muted);
+  padding: 8px 14px;
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+}
+
+.kg-tab.is-actief {
+  color: var(--kg-gold-bright);
+  border-bottom-color: var(--kg-gold-bright);
+}
+
+.kg-tab:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.kg-tab__badge {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(201, 162, 39, 0.18);
+  border-radius: 999px;
+  padding: 1px 7px;
+  margin-left: 6px;
+  color: var(--kg-gold);
+}
+
+.kg-scorebord__inhoud {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px 20px;
+}
+
+.kg-scoretabel {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.kg-scoretabel th,
+.kg-scoretabel td {
+  padding: 6px 8px;
+  text-align: right;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.1);
+  white-space: nowrap;
+}
+
+.kg-scoretabel th:first-child,
+.kg-scoretabel td:first-child {
+  text-align: left;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kg-scoretabel thead th {
+  font-family: var(--kg-serif);
+  color: var(--kg-gold-bright);
+  border-bottom: 1px solid rgba(201, 162, 39, 0.4);
+  font-weight: 600;
+}
+
+.kg-scoretabel .kg-rij--troef td:first-child { color: var(--kg-gold-bright); }
+.kg-scoretabel .kg-rij--negatief td:first-child { color: var(--kg-muted); }
+
+.kg-score-pos { color: var(--kg-green); }
+.kg-score-neg { color: #e0584a; }
+.kg-score-nul { color: var(--kg-muted); }
+
+.kg-scoretabel tfoot td {
+  border-top: 2px solid rgba(201, 162, 39, 0.5);
+  border-bottom: none;
+  font-weight: 700;
+  color: var(--kg-cream);
+  padding-top: 9px;
+}
+
+.kg-scoretabel tfoot td.is-beste {
+  color: var(--kg-gold-bright);
+  text-shadow: 0 0 12px rgba(232, 199, 90, 0.5);
+}
+
+.kg-scoretabel tfoot td.is-slechtste { color: #e0584a; }
+
+.kg-scorebord__leeg {
+  color: var(--kg-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 30px 10px;
+}
+
+.kg-chat-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  color: var(--kg-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------------
+ * Responsive
+ * ------------------------------------------------------------------------ */
+
+@media (max-width: 860px) {
+  .kg-setup__body { grid-template-columns: 1fr; }
+  .kg-setup__kolom + .kg-setup__kolom {
+    border-left: none;
+    border-top: 1px solid rgba(201, 162, 39, 0.14);
+  }
+  .kg-chip { padding: 4px 10px 4px 6px; }
+  .kg-chip__soort { display: none; }
+}
+
+@media (max-width: 560px) {
+  .kg-omgevingen { grid-template-columns: 1fr; }
+  .kg-stoel { grid-template-columns: 22px minmax(0, 1fr) auto; }
+  .kg-stoel select { grid-column: 2 / -1; }
+  .kg-hud__ronde { left: 8px; top: 8px; padding: 7px 10px; gap: 8px; }
+  .kg-hud__knoppen { right: 8px; top: 8px; }
+}
