@@ -5,41 +5,76 @@
  */
 
 import type { Card, CardId, Rank, Seat, Suit } from './types.ts';
-import { RANKS, SUITS } from './types.ts';
+import { ACE, RANKS, SUITS } from './types.ts';
 
-/** Maak een Card-object (gememoiseerd is toegestaan; objecten zijn immutabel). */
-export function makeCard(suit: Suit, rank: Rank): Card {
-  return { id: cardId(suit, rank), suit, rank };
+/**
+ * Maak een Card-object. `instance` > 0 markeert een extra deck-kopie (krijgt een
+ * uniek id met `#n` en `instanceId`); 0/undefined = eerste/enige deck (kaal id,
+ * byte-identiek aan vroeger).
+ */
+export function makeCard(suit: Suit, rank: Rank, instance?: number): Card {
+  const id = cardId(suit, rank, instance);
+  return instance && instance > 0 ? { id, suit, rank, instanceId: instance } : { id, suit, rank };
 }
 
-/** Stabiele id: `${suit}-${rank}`. */
-export function cardId(suit: Suit, rank: Rank): CardId {
-  return `${suit}-${rank}`;
+/** Stabiele id: `${suit}-${rank}`, of `${suit}-${rank}#${instance}` voor extra decks. */
+export function cardId(suit: Suit, rank: Rank, instance?: number): CardId {
+  return instance && instance > 0 ? `${suit}-${rank}#${instance}` : `${suit}-${rank}`;
+}
+
+/** Suit/rank van een joker zijn placeholders; gebruik isJoker() om hem te herkennen. */
+const JOKER_SUIT: Suit = 'spades';
+
+/** Maak een joker met index `n` (id `joker-${n}`). */
+export function makeJoker(n: number): Card {
+  return { id: `joker-${n}`, suit: JOKER_SUIT, rank: ACE, joker: true, instanceId: n };
+}
+
+/** Is deze kaart een joker? (Suit/rank zijn dan placeholders.) */
+export function isJoker(card: Card): boolean {
+  return card.joker === true;
 }
 
 /** Parse een CardId terug naar een Card. Gooit Error bij ongeldig id. */
 export function cardFromId(id: CardId): Card {
-  const sep = id.lastIndexOf('-');
-  const suit = id.slice(0, sep) as Suit;
-  const rank = Number(id.slice(sep + 1)) as Rank;
+  if (id.startsWith('joker-')) {
+    const n = Number(id.slice('joker-'.length));
+    return makeJoker(Number.isFinite(n) ? n : 0);
+  }
+  const hash = id.indexOf('#');
+  const core = hash === -1 ? id : id.slice(0, hash);
+  const instance = hash === -1 ? undefined : Number(id.slice(hash + 1));
+  const sep = core.lastIndexOf('-');
+  const suit = core.slice(0, sep) as Suit;
+  const rank = Number(core.slice(sep + 1)) as Rank;
   if (!SUITS.includes(suit) || !RANKS.includes(rank)) {
     throw new Error(`Ongeldige CardId: ${id}`);
   }
-  return makeCard(suit, rank);
+  return makeCard(suit, rank, instance);
 }
 
 /**
- * Volledig spel van 52 kaarten, optioneel met verwijderde kaarten
- * (bijv. ♠2 bij 3 spelers; ♠2+♣2 of de zwarte zevens bij 5 spelers).
+ * Bouw een spel. Standaard 52 kaarten (één deck, geen jokers) — identiek aan
+ * vroeger. `opts.copies` herhaalt het hele deck (Jokeren: 2), `opts.jokers`
+ * voegt N jokers toe (Pesten/Jokeren). `removed` schrapt kaarten op id
+ * (bijv. ♠2 bij 3 spelers) uit elke kopie.
  */
-export function createDeck(removed: readonly CardId[] = []): Card[] {
+export function createDeck(
+  removed: readonly CardId[] = [],
+  opts: { copies?: number; jokers?: number } = {},
+): Card[] {
+  const copies = Math.max(1, opts.copies ?? 1);
   const out: Card[] = [];
-  for (const suit of SUITS) {
-    for (const rank of RANKS) {
-      const id = cardId(suit, rank);
-      if (!removed.includes(id)) out.push(makeCard(suit, rank));
+  for (let copy = 0; copy < copies; copy++) {
+    for (const suit of SUITS) {
+      for (const rank of RANKS) {
+        if (!removed.includes(cardId(suit, rank, copy)) && !removed.includes(cardId(suit, rank))) {
+          out.push(makeCard(suit, rank, copy));
+        }
+      }
     }
   }
+  for (let j = 0; j < (opts.jokers ?? 0); j++) out.push(makeJoker(j));
   return out;
 }
 
@@ -93,11 +128,13 @@ export function deal(deck: readonly Card[], seatCount: number, dealer: Seat): Ca
  */
 export function sortHand(hand: readonly Card[]): Card[] {
   const order: Suit[] = ['clubs', 'diamonds', 'spades', 'hearts'];
-  return hand
-    .slice()
-    .sort((a, b) =>
-      a.suit === b.suit ? a.rank - b.rank : order.indexOf(a.suit) - order.indexOf(b.suit),
-    );
+  return hand.slice().sort((a, b) => {
+    const ja = isJoker(a);
+    const jb = isJoker(b);
+    if (ja !== jb) return ja ? 1 : -1; // jokers achteraan
+    if (ja && jb) return (a.instanceId ?? 0) - (b.instanceId ?? 0);
+    return a.suit === b.suit ? a.rank - b.rank : order.indexOf(a.suit) - order.indexOf(b.suit);
+  });
 }
 
 /**

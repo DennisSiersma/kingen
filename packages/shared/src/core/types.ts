@@ -59,16 +59,30 @@ export const RANK_LABELS_EN: Readonly<Record<Rank, string>> = {
 };
 
 /**
- * Stabiele kaart-id, formaat `${suit}-${rank}`, bijv. "hearts-13" (hartenheer).
- * Wordt gebruikt als sleutel in maps, netwerkprotocol en render-cache.
+ * Stabiele kaart-id, als opake sleutel in maps, netwerkprotocol en render-cache.
+ * Formaten:
+ *  - standaardkaart:        `${suit}-${rank}`     bijv. "hearts-13"
+ *  - extra deck-kopie (>0): `${suit}-${rank}#${n}` bijv. "hearts-13#1"
+ *  - joker:                 `joker-${n}`          bijv. "joker-0"
+ * Parse via cardFromId(). (Was de literal-template `${Suit}-${number}`; verbreed
+ * naar string voor jokers en meerdere decks.)
  */
-export type CardId = `${Suit}-${number}`;
+export type CardId = string;
 
 /** Een speelkaart. Immutabel behandelen. */
 export interface Card {
   readonly id: CardId;
   readonly suit: Suit;
   readonly rank: Rank;
+  /** Kopie-index bij spellen met meerdere decks (0/undefined = eerste/enige deck). */
+  readonly instanceId?: number;
+  /**
+   * True voor een joker. Een joker heeft GEEN betekenisvolle suit/rank
+   * (placeholderwaarden); code die jokers kan tegenkomen moet eerst isJoker()
+   * checken. Jokers komen alleen voor in spellen die ze gebruiken (Pesten,
+   * Jokeren), nooit in slagenspellen.
+   */
+  readonly joker?: boolean;
 }
 
 // ---------------------------------------------------------------------------
