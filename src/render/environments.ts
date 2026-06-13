@@ -486,17 +486,23 @@ export function createCafeEnvironment(): Environment {
   const maakLichten = (): THREE.Light[] => {
     const lichten: THREE.Light[] = [];
 
-    const hemel = new THREE.HemisphereLight(0x6a4c30, 0x1c0f08, 0.95);
+    const hemel = new THREE.HemisphereLight(0x7e5a38, 0x261507, 1.25);
     hemel.userData['omgevingslicht'] = true;
     lichten.push(hemel);
 
     // Warme basisvulling zodat de hele kroeg uit het pikkedonker komt.
-    const omgeving = new THREE.AmbientLight(0xffd9a8, 0.32);
+    const omgeving = new THREE.AmbientLight(0xffdcae, 0.6);
     omgeving.userData['omgevingslicht'] = true;
     lichten.push(omgeving);
 
+    // Zacht bovenlicht voor leesbaarheid van de hele ruimte.
+    const ruimte = new THREE.PointLight(0xffcf9a, 6, 13, 1.6);
+    ruimte.position.set(0, tableSurfaceY + 2.4, 0.6);
+    ruimte.userData['omgevingslicht'] = true;
+    lichten.push(ruimte);
+
     for (const dx of [-0.55, 0.55]) {
-      const spot = new THREE.SpotLight(0xffb56b, 34, 7, 0.62, 0.55, 1.8);
+      const spot = new THREE.SpotLight(0xffc488, 22, 7.5, 0.7, 0.6, 1.7);
       spot.position.set(dx, tableSurfaceY + 1.02, 0);
       spot.target.position.set(dx * 0.35, tableSurfaceY, 0);
       stelSchaduwIn(spot);
@@ -700,29 +706,37 @@ export function createCasinoEnvironment(): Environment {
   const maakLichten = (): THREE.Light[] => {
     const lichten: THREE.Light[] = [];
 
-    // Laaghangende, felle tafellamp recht boven het midden.
-    const spot = new THREE.SpotLight(0xffe2b0, 72, 7.5, 0.82, 0.45, 1.9);
-    spot.position.set(0, tableSurfaceY + 0.98, 0);
+    // Laaghangende tafellamp recht boven het midden. Gematigd in intensiteit
+    // (met Neutral-tonemapping wordt fel licht niet meer "uitgewassen", dus een
+    // lagere waarde geeft juist meer kleur en contrast op de kaarten).
+    const spot = new THREE.SpotLight(0xffe7c2, 34, 8, 0.9, 0.5, 1.7);
+    spot.position.set(0, tableSurfaceY + 1.0, 0);
     spot.target.position.set(0, tableSurfaceY, 0);
     stelSchaduwIn(spot, 2048);
     lichten.push(spot);
 
-    // Gedempt omgevingslicht: het donker hoort erbij, maar de tafel en
-    // de eigen kaarten moeten leesbaar blijven (en met de slider verder oplichten).
-    const hemel = new THREE.HemisphereLight(0x33485e, 0x0a0f16, 0.55);
+    // Stevig omgevingslicht zodat de tafel, stoelen en omgeving niet pikzwart
+    // zijn (schaalt mee met de helderheid-slider).
+    const hemel = new THREE.HemisphereLight(0x4a6076, 0x141a22, 1.15);
     hemel.userData['omgevingslicht'] = true;
     lichten.push(hemel);
 
-    const omgeving = new THREE.AmbientLight(0x3a4a60, 0.3);
+    const omgeving = new THREE.AmbientLight(0x46566c, 0.65);
     omgeving.userData['omgevingslicht'] = true;
     lichten.push(omgeving);
 
+    // Zacht bovenlicht dat de hele ruimte (stoelen, vloer) leesbaar maakt.
+    const ruimte = new THREE.PointLight(0x9fb0c4, 6, 14, 1.6);
+    ruimte.position.set(0, tableSurfaceY + 2.6, 0.4);
+    ruimte.userData['omgevingslicht'] = true;
+    lichten.push(ruimte);
+
     // Gouden accentlichtjes in de verte.
-    const goud1 = new THREE.PointLight(0xd4af37, 3, 6, 2);
+    const goud1 = new THREE.PointLight(0xd4af37, 4, 6, 2);
     goud1.position.set(2.4, 1.2, -1.8);
     goud1.userData['omgevingslicht'] = true;
     lichten.push(goud1);
-    const goud2 = new THREE.PointLight(0xd4af37, 2.2, 6, 2);
+    const goud2 = new THREE.PointLight(0xd4af37, 3, 6, 2);
     goud2.position.set(-2.6, 1.0, 1.6);
     goud2.userData['omgevingslicht'] = true;
     lichten.push(goud2);

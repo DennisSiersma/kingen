@@ -9,9 +9,15 @@
  */
 
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Card, CardId } from '../core/types.ts';
 import type { CardRenderer, CardTextureOptions } from './types.ts';
-import { CARD_ASPECT, drawCardBack as drawBack, drawCardFace as drawFace } from './cardTextures.ts';
+import {
+  CARD_ASPECT,
+  CORNER_RADIUS_FRAC,
+  drawCardBack as drawBack,
+  drawCardFace as drawFace,
+} from './cardTextures.ts';
 
 // Tekenfuncties los testbaar her-exporteren (publieke API van deze module).
 export { drawCardFace, drawCardBack, selfTestCardTextures, roundedRectPath, CARD_ASPECT } from './cardTextures.ts';
@@ -68,6 +74,58 @@ export function setCardHighlight(mesh: THREE.Mesh, state: CardHighlight): void {
   mesh.userData.highlight = state;
 }
 
+/** Afgerond-rechthoekig kaartsilhouet als THREE.Shape (gecentreerd op 0,0). */
+function roundedCardShape(w: number, h: number, r: number): THREE.Shape {
+  const s = new THREE.Shape();
+  const x = -w / 2;
+  const y = -h / 2;
+  s.moveTo(x + r, y);
+  s.lineTo(x + w - r, y);
+  s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r);
+  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h);
+  s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r);
+  s.quadraticCurveTo(x, y, x + r, y);
+  return s;
+}
+
+/** Normaliseer de UV's van een vlak shape-geometrie naar 0..1 over de bounding box. */
+function normalizeShapeUV(geo: THREE.BufferGeometry, w: number, h: number): void {
+  const pos = geo.attributes['position'] as THREE.BufferAttribute;
+  const uv = geo.attributes['uv'] as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    uv.setXY(i, (pos.getX(i) + w / 2) / w, (pos.getY(i) + h / 2) / h);
+  }
+  uv.needsUpdate = true;
+}
+
+/**
+ * Kaartgeometrie met écht afgerond silhouet: twee afgerond-rechthoekige vlakken
+ * (voor- en achterkant), gescheiden door de kaartdikte. Geen rechte zijwanden,
+ * dus geen witte rand die bij een BoxGeometry buiten de afgeronde hoeken stak.
+ * Materiaalgroepen: 0 = voorkant, 1 = achterkant.
+ */
+function makeRoundedCardGeometry(w: number, h: number, t: number, r: number): THREE.BufferGeometry {
+  const shape = roundedCardShape(w, h, r);
+
+  const front = new THREE.ShapeGeometry(shape, 10);
+  normalizeShapeUV(front, w, h);
+  front.translate(0, 0, t / 2);
+
+  const back = new THREE.ShapeGeometry(shape, 10);
+  normalizeShapeUV(back, w, h); // vóór het draaien, zodat de UV-oriëntatie klopt
+  back.rotateY(Math.PI); // laat de achterkant naar -z kijken (rug symmetrisch → spiegeling onzichtbaar)
+  back.translate(0, 0, -t / 2);
+
+  const merged = mergeGeometries([front, back], true); // useGroups: groep 0 = voor, 1 = achter
+  front.dispose();
+  back.dispose();
+  if (!merged) throw new Error('Kon kaartgeometrie niet samenvoegen');
+  return merged;
+}
+
 /** Maak de (cachende) CardRenderer. Elke texture wordt exact één keer gegenereerd. */
 export function createCardRenderer(options?: CardTextureOptions): CardRenderer {
   const resolution = Math.max(256, Math.round(options?.resolution ?? 1024));
@@ -76,8 +134,14 @@ export function createCardRenderer(options?: CardTextureOptions): CardRenderer {
 
   const cardSize = { width: CARD_WIDTH, height: CARD_HEIGHT, thickness: CARD_THICKNESS } as const;
 
-  // Gedeelde geometrie voor alle kaarten (dunne box: dikte-illusie + zijrand).
-  const geometry = new THREE.BoxGeometry(cardSize.width, cardSize.height, cardSize.thickness);
+  // Gedeelde geometrie voor alle kaarten: afgerond silhouet (voor- + achterkant),
+  // geen rechte zijwanden → geen uitstekende witte rand bij de hoeken.
+  const geometry = makeRoundedCardGeometry(
+    cardSize.width,
+    cardSize.height,
+    cardSize.thickness,
+    CARD_WIDTH * CORNER_RADIUS_FRAC,
+  );
 
   const faceTextures = new Map<CardId, THREE.CanvasTexture>();
   let backTexture: THREE.CanvasTexture | null = null;
@@ -138,14 +202,6 @@ export function createCardRenderer(options?: CardTextureOptions): CardRenderer {
     });
   }
 
-  function makeEdgeMaterial(): THREE.MeshPhysicalMaterial {
-    return new THREE.MeshPhysicalMaterial({
-      color: '#e9e3d3',
-      roughness: 0.85,
-      metalness: 0,
-    });
-  }
-
   function createCardMesh(card: Card): THREE.Mesh {
     if (disposed) throw new Error('CardRenderer is al opgeruimd (dispose aangeroepen)');
     // Eigen materialen per mesh zodat highlight-status per kaart kan
@@ -153,11 +209,10 @@ export function createCardRenderer(options?: CardTextureOptions): CardRenderer {
     // EIGENAARSCHAP: de materialen horen bij de mesh — wie de mesh uit de
     // scene verwijdert, dispose't ze (zie verwijderMesh in animations.ts);
     // anders lekken er per ronde tientallen materialen.
-    const edge = makeEdgeMaterial();
     const front = makeCardMaterial(getFrontTexture(card));
     const back = makeCardMaterial(getBackTexture());
-    // BoxGeometry-materiaalvolgorde: +x, -x, +y, -y, +z (voorkant), -z (rug).
-    const mesh = new THREE.Mesh(geometry, [edge, edge, edge, edge, front, back]);
+    // Geometrie-materiaalgroepen: 0 = voorkant, 1 = achterkant.
+    const mesh = new THREE.Mesh(geometry, [front, back]);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.userData.cardId = card.id;

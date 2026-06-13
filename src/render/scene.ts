@@ -68,7 +68,9 @@ export async function createSceneManager(
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  // Neutral (Khronos PBR Neutral) i.p.v. ACES: ACES desatureert/wast felle
+  // highlights uit, waardoor de kaarten onder de tafelspot kleurloos werden.
+  renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = BASIS_EXPOSURE * (leesHelderheid() / 100);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.style.display = 'block';
