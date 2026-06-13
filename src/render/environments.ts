@@ -450,6 +450,7 @@ function maakHandLicht(
   licht.target.position.set(0, tableSurfaceY + 0.18, tableRadius * 1.03);
   licht.castShadow = false;
   licht.name = 'handlicht';
+  licht.userData['omgevingslicht'] = true;
   return licht;
 }
 
@@ -482,11 +483,17 @@ export function createCafeEnvironment(): Environment {
   const maakLichten = (): THREE.Light[] => {
     const lichten: THREE.Light[] = [];
 
-    const hemel = new THREE.HemisphereLight(0x4a3424, 0x110805, 0.55);
+    const hemel = new THREE.HemisphereLight(0x6a4c30, 0x1c0f08, 0.95);
+    hemel.userData['omgevingslicht'] = true;
     lichten.push(hemel);
 
+    // Warme basisvulling zodat de hele kroeg uit het pikkedonker komt.
+    const omgeving = new THREE.AmbientLight(0xffd9a8, 0.32);
+    omgeving.userData['omgevingslicht'] = true;
+    lichten.push(omgeving);
+
     for (const dx of [-0.55, 0.55]) {
-      const spot = new THREE.SpotLight(0xffb56b, 38, 7, 0.62, 0.55, 1.8);
+      const spot = new THREE.SpotLight(0xffb56b, 34, 7, 0.62, 0.55, 1.8);
       spot.position.set(dx, tableSurfaceY + 1.02, 0);
       spot.target.position.set(dx * 0.35, tableSurfaceY, 0);
       stelSchaduwIn(spot);
@@ -496,6 +503,7 @@ export function createCafeEnvironment(): Environment {
     // Warm strooilicht vanaf de bar achterin.
     const bar = new THREE.PointLight(0xff9a4d, 4, 7, 2);
     bar.position.set(0, 1.7, -3.6);
+    bar.userData['omgevingslicht'] = true;
     lichten.push(bar);
 
     // Subtiel warm leeslicht op de eigen hand.
@@ -593,11 +601,13 @@ export function createKeukentafelEnvironment(): Environment {
     lichten.push(dag);
 
     const hemel = new THREE.HemisphereLight(0xcfe0ee, 0x9a8b74, 0.85);
+    hemel.userData['omgevingslicht'] = true;
     lichten.push(hemel);
 
     // Zachte warme invulling vanaf de andere kant van de keuken.
     const vul = new THREE.PointLight(0xffe6c0, 2.2, 9, 2);
     vul.position.set(-2.2, 2.3, 2.0);
+    vul.userData['omgevingslicht'] = true;
     lichten.push(vul);
 
     // Licht leeslicht op de eigen hand (de keuken is al helder; mild houden).
@@ -688,22 +698,30 @@ export function createCasinoEnvironment(): Environment {
     const lichten: THREE.Light[] = [];
 
     // Laaghangende, felle tafellamp recht boven het midden.
-    const spot = new THREE.SpotLight(0xffe2b0, 95, 7.5, 0.78, 0.4, 1.9);
+    const spot = new THREE.SpotLight(0xffe2b0, 72, 7.5, 0.82, 0.45, 1.9);
     spot.position.set(0, tableSurfaceY + 0.98, 0);
     spot.target.position.set(0, tableSurfaceY, 0);
     stelSchaduwIn(spot, 2048);
     lichten.push(spot);
 
-    // Heel weinig omgevingslicht: het donker hoort erbij.
-    const hemel = new THREE.HemisphereLight(0x16202c, 0x05070a, 0.22);
+    // Gedempt omgevingslicht: het donker hoort erbij, maar de tafel en
+    // de eigen kaarten moeten leesbaar blijven (en met de slider verder oplichten).
+    const hemel = new THREE.HemisphereLight(0x33485e, 0x0a0f16, 0.55);
+    hemel.userData['omgevingslicht'] = true;
     lichten.push(hemel);
+
+    const omgeving = new THREE.AmbientLight(0x3a4a60, 0.3);
+    omgeving.userData['omgevingslicht'] = true;
+    lichten.push(omgeving);
 
     // Gouden accentlichtjes in de verte.
     const goud1 = new THREE.PointLight(0xd4af37, 3, 6, 2);
     goud1.position.set(2.4, 1.2, -1.8);
+    goud1.userData['omgevingslicht'] = true;
     lichten.push(goud1);
     const goud2 = new THREE.PointLight(0xd4af37, 2.2, 6, 2);
     goud2.position.set(-2.6, 1.0, 1.6);
+    goud2.userData['omgevingslicht'] = true;
     lichten.push(goud2);
 
     // Subtiel warm leeslicht op de eigen hand (de centrale spot reikt daar niet).

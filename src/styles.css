@@ -591,15 +591,40 @@
 .kg-hud__troef {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
+  gap: 7px;
+  padding: 6px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(201, 162, 39, 0.4);
-  background: rgba(201, 162, 39, 0.1);
-  font-size: 0.88rem;
+  border: 2px solid var(--kg-gold-bright);
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.28), rgba(201, 162, 39, 0.14));
+  box-shadow: 0 0 14px rgba(201, 162, 39, 0.45), inset 0 0 6px rgba(201, 162, 39, 0.2);
+  font-size: 0.96rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--kg-gold-bright);
+  animation: kg-troef-puls 2.4s ease-in-out infinite;
 }
 
-.kg-hud__troef .kg-troefsymbool { font-size: 1.2rem; line-height: 1; }
+.kg-hud__troef .kg-troefsymbool {
+  font-size: 1.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+
+/* Rode troefkleuren (harten/ruiten) krijgen een rode chip, zwarte een witte. */
+.kg-hud__troef:has(.kg-suit-rood) {
+  border-color: #ff6b6b;
+  background: linear-gradient(180deg, rgba(220, 60, 60, 0.34), rgba(180, 40, 40, 0.18));
+  box-shadow: 0 0 14px rgba(220, 60, 60, 0.5), inset 0 0 6px rgba(220, 60, 60, 0.25);
+  color: #ffd9d9;
+}
+
+.kg-hud__troef .kg-suit-rood { color: #ff5a5a; }
+.kg-hud__troef .kg-suit-zwart { color: #1a1a1a; text-shadow: 0 0 2px rgba(255, 255, 255, 0.8); }
+
+@keyframes kg-troef-puls {
+  0%, 100% { box-shadow: 0 0 12px rgba(201, 162, 39, 0.4), inset 0 0 6px rgba(201, 162, 39, 0.18); }
+  50% { box-shadow: 0 0 20px rgba(201, 162, 39, 0.7), inset 0 0 8px rgba(201, 162, 39, 0.3); }
+}
 
 .kg-hud__troef.is-leeg { display: none; }
 

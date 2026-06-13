@@ -84,6 +84,28 @@ export async function createSceneManager(
   const layout = createTableLayout(env.tableSurfaceY, env.tableRadius);
   const animator = createCardAnimator(scene, cardRenderer, layout, 4);
 
+  // Helderheid (50-160%) regelt zowel de tonemapping-exposure als de
+  // intensiteit van de omgevingslichten (gemarkeerd met userData.omgevingslicht).
+  // Zo lichten donkere sferen als café en casino echt op i.p.v. alleen de
+  // centrale spot. De basisintensiteit wordt per licht eenmalig onthouden.
+  let huidigeHelderheid = leesHelderheid();
+  const pasHelderheidToe = (): void => {
+    const factor = klemHelderheid(huidigeHelderheid) / 100;
+    renderer.toneMappingExposure = BASIS_EXPOSURE * factor;
+    // Omgevingslichten extra meeschalen zodat de darks zichtbaar oplichten.
+    const omgevingFactor = Math.pow(factor, 1.4);
+    scene.traverse((obj) => {
+      const licht = obj as THREE.Light;
+      if (!(licht as Partial<THREE.Light>).isLight) return;
+      if (!licht.userData['omgevingslicht']) return;
+      if (licht.userData['basisIntensiteit'] === undefined) {
+        licht.userData['basisIntensiteit'] = licht.intensity;
+      }
+      licht.intensity = (licht.userData['basisIntensiteit'] as number) * omgevingFactor;
+    });
+  };
+  pasHelderheidToe();
+
   // --- camera: schuin op het tafelblad, achter stoel 0 ---
   const kijkDoel = new THREE.Vector3(0, env.tableSurfaceY + 0.02, -0.12);
   const camera = new THREE.PerspectiveCamera(47, 1, 0.1, 60);
@@ -336,6 +358,8 @@ export async function createSceneManager(
       layout.setDimensions(env.tableSurfaceY, env.tableRadius);
       kijkDoel.y = env.tableSurfaceY + 0.02;
       animator.relayout();
+      // Nieuwe omgeving heeft eigen lichten: helderheid opnieuw toepassen.
+      pasHelderheidToe();
     },
 
     onCardClicked(handler: (cardId: string) => void): () => void {
@@ -362,7 +386,8 @@ export async function createSceneManager(
     },
 
     setBrightness(percent: number): void {
-      renderer.toneMappingExposure = BASIS_EXPOSURE * (klemHelderheid(percent) / 100);
+      huidigeHelderheid = klemHelderheid(percent);
+      pasHelderheidToe();
     },
 
     setCameraMotion(enabled: boolean): void {
