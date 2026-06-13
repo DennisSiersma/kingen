@@ -5,16 +5,16 @@
  * resulterende events op de EventBus. Render/UI hangen aan de bus en kunnen
  * de loop pauzeren via een animatie-gate (afterEvent).
  *
- * Zet-conventie: de TurnManager is generiek, maar verwacht voor slagenspellen
- * dat zetten objecten zijn met een `type`-veld:
- *   { type: 'playCard', card }  { type: 'chooseTrump', suit }
- *   { type: 'chooseRoundKind', kind }  en optioneel andere typen.
- * Op basis daarvan wordt de juiste PlayerController-methode aangeroepen.
+ * Zet-conventie: de TurnManager is generiek. Hij vraagt elke controller om een
+ * zet via de spel-onafhankelijke `chooseMove(view, legalMoves)`. Controllers die
+ * die (nog) niet hebben — de Kingen legacy-controllers — worden afgehandeld via
+ * dispatchKingenMove(), dat hun getypte methodes (chooseCard/chooseTrump/
+ * chooseRoundKind/claim) op de zet-types { type, card/suit/kind } afbeeldt.
  */
 
-import type { Card, GameDefinition, GameEvent, PlayerConfig, Seat, Suit } from './types.ts';
+import type { GameDefinition, GameEvent, PlayerConfig, PublicGameView, Seat } from './types.ts';
 import type { GameEventBus } from './events.ts';
-import type { PlayerController } from './player.ts';
+import { dispatchKingenMove, type MoveShape, type PlayerController } from './player.ts';
 
 export interface TurnManagerOptions<TState, TMove, TConfig> {
   definition: GameDefinition<TState, TMove, TConfig>;
@@ -29,14 +29,6 @@ export interface TurnManagerOptions<TState, TMove, TConfig> {
    * (delen, spelen, slag innemen) kunnen afronden vóór de volgende zet.
    */
   afterEvent?: (event: GameEvent) => Promise<void>;
-}
-
-/** Structurele blik op een zet (zie zet-conventie hierboven). */
-interface MoveShape {
-  type: string;
-  card?: Card;
-  suit?: Suit;
-  kind?: string;
 }
 
 export class TurnManager<TState, TMove, TConfig> {
@@ -97,59 +89,23 @@ export class TurnManager<TState, TMove, TConfig> {
   private async pickMove(
     seat: Seat,
     controller: PlayerController,
-    view: Parameters<PlayerController['chooseCard']>[0],
+    view: PublicGameView,
     legal: MoveShape[],
   ): Promise<MoveShape> {
-    const cardMoves = legal.filter((m) => m.type === 'playCard');
-    if (cardMoves.length > 0) {
-      const claimMove = legal.find((m) => m.type === 'claimHand');
-      let card: Card;
-      if (claimMove && controller.chooseCardOrClaim) {
-        // Variant 'hand afleggen': de controller mag kiezen tussen een kaart
-        // spelen en claimen (AI via strategy.shouldClaim, mens via de HUD-knop).
-        const keuze = await controller.chooseCardOrClaim(view);
-        if (keuze === 'claim') return claimMove;
-        card = keuze;
-      } else {
-        card = await controller.chooseCard(view);
-      }
-      const move = cardMoves.find((m) => m.card?.id === card.id);
-      if (move) return move;
-      this.opts.bus.emit({
-        type: 'illegalMove',
-        seat,
-        reason: `Kaart ${card.id} is hier niet toegestaan`,
-      });
-      return cardMoves[0]!;
-    }
+    const meldIllegal = (reason: string): void => {
+      this.opts.bus.emit({ type: 'illegalMove', seat, reason });
+    };
 
-    if (legal.every((m) => m.type === 'chooseTrump')) {
-      const suit = await controller.chooseTrump(view);
-      const move = legal.find((m) => m.suit === suit);
-      if (move) return move;
-      this.opts.bus.emit({
-        type: 'illegalMove',
-        seat,
-        reason: `Troefkeuze ${String(suit)} is hier niet toegestaan`,
-      });
+    // Canoniek pad: de controller kiest zelf een generieke zet.
+    if (controller.chooseMove) {
+      const chosen = (await controller.chooseMove(view, legal)) as MoveShape;
+      if (legal.includes(chosen)) return chosen;
+      meldIllegal('Ongeldige zet');
       return legal[0]!;
     }
 
-    if (legal.every((m) => m.type === 'chooseRoundKind')) {
-      const available = legal.map((m) => m.kind!).filter((k) => k !== undefined);
-      const kind = await controller.chooseRoundKind(view, available);
-      const move = legal.find((m) => m.kind === kind);
-      if (move) return move;
-      this.opts.bus.emit({
-        type: 'illegalMove',
-        seat,
-        reason: `Spelkeuze ${kind} is hier niet toegestaan`,
-      });
-      return legal[0]!;
-    }
-
-    // Onbekend zet-type: neem de eerste legale zet (failsafe).
-    return legal[0]!;
+    // Legacy (Kingen): vertaal via de getypte methodes.
+    return dispatchKingenMove(controller, view, legal, meldIllegal);
   }
 
   /** Onderbreek de partij netjes (terug naar setup). */
