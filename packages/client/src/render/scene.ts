@@ -12,7 +12,7 @@ import type { GameEventBus } from '@shared/core/events.ts';
 import { createCardRenderer } from './cards.ts';
 import { getEnvironment } from './environments.ts';
 import { createCardAnimator, createTableLayout } from './animations.ts';
-import type { EnvironmentId, SceneManager } from './types.ts';
+import type { EnvironmentId, SceneManager, SceneRenderPlugin } from './types.ts';
 
 /** Uitgebreid contract: main.ts kan de animatie-gate (afterEvent) hierop wachten. */
 export interface KingenSceneManager extends SceneManager {
@@ -68,6 +68,8 @@ export async function createSceneManager(
   container: HTMLElement,
   bus: GameEventBus,
   environment: EnvironmentId,
+  /** Optionele per-spel render-plugin (afleg-trek/rummy); Kingen geeft er geen. */
+  renderPlugin?: SceneRenderPlugin,
 ): Promise<KingenSceneManager> {
   // --- renderer ---
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -327,6 +329,9 @@ export async function createSceneManager(
   };
 
   const verwerkEvent = async (ev: GameEvent): Promise<void> => {
+    // Per-spel render-plugin krijgt eerst de kans (afleg-trek/rummy-events);
+    // geeft true terug = afgehandeld, dan slaat de default slag-render over.
+    if (renderPlugin && (await renderPlugin.handleEvent(ev, animator))) return;
     switch (ev.type) {
       case 'gameStart':
         stoelen = ev.seatCount;

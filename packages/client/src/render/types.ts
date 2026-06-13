@@ -6,7 +6,7 @@
  */
 
 import type * as THREE from 'three';
-import type { Card, Rank, Seat, Suit } from '@shared/core/types.ts';
+import type { Card, GameEvent, Rank, Seat, Suit } from '@shared/core/types.ts';
 
 // ---------------------------------------------------------------------------
 // Omgevingen
@@ -127,6 +127,29 @@ export interface CardAnimator {
 
   /** Onderbreek alles (nieuwe partij / venster weg). */
   cancelAll(): void;
+
+  // --- Optionele uitbreidingen per spel-familie (afleg-trek, rummy) ---
+  // Slagenspellen (Kingen) implementeren deze niet; een render-plugin voor
+  // Pesten/Jokeren voegt ze toe wanneer dat spel gebouwd wordt.
+
+  /** Afleg-trek: speler trekt `count` kaarten van de koopstapel. */
+  animateDraw?(seat: Seat, count: number): Promise<void>;
+  /** Afleg-trek: kaart naar de aflegstapel. */
+  animateDiscard?(card: Card, from: Seat): Promise<void>;
+  /** Afleg-trek: aflegstapel teruggeschud tot nieuwe koopstapel. */
+  animateReshuffle?(): Promise<void>;
+  /** Rummy: een combinatie (meld) open op tafel leggen. */
+  animateLayMeld?(seat: Seat, cards: Card[]): Promise<void>;
+}
+
+/**
+ * Per-spel render-plugin: mag een GameEvent zelf afhandelen (bijv. drawCard/
+ * layCard voor afleg-trek-spellen) vóór de standaard slag-render. Geeft `true`
+ * terug als het event volledig is afgehandeld (de scene slaat zijn default over).
+ * Kingen levert geen plugin → de standaard slag-render draait ongewijzigd.
+ */
+export interface SceneRenderPlugin {
+  handleEvent(ev: GameEvent, animator: CardAnimator): Promise<boolean>;
 }
 
 // ---------------------------------------------------------------------------

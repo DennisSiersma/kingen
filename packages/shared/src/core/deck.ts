@@ -138,22 +138,35 @@ export function sortHand(hand: readonly Card[]): Card[] {
 }
 
 /**
+ * Kaartkracht binnen een slag: hoe hoger, hoe sterker. De `trump`-parameter laat
+ * spellen met afwijkende troefvolgorde (Klaverjas: B/9 hoog in troef) per kaart
+ * beslissen. Default = rang (aas hoog), zoals Kingen/Hartenjagen.
+ */
+export type RankValue = (card: Card, trump: Suit | null) => number;
+
+const defaultRankValue: RankValue = (card) => card.rank;
+
+/**
  * Bepaal de winnaar van een complete slag.
- * Hoogste troef wint; anders hoogste kaart in de gevraagde kleur (aas hoog).
+ * Hoogste troef wint; anders de sterkste kaart in de gevraagde kleur. Met een
+ * eigen `rankValue` injecteren spellen hun afwijkende kaartkracht (Toepen:
+ * 10>9>8>7>A>H>V>B; Klaverjas: troefvolgorde B>9>A>10>H>V>8>7).
  */
 export function trickWinner(
   plays: readonly { seat: Seat; card: Card }[],
   trump: Suit | null,
+  rankValue: RankValue = defaultRankValue,
 ): Seat {
   if (plays.length === 0) throw new Error('Lege slag');
   const ledSuit = plays[0]!.card.suit;
   let best = plays[0]!;
   for (const p of plays.slice(1)) {
+    const sterker = rankValue(p.card, trump) > rankValue(best.card, trump);
     const beatsAsTrump =
-      trump !== null && p.card.suit === trump && (best.card.suit !== trump || p.card.rank > best.card.rank);
+      trump !== null && p.card.suit === trump && (best.card.suit !== trump || sterker);
     const beatsInLed =
       p.card.suit === ledSuit && best.card.suit === ledSuit &&
-      (trump === null || best.card.suit !== trump) && p.card.rank > best.card.rank;
+      (trump === null || best.card.suit !== trump) && sterker;
     if (beatsAsTrump || beatsInLed) best = p;
   }
   return best.seat;
