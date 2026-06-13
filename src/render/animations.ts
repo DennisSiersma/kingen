@@ -136,7 +136,9 @@ export function createTableLayout(tableSurfaceY: number, tableRadius: number): K
 
     wonPile(seat: Seat, seatCount: number): THREE.Vector3 {
       const a = seatAngle(seat, seatCount) + 0.5;
-      return new THREE.Vector3(Math.cos(a) * straal * 0.62, opp + 0.006, Math.sin(a) * straal * 0.62);
+      // Iets naar binnen (0.52) zodat de gewonnen stapels niet over de
+      // tafelrand steken, ook niet met de schuine stapeling.
+      return new THREE.Vector3(Math.cos(a) * straal * 0.52, opp + 0.006, Math.sin(a) * straal * 0.52);
     },
 
     deckPosition(dealer: Seat, seatCount: number): THREE.Vector3 {
@@ -199,6 +201,13 @@ interface DoelTransform {
  * groeit de kaart tijdens de vlucht terug naar 1 (tafelformaat).
  */
 const EIGEN_HAND_SCHAAL = 0.58;
+
+/**
+ * Schaal van kaarten die plat op tafel liggen (slag, gewonnen stapels, deck).
+ * Kleiner dan 1 zodat ze in verhouding bij de tafel passen en niet door de
+ * rand steken; tegelijk groot genoeg om vanaf elke stoel leesbaar te blijven.
+ */
+const TAFEL_SCHAAL = 0.78;
 
 // ---------------------------------------------------------------------------
 // CardAnimator
@@ -486,11 +495,15 @@ export function createCardAnimator(
       const slot = layout.trickSlot(from, stoelen).clone();
       slot.x += (Math.random() - 0.5) * 0.03;
       slot.z += (Math.random() - 0.5) * 0.03;
-      slot.y += slag.length * 0.003;
+      // Stap groter dan de kaartdikte (6 mm) zodat opeenvolgende slagkaarten
+      // niet in elkaar steken (z-fighting); later gespeelde kaart ligt bovenop.
+      slot.y += slag.length * 0.012;
       const yaw = slagYaw(from) + (Math.random() - 0.5) * 0.18;
+      // Tekenvolgorde sluit aan op de speelvolgorde: nieuwste kaart vóór.
+      mesh.renderOrder = 10 + slag.length;
 
       slag.push({ seat: from, card, mesh });
-      await beweegMesh(mesh, { pos: slot, quat: vlakkeQuat(yaw, true) }, {
+      await beweegMesh(mesh, { pos: slot, quat: vlakkeQuat(yaw, true), schaal: TAFEL_SCHAAL }, {
         duur: 480,
         boog: 0.22,
         ease: easeInOutCubic,
@@ -513,6 +526,7 @@ export function createCardAnimator(
               .clone()
               .add(new THREE.Vector3((Math.random() - 0.5) * 0.02, i * dikte * 1.2, (Math.random() - 0.5) * 0.02)),
             quat: vlakkeQuat(winnaarYaw + (Math.random() - 0.5) * 0.3, false),
+            schaal: TAFEL_SCHAAL,
           },
           { duur: 600, vertraging: i * 40, fade: true, ease: easeInOutCubic },
         ),
@@ -528,6 +542,8 @@ export function createCardAnimator(
         // veilig kan opruimen; hij ligt gedekt, dus de voorkant is onzichtbaar.
         const marker = maakMesh(eerste.card);
         marker.userData = { pijlerVanStapel: true };
+        marker.scale.setScalar(TAFEL_SCHAAL);
+        marker.renderOrder = 0;
         marker.position.set(
           stapelBasis.x + (Math.random() - 0.5) * 0.012,
           stapelBasis.y + teller * dikte * 1.3,
