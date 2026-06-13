@@ -41,7 +41,8 @@ const server = http.createServer((req, res) => {
 const wss = new WebSocketServer({ server, path: '/ws' });
 // KINGEN_AI_FAST=1 → AI zonder denkvertraging (handig voor tests/CI).
 const aiDelay: [number, number] | undefined = process.env.KINGEN_AI_FAST ? [0, 0] : undefined;
-const room = new Room('ONLINE', 'Online tafel', undefined, aiDelay);
+const moveTimeoutMs = Number(process.env.MOVE_TIMEOUT_MS ?? 60000);
+const room = new Room('ONLINE', 'Online tafel', undefined, aiDelay, moveTimeoutMs);
 
 let teller = 0;
 wss.on('connection', (ws: WebSocket) => {

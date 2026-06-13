@@ -101,6 +101,106 @@
   color: #fff;
 }
 
+/* Online-chatpaneel (rechtsonder, inklapbaar). */
+.kg-chat {
+  position: fixed;
+  right: 12px;
+  bottom: 34px;
+  z-index: 65;
+  width: min(300px, 80vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--kg-panel, rgba(20, 16, 12, 0.94));
+  border: 1px solid var(--kg-panel-line, rgba(201, 162, 39, 0.3));
+  border-radius: 12px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  pointer-events: auto;
+}
+.kg-chat__kop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  border-bottom: 1px solid var(--kg-panel-line, rgba(201, 162, 39, 0.3));
+  color: var(--kg-gold-bright, #e8c75a);
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+}
+.kg-chat__titel { flex: 1; }
+.kg-chat__badge {
+  min-width: 1.4em;
+  text-align: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 0.72rem;
+  font-family: var(--kg-sans, system-ui, sans-serif);
+}
+.kg-chat__chevron { color: var(--kg-muted, #b9ad93); }
+.kg-chat__body { display: flex; flex-direction: column; }
+.kg-chat__status {
+  padding: 5px 12px;
+  font-size: 0.74rem;
+  color: #ffcf9a;
+  background: rgba(192, 57, 43, 0.18);
+  border-bottom: 1px solid var(--kg-panel-line, rgba(201, 162, 39, 0.3));
+}
+.kg-chat__lijst {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  height: 220px;
+  max-height: 38vh;
+  overflow-y: auto;
+  padding: 10px 12px;
+}
+.kg-chat__bericht {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.84rem;
+  color: var(--kg-text, #efe7d6);
+}
+.kg-chat__bericht.is-eigen { align-items: flex-end; text-align: right; }
+.kg-chat__bericht.is-systeem {
+  align-items: center;
+  text-align: center;
+  color: var(--kg-muted, #b9ad93);
+  font-style: italic;
+  font-size: 0.78rem;
+}
+.kg-chat__meta { font-size: 0.7rem; color: var(--kg-muted, #b9ad93); }
+.kg-chat__bericht.is-eigen .kg-chat__tekst { color: var(--kg-gold-bright, #e8c75a); }
+.kg-chat__invoer {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--kg-panel-line, rgba(201, 162, 39, 0.3));
+}
+.kg-chat__veld {
+  flex: 1;
+  padding: 6px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--kg-panel-line, rgba(201, 162, 39, 0.3));
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--kg-text, #efe7d6);
+  font-size: 0.86rem;
+}
+.kg-chat__verstuur {
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  background: rgba(201, 162, 39, 0.16);
+  color: var(--kg-gold-bright, #e8c75a);
+  cursor: pointer;
+  font-size: 0.84rem;
+}
+
 /* Subtiele ontwerper-signatuur, altijd rechtsonder (setup én spel). */
 #kg-credit {
   position: fixed;

@@ -27,6 +27,10 @@ export interface GameHostDeps {
   forwardEvent: (event: GameEvent) => void;
   /** AI-denktijd (min,max) in ms; weglaten = natuurlijke default. [0,0] in tests. */
   aiThinkDelayMs?: [number, number];
+  /** Zet-time-out per menselijke beurt (ms); daarna speelt de server veilig. */
+  moveTimeoutMs?: number;
+  /** Aangeroepen wanneer de server een zet namens een (weggelopen) speler speelt. */
+  onMoveTimeout?: (seat: Seat) => void;
 }
 
 export class GameHost {
@@ -42,8 +46,11 @@ export class GameHost {
     const controllers: PlayerController[] = deps.players.map((cfg, i) => {
       const seat = i as Seat;
       if (deps.humanSeats.has(seat)) {
-        const rp = new RemotePlayerController(seat, cfg, (payload) =>
-          deps.sendRequestMove(seat, payload),
+        const rp = new RemotePlayerController(
+          seat,
+          cfg,
+          (payload) => deps.sendRequestMove(seat, payload),
+          { timeoutMs: deps.moveTimeoutMs, onTimeout: deps.onMoveTimeout },
         );
         this.remotes.set(seat, rp);
         return rp;

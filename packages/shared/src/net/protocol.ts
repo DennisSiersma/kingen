@@ -21,9 +21,16 @@ export interface ChatMessage {
   from: Seat | null;
   /** Weergavenaam van de afzender. */
   fromName: string;
+  /** Letterlijke tekst (spelerschat) óf taalonafhankelijke fallback bij systeemberichten. */
   tekst: string;
   /** Unix-ms. */
   timestamp: number;
+  /**
+   * Systeemmelding: een i18n-sleutel zodat elke client hem in de eigen taal
+   * toont (i.p.v. een vaste servertaal). `params` vult placeholders zoals {name}.
+   */
+  systemCode?: string;
+  params?: Record<string, string | number>;
 }
 
 /** Beschrijving van een gameroom. */

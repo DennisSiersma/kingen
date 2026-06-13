@@ -225,6 +225,16 @@ const nl = {
   'online.backLocal': '← Lokaal spelen',
   'online.gameOver': 'Partij voorbij — winnaar: {winner}',
   'online.connectFailed': 'Verbinden met de server mislukt.',
+  'online.reconnecting': 'Verbinding kwijt — opnieuw verbinden…',
+  'online.reconnected': 'Weer verbonden.',
+
+  // Chat
+  'chat.title': 'Chat',
+  'chat.placeholder': 'Typ een bericht…',
+  'chat.send': 'Stuur',
+  'chat.sysJoined': '{name} is erbij',
+  'chat.sysLeft': '{name} heeft de tafel verlaten',
+  'chat.sysAiTakeover': '{name} is even weg — de computer speelt',
 } as const;
 
 export type TranslationKey = keyof typeof nl;
@@ -431,6 +441,16 @@ const en: Record<TranslationKey, string> = {
   'online.backLocal': '← Play local',
   'online.gameOver': 'Game over — winner: {winner}',
   'online.connectFailed': 'Could not connect to the server.',
+  'online.reconnecting': 'Connection lost — reconnecting…',
+  'online.reconnected': 'Reconnected.',
+
+  // Chat
+  'chat.title': 'Chat',
+  'chat.placeholder': 'Type a message…',
+  'chat.send': 'Send',
+  'chat.sysJoined': '{name} joined',
+  'chat.sysLeft': '{name} left the table',
+  'chat.sysAiTakeover': '{name} is away — the computer is playing',
 };
 
 const DICTIONARIES: Record<Lang, Record<TranslationKey, string>> = { nl, en };

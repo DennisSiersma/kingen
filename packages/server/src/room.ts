@@ -7,7 +7,7 @@
  */
 
 import type { GameEvent, PlayerConfig, Seat } from '@kingen/shared/core/types.ts';
-import type { NetMessage, RoomInfo } from '@kingen/shared/net/protocol.ts';
+import type { ChatMessage, NetMessage, RoomInfo } from '@kingen/shared/net/protocol.ts';
 import type { KingenVariantConfig } from '@kingen/shared/games/kingen/types.ts';
 import { DEFAULT_VARIANT } from '@kingen/shared/games/kingen/types.ts';
 import { GameHost } from './gameHost.ts';
@@ -34,19 +34,23 @@ export class Room {
   private readonly names = new Map<Seat, string>();
   private host: GameHost | null = null;
   private inProgress = false;
+  private chatTeller = 0;
   private readonly aiThinkDelayMs: [number, number] | undefined;
+  private readonly moveTimeoutMs: number;
 
   constructor(
     id: string,
     naam: string,
     variant: KingenVariantConfig = DEFAULT_VARIANT,
     aiThinkDelayMs?: [number, number],
+    moveTimeoutMs = 60000,
   ) {
     this.id = id;
     this.naam = naam;
     this.variant = structuredClone(variant);
     this.maxPlayers = this.variant.playerCount;
     this.aiThinkDelayMs = aiThinkDelayMs;
+    this.moveTimeoutMs = moveTimeoutMs;
   }
 
   // --- Verbindingen ---------------------------------------------------------
@@ -58,10 +62,12 @@ export class Room {
   disconnect(connId: string): void {
     const seat = this.seatByConn.get(connId);
     if (seat !== undefined) {
+      const naam = this.names.get(seat) ?? 'Een speler';
       this.connBySeat.delete(seat);
       this.seatByConn.delete(connId);
       this.broadcast({ kind: 'leftRoom', roomId: this.id, seat });
       this.broadcastRoomUpdate();
+      this.systeemChat('chat.sysLeft', { name: naam }, `${naam} heeft de tafel verlaten`);
     }
     this.conns.delete(connId);
   }
@@ -80,7 +86,7 @@ export class Room {
         this.onMove(connId, msg.seat, msg.move);
         break;
       case 'chat':
-        this.broadcast(msg);
+        this.onChat(connId, msg.message?.tekst ?? '');
         break;
       default:
         // Overige berichten (server→client) negeren we hier.
@@ -104,6 +110,8 @@ export class Room {
     this.names.set(seat, name.trim() || `Speler ${seat + 1}`);
     conn.send({ kind: 'joinedRoom', room: this.toRoomInfo(), yourSeat: seat });
     this.broadcastRoomUpdate();
+    const naam = this.names.get(seat) ?? `Speler ${seat + 1}`;
+    this.systeemChat('chat.sysJoined', { name: naam }, `${naam} is erbij`);
   }
 
   private onStartGame(): void {
@@ -144,6 +152,11 @@ export class Room {
         sendRequestMove: (seat, payload) => this.sendRequestMove(seat, payload),
         forwardEvent: (event) => this.broadcastEvent(event),
         aiThinkDelayMs: this.aiThinkDelayMs,
+        moveTimeoutMs: this.moveTimeoutMs,
+        onMoveTimeout: (seat) => {
+          const naam = this.names.get(seat) ?? `Speler ${seat + 1}`;
+          this.systeemChat('chat.sysAiTakeover', { name: naam }, `${naam} is even weg — de computer speelt`);
+        },
       },
       seed,
     );
@@ -167,6 +180,41 @@ export class Room {
   }
 
   // --- Uitgaand -------------------------------------------------------------
+
+  /** Een chatbericht van een speler: verrijk met afzender-stoel/naam en verspreid. */
+  private onChat(connId: string, ruweTekst: string): void {
+    const tekst = String(ruweTekst).replace(/\s+/g, ' ').trim().slice(0, 300);
+    if (!tekst) return;
+    const seat = this.seatByConn.get(connId);
+    const message: ChatMessage = {
+      id: `m${++this.chatTeller}`,
+      roomId: this.id,
+      from: seat ?? null,
+      fromName: seat !== undefined ? this.names.get(seat) ?? `Speler ${seat + 1}` : 'Onbekend',
+      tekst,
+      timestamp: Date.now(),
+    };
+    this.broadcast({ kind: 'chat', message });
+  }
+
+  /**
+   * Systeemmelding in de chat (from = null). `systemCode` is een i18n-sleutel
+   * die elke client in de eigen taal toont; `fallback` is de NL-tekst voor
+   * clients zonder die sleutel/logging.
+   */
+  private systeemChat(systemCode: string, params: Record<string, string | number>, fallback: string): void {
+    const message: ChatMessage = {
+      id: `m${++this.chatTeller}`,
+      roomId: this.id,
+      from: null,
+      fromName: 'Systeem',
+      tekst: fallback,
+      timestamp: Date.now(),
+      systemCode,
+      params,
+    };
+    this.broadcast({ kind: 'chat', message });
+  }
 
   private sendRequestMove(seat: Seat, payload: MoveRequestPayload): void {
     const connId = this.connBySeat.get(seat);

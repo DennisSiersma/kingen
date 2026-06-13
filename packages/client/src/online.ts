@@ -18,6 +18,7 @@ import type { RoomInfo } from '@shared/net/protocol.ts';
 import { createSceneManager } from './render/scene.ts';
 import { createHud } from './ui/hud.ts';
 import { createScoreboard } from './ui/scoreboard.ts';
+import { createChatPanel } from './ui/chat.ts';
 import { createChoiceDialogs, createNotifications } from './ui/notifications.ts';
 import { el, onEnvironmentChange, onUiEvent } from './ui/uiBus.ts';
 import { onLangChange, rankLabels, roundKindName, suitName, t } from './ui/i18n.ts';
@@ -123,15 +124,20 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
     }
   });
 
-  // --- transport + lobby ---
+  // --- transport + lobby + chat ---
   const transport = new WebSocketTransport(defaultWsUrl());
   const lobby = maakLobby(ui);
+  const chat = createChatPanel(ui);
+  chat.onVerstuur((tekst) => transport.sendChat(ROOM_ID, tekst));
+  transport.onChat((msg) => chat.voegToe(msg));
 
   transport.onMessage((msg) => {
     switch (msg.kind) {
       case 'joinedRoom':
         mySeat = msg.yourSeat;
         scene.setViewerSeat(mySeat);
+        chat.setEigenStoel(mySeat);
+        chat.toon();
         lobby.toonWachtkamer(msg.room, mySeat);
         break;
       case 'roomUpdate':
@@ -158,7 +164,12 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
     }
   });
 
-  transport.onStateChange((state) => lobby.setStatus(state));
+  transport.onStateChange((state) => {
+    lobby.setStatus(state);
+    if (state === 'connected') chat.setStatus(null);
+    else if (state === 'connecting') chat.setStatus(t('online.connecting'));
+    else chat.setStatus(t('online.disconnected'));
+  });
 
   lobby.onVerbinden(async (naam) => {
     try {
