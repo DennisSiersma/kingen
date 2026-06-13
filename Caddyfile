@@ -1,0 +1,13 @@
+# Caddy reverse proxy voor de productie-VPS.
+# Caddy regelt automatisch een TLS-certificaat (Let's Encrypt) en proxyt zowel
+# HTTP als de WebSocket-upgrade (/ws) door naar de kingen-container.
+#
+# Cloudflare: zet de SSL/TLS-modus op "Full (strict)". Staat de Cloudflare-proxy
+# (oranje wolk) aan, gebruik dan de DNS-challenge (Cloudflare API-token) of zet
+# het record tijdens de eerste uitrol even op "DNS only" zodat Caddy het cert via
+# de HTTP-challenge kan ophalen.
+
+siersma.farcon.cloud {
+	encode zstd gzip
+	reverse_proxy kingen:8080
+}

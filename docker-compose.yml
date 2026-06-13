@@ -1,0 +1,16 @@
+# Dev/intern (bijv. Proxmox): bouwt en draait de app, bereikbaar op poort 8080.
+# Open http://<host-ip>:8080 in de browser.
+#   docker compose up -d --build
+services:
+  kingen:
+    build: .
+    image: kingen:latest
+    container_name: kingen
+    restart: unless-stopped
+    environment:
+      - PORT=8080
+      - MAX_ROOMS=4
+      - MOVE_TIMEOUT_MS=60000
+      - RECONNECT_GRACE_MS=120000
+    ports:
+      - "8080:8080"
