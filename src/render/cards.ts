@@ -23,7 +23,9 @@ export type { CardTextureSelfTestResult, BackTheme } from './cardTextures.ts';
  */
 export const CARD_WIDTH = 0.63;
 export const CARD_HEIGHT = 0.882;
-export const CARD_THICKNESS = 0.006;
+// Dun gehouden: dikke kaarten lieten de slag onnatuurlijk hoog "zweven" en
+// gaven een witte spleet tussen kaart en slagschaduw.
+export const CARD_THICKNESS = 0.0035;
 
 /** Aanbevolen lift (wereldeenheden) voor een gehoverde handkaart. */
 export const HOVER_LIFT = 0.05;
@@ -116,16 +118,18 @@ export function createCardRenderer(options?: CardTextureOptions): CardRenderer {
     return backTexture;
   }
 
-  /** Fysisch materiaal met lichte clearcoat/sheen voor realistische kaartglans. */
+  /** Fysisch materiaal met lichte glans. Bewust mat gehouden: te veel
+   *  clearcoat/sheen blaast onder de felle tafelspot de witte kaart uit
+   *  ("washed out"), waardoor pip-kleuren verdwijnen. */
   function makeCardMaterial(map: THREE.Texture): THREE.MeshPhysicalMaterial {
     return new THREE.MeshPhysicalMaterial({
       map,
-      roughness: 0.38,
+      roughness: 0.62,
       metalness: 0,
-      clearcoat: 0.32,
-      clearcoatRoughness: 0.3,
-      sheen: 0.25,
-      sheenRoughness: 0.55,
+      clearcoat: 0.1,
+      clearcoatRoughness: 0.55,
+      sheen: 0.08,
+      sheenRoughness: 0.7,
       sheenColor: new THREE.Color('#fff6e0'),
       // Afgeronde hoeken: transparante texture-hoeken via alphaTest wegsnijden
       // (geen sorteer-artefacten zoals bij transparent=true).

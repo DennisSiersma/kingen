@@ -8,6 +8,7 @@
 
 import type { Card, PlayerConfig, PublicGameView, Seat, Suit } from './types.ts';
 import { SUITS } from './types.ts';
+import { snelheidsFactor } from './speed.ts';
 import type { AiStrategy } from '../ai/types.ts';
 
 /**
@@ -65,7 +66,8 @@ export class AiPlayer implements PlayerController {
 
   private async think(): Promise<void> {
     const [min, max] = this.thinkDelayMs;
-    const ms = min + Math.random() * Math.max(0, max - min);
+    // De globale speelsnelheid schaalt de denktijd mee (instelbaar in de UI).
+    const ms = (min + Math.random() * Math.max(0, max - min)) * snelheidsFactor();
     if (ms > 0) await new Promise((r) => setTimeout(r, ms));
   }
 
