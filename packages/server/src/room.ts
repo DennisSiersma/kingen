@@ -21,9 +21,23 @@ export interface ClientConn {
 
 const AI_NAME_POOL = ['Ada', 'Kaia', 'Chris', 'Thom', 'Ali', 'Geeta', 'Myrna', 'Lola'];
 
+export interface RoomOpts {
+  id: string;
+  naam: string;
+  code: string;
+  zichtbaarheid?: 'open' | 'prive';
+  variant?: KingenVariantConfig;
+  aiThinkDelayMs?: [number, number];
+  moveTimeoutMs?: number;
+  /** Aangeroepen bij elke wijziging die de lobbylijst raakt (join/leave/start/eind). */
+  onChange?: () => void;
+}
+
 export class Room {
   readonly id: string;
   readonly naam: string;
+  readonly code: string;
+  readonly zichtbaarheid: 'open' | 'prive';
   readonly gameId = 'kingen';
   readonly variant: KingenVariantConfig;
   readonly maxPlayers: number;
@@ -41,20 +55,27 @@ export class Room {
   private chatTeller = 0;
   private readonly aiThinkDelayMs: [number, number] | undefined;
   private readonly moveTimeoutMs: number;
+  private readonly onChange: (() => void) | undefined;
 
-  constructor(
-    id: string,
-    naam: string,
-    variant: KingenVariantConfig = DEFAULT_VARIANT,
-    aiThinkDelayMs?: [number, number],
-    moveTimeoutMs = 60000,
-  ) {
-    this.id = id;
-    this.naam = naam;
-    this.variant = structuredClone(variant);
+  constructor(opts: RoomOpts) {
+    this.id = opts.id;
+    this.naam = opts.naam;
+    this.code = opts.code;
+    this.zichtbaarheid = opts.zichtbaarheid ?? 'open';
+    this.variant = structuredClone(opts.variant ?? DEFAULT_VARIANT);
     this.maxPlayers = this.variant.playerCount;
-    this.aiThinkDelayMs = aiThinkDelayMs;
-    this.moveTimeoutMs = moveTimeoutMs;
+    this.aiThinkDelayMs = opts.aiThinkDelayMs;
+    this.moveTimeoutMs = opts.moveTimeoutMs ?? 60000;
+    this.onChange = opts.onChange;
+  }
+
+  /** Aantal verbonden mensen (voor opruimen lege tafels). */
+  get aantalVerbonden(): number {
+    return this.connBySeat.size;
+  }
+
+  get bezig(): boolean {
+    return this.inProgress;
   }
 
   // --- Verbindingen ---------------------------------------------------------
@@ -87,13 +108,11 @@ export class Room {
     this.conns.delete(connId);
   }
 
+  /** In-room berichten (de Hub routeert lobby-berichten zelf). */
   handleMessage(connId: string, msg: NetMessage): void {
     const conn = this.conns.get(connId);
     if (!conn) return;
     switch (msg.kind) {
-      case 'hello':
-        this.onHello(conn, msg.clientId, msg.name);
-        break;
       case 'startGame':
         this.onStartGame();
         break;
@@ -104,13 +123,13 @@ export class Room {
         this.onChat(connId, msg.message?.tekst ?? '');
         break;
       default:
-        // Overige berichten (server→client) negeren we hier.
         break;
     }
   }
 
-  private onHello(conn: ClientConn, clientId: string, name: string): void {
-    conn.send({ kind: 'helloOk', connectionId: conn.id, clientId });
+  /** Treed toe tot deze tafel. Retourneert false als joinen niet kon. */
+  join(conn: ClientConn, clientId: string, name: string): boolean {
+    this.conns.set(conn.id, conn);
     this.clientIdByConn.set(conn.id, clientId);
 
     // Reconnect: kent deze clientId al een stoel, dan herbinden we (ook midden
@@ -129,17 +148,21 @@ export class Room {
         this.host.resendRequest(bestaandeStoel);
         this.systeemChat('chat.sysBack', { name: naam }, `${naam} is terug`);
       }
-      return;
+      return true;
     }
 
     if (this.inProgress) {
       conn.send({ kind: 'error', code: 'in-uitvoering', melding: 'De partij is al bezig' });
-      return;
+      this.conns.delete(conn.id);
+      this.clientIdByConn.delete(conn.id);
+      return false;
     }
     const seat = this.laagsteVrijeStoel();
     if (seat === null) {
       conn.send({ kind: 'error', code: 'vol', melding: 'De tafel is vol' });
-      return;
+      this.conns.delete(conn.id);
+      this.clientIdByConn.delete(conn.id);
+      return false;
     }
     this.seatByConn.set(conn.id, seat);
     this.connBySeat.set(seat, conn.id);
@@ -149,6 +172,7 @@ export class Room {
     this.broadcastRoomUpdate();
     const naam = this.names.get(seat) ?? `Speler ${seat + 1}`;
     this.systeemChat('chat.sysJoined', { name: naam }, `${naam} is erbij`);
+    return true;
   }
 
   private onStartGame(): void {
@@ -297,6 +321,12 @@ export class Room {
 
   private broadcastRoomUpdate(): void {
     this.broadcast({ kind: 'roomUpdate', room: this.toRoomInfo() });
+    this.onChange?.();
+  }
+
+  /** Publieke roominfo (voor de lobbylijst). */
+  info(): RoomInfo {
+    return this.toRoomInfo();
   }
 
   // --- Hulp -----------------------------------------------------------------
@@ -325,6 +355,8 @@ export class Room {
       players,
       maxPlayers: this.maxPlayers,
       inProgress: this.inProgress,
+      code: this.code,
+      zichtbaarheid: this.zichtbaarheid,
     };
   }
 }

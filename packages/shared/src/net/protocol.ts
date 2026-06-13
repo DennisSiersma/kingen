@@ -43,6 +43,10 @@ export interface RoomInfo {
   maxPlayers: number;
   /** Is de partij al bezig? */
   inProgress: boolean;
+  /** Deelbare code om te joinen (ook voor privé tafels). */
+  code?: string;
+  /** Open tafels staan in de lobbylijst; privé tafels alleen joinbaar via code. */
+  zichtbaarheid?: 'open' | 'prive';
 }
 
 /**
@@ -54,6 +58,16 @@ export type NetMessage =
   | { kind: 'hello'; clientId: string; name: string }
   /** Server bevestigt de verbinding. */
   | { kind: 'helloOk'; connectionId: string; clientId: string }
+  /** Lobby: vraag de lijst met open tafels op. */
+  | { kind: 'listRooms' }
+  /** Lobby: lijst met open tafels (antwoord). */
+  | { kind: 'roomList'; rooms: RoomInfo[] }
+  /** Lobby: maak een nieuwe tafel en treed toe als host. */
+  | { kind: 'createRoom'; naam: string; maxPlayers: number; zichtbaarheid: 'open' | 'prive' }
+  /** Lobby: treed toe tot een bestaande tafel via code. */
+  | { kind: 'joinRoom'; code: string }
+  /** Verlaat de huidige tafel (terug naar de lobby). */
+  | { kind: 'leaveRoom' }
   /** Host start de partij (lege stoelen worden door de server met AI gevuld). */
   | { kind: 'startGame'; roomId: string }
   | { kind: 'gameEvent'; roomId: string; event: GameEvent }

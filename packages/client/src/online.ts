@@ -13,18 +13,16 @@ import { ScoreSheet } from '@shared/core/scoresheet.ts';
 import { SUITS, SUIT_SYMBOLS, type Card, type GameEvent, type PublicGameView, type Seat, type Suit } from '@shared/core/types.ts';
 import { DEFAULT_VARIANT, type KingenRoundKind } from '@shared/games/kingen/types.ts';
 import { getTableParams } from '@shared/games/kingen/params.ts';
-import type { RoomInfo } from '@shared/net/protocol.ts';
 
 import { createSceneManager } from './render/scene.ts';
 import { createHud } from './ui/hud.ts';
 import { createScoreboard } from './ui/scoreboard.ts';
 import { createChatPanel } from './ui/chat.ts';
+import { createLobby } from './ui/lobby.ts';
 import { createChoiceDialogs, createNotifications } from './ui/notifications.ts';
-import { el, onEnvironmentChange, onUiEvent } from './ui/uiBus.ts';
+import { onEnvironmentChange, onUiEvent } from './ui/uiBus.ts';
 import { onLangChange, rankLabels, roundKindName, suitName, t } from './ui/i18n.ts';
 import { WebSocketTransport, defaultWsUrl } from './net/wsTransport.ts';
-
-const ROOM_ID = 'ONLINE';
 
 function clientId(): string {
   try {
@@ -60,6 +58,22 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
 
   // --- spelstate (afgeleid uit events) ---
   let mySeat: Seat = 0;
+  let huidigeRoomId = '';
+  let inRoom = false;
+  const leesOpgeslagen = (key: string): string => {
+    try {
+      return localStorage.getItem(key) ?? '';
+    } catch {
+      return '';
+    }
+  };
+  const bewaar = (key: string, val: string): void => {
+    try {
+      localStorage.setItem(key, val);
+    } catch {
+      // best-effort
+    }
+  };
   let names: string[] = [];
   let n: number = DEFAULT_VARIANT.playerCount;
   const totalRondes = getTableParams(DEFAULT_VARIANT).totalRounds;
@@ -126,14 +140,33 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
 
   // --- transport + lobby + chat ---
   const transport = new WebSocketTransport(defaultWsUrl());
-  const lobby = maakLobby(ui);
+  const lobby = createLobby(ui, leesOpgeslagen('kingen.name'));
   const chat = createChatPanel(ui);
-  chat.onVerstuur((tekst) => transport.sendChat(ROOM_ID, tekst));
+  chat.onVerstuur((tekst) => {
+    if (huidigeRoomId) transport.sendChat(huidigeRoomId, tekst);
+  });
   transport.onChat((msg) => chat.voegToe(msg));
+
+  // Bewaar het hello-bericht en (her)stuur het bij elke verbinding, zodat de
+  // server na een reconnect je stoel op je clientId herkent en herstelt.
+  let laatsteHello: Extract<import('@shared/net/protocol.ts').NetMessage, { kind: 'hello' }> | null = null;
+  let alEensVerbonden = false;
 
   transport.onMessage((msg) => {
     switch (msg.kind) {
+      case 'roomList':
+        lobby.updateRoomList(msg.rooms);
+        if (!inRoom) {
+          // Bij een (her)verbinding automatisch terug naar je laatste tafel, anders de browser.
+          const code = leesOpgeslagen('kingen.roomCode');
+          if (code) transport.send({ kind: 'joinRoom', code });
+          else lobby.toonBrowser();
+        }
+        break;
       case 'joinedRoom':
+        inRoom = true;
+        huidigeRoomId = msg.room.id;
+        bewaar('kingen.roomCode', msg.room.code ?? '');
         mySeat = msg.yourSeat;
         scene.setViewerSeat(mySeat);
         chat.setEigenStoel(mySeat);
@@ -141,7 +174,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
         lobby.toonWachtkamer(msg.room, mySeat);
         break;
       case 'roomUpdate':
-        lobby.update(msg.room);
+        if (msg.room.id === huidigeRoomId) lobby.updateRoom(msg.room);
         break;
       case 'gameEvent':
         if (msg.event.type === 'gameStart') lobby.verberg();
@@ -154,26 +187,31 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
         }
         break;
       case 'snapshot':
+        inRoom = true;
+        huidigeRoomId = msg.roomId;
         mySeat = msg.seat;
         scene.setViewerSeat(mySeat);
         chat.setEigenStoel(mySeat);
+        chat.toon();
         toepassenSnapshot(msg.view);
         break;
       case 'requestMove':
         void handleRequest(msg);
         break;
       case 'error':
+        if (msg.code === 'geen-tafel' || msg.code === 'vol' || msg.code === 'in-uitvoering' || msg.code === 'max-tafels') {
+          // Tafel niet (meer) beschikbaar → terug naar de browser.
+          bewaar('kingen.roomCode', '');
+          inRoom = false;
+          huidigeRoomId = '';
+          lobby.toonBrowser();
+        }
         void notifications.toon(msg.melding, { soort: 'waarschuwing', duurMs: 3000 });
         break;
       default:
         break;
     }
   });
-
-  // Bewaar het hello-bericht en (her)stuur het bij elke verbinding, zodat de
-  // server na een reconnect je stoel op je clientId herkent en herstelt.
-  let laatsteHello: Extract<import('@shared/net/protocol.ts').NetMessage, { kind: 'hello' }> | null = null;
-  let alEensVerbonden = false;
 
   transport.onStateChange((state) => {
     lobby.setStatus(state);
@@ -191,29 +229,40 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
 
   const verbind = async (naam: string): Promise<void> => {
     laatsteHello = { kind: 'hello', clientId: clientId(), name: naam };
-    try {
-      localStorage.setItem('kingen.name', naam);
-    } catch {
-      // best-effort
-    }
+    bewaar('kingen.name', naam);
     try {
       await transport.connect();
     } catch {
       void notifications.toon(t('online.connectFailed'), { soort: 'waarschuwing', duurMs: 4000 });
     }
   };
-  lobby.onVerbinden(verbind);
+  lobby.onConnect(verbind);
+  lobby.onCreate((o) =>
+    transport.send({ kind: 'createRoom', naam: o.naam, maxPlayers: o.maxPlayers, zichtbaarheid: o.zichtbaarheid }),
+  );
+  lobby.onJoinCode((code) => transport.send({ kind: 'joinRoom', code }));
+  lobby.onStart(() => {
+    if (huidigeRoomId) transport.send({ kind: 'startGame', roomId: huidigeRoomId });
+  });
+  lobby.onLeave(() => {
+    transport.send({ kind: 'leaveRoom' });
+    inRoom = false;
+    huidigeRoomId = '';
+    bewaar('kingen.roomCode', '');
+    chat.verberg();
+    hud.hide();
+    lobby.toonBrowser();
+  });
 
   // Bij herladen (reconnect) automatisch opnieuw verbinden met de bewaarde naam,
   // zodat je via je clientId je stoel + een snapshot terugkrijgt.
-  let bewaardeNaam = '';
-  try {
-    bewaardeNaam = localStorage.getItem('kingen.name') ?? '';
-  } catch {
-    bewaardeNaam = '';
+  const bewaardeNaam = leesOpgeslagen('kingen.name');
+  if (bewaardeNaam) {
+    lobby.setStatus('connecting');
+    void verbind(bewaardeNaam);
+  } else {
+    lobby.toonNaam();
   }
-  if (bewaardeNaam) void verbind(bewaardeNaam);
-  lobby.onStart(() => transport.send({ kind: 'startGame', roomId: ROOM_ID }));
 
   // Dev-only hook: speel de eerste legale kaart als het jouw beurt is (voor
   // geautomatiseerde tests; in productie niet aanwezig).
@@ -262,7 +311,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
         stopUi();
         scene.setPlayableCards([]);
         kaartKeuze = null;
-        transport.send({ kind: 'moveRequest', roomId: ROOM_ID, seat: mySeat, move: { type: 'playCard', card: kaart } });
+        transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move: { type: 'playCard', card: kaart } });
       };
       const stopScene = scene.onCardClicked(kies);
       // Ook via een UiEvent (toegankelijkheid + test), net als de offline LokaleMens.
@@ -274,106 +323,11 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
       kaartKeuze = { legaal: [...legaal.keys()], kies };
     } else if (msg.moveType === 'trump') {
       const suit = await dialogs.vraagTroef((msg.legalSuits as Suit[]) ?? [...SUITS]);
-      transport.send({ kind: 'moveRequest', roomId: ROOM_ID, seat: mySeat, move: { type: 'chooseTrump', suit } });
+      transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move: { type: 'chooseTrump', suit } });
     } else {
       const kind = await dialogs.vraagRondeKeuze((msg.legalKinds ?? []) as KingenRoundKind[]);
-      transport.send({ kind: 'moveRequest', roomId: ROOM_ID, seat: mySeat, move: { type: 'chooseRoundKind', kind } });
+      transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move: { type: 'chooseRoundKind', kind } });
     }
   }
 }
 
-// ---------------------------------------------------------------------------
-// Minimale lobby-overlay (Fase 1). Fase 2 vervangt dit door een echte lobby
-// met roomlijst, stoelen claimen en host-instellingen.
-// ---------------------------------------------------------------------------
-
-interface Lobby {
-  onVerbinden(cb: (naam: string) => void): void;
-  onStart(cb: () => void): void;
-  toonWachtkamer(room: RoomInfo, mySeat: Seat): void;
-  update(room: RoomInfo): void;
-  setStatus(state: string): void;
-  verberg(): void;
-}
-
-function maakLobby(ui: HTMLElement): Lobby {
-  const overlay = el('div', 'kg-online-lobby');
-  const kaart = el('div', 'kg-online-kaart');
-  overlay.appendChild(kaart);
-
-  kaart.appendChild(el('h2', undefined, t('online.title')));
-  const status = el('p', 'kg-online-status', t('online.disconnected'));
-  kaart.appendChild(status);
-
-  const naamRij = el('div', 'kg-online-rij');
-  const naamInput = el('input', 'kg-online-input') as HTMLInputElement;
-  naamInput.type = 'text';
-  naamInput.maxLength = 16;
-  naamInput.placeholder = t('online.namePlaceholder');
-  try {
-    naamInput.value = localStorage.getItem('kingen.name') ?? '';
-  } catch {
-    naamInput.value = '';
-  }
-  naamRij.appendChild(naamInput);
-  const verbindKnop = el('button', 'kg-btn', t('online.connect')) as HTMLButtonElement;
-  naamRij.appendChild(verbindKnop);
-  kaart.appendChild(naamRij);
-
-  const stoelenLijst = el('ul', 'kg-online-stoelen');
-  kaart.appendChild(stoelenLijst);
-
-  const startKnop = el('button', 'kg-btn kg-btn--primair', t('online.start')) as HTMLButtonElement;
-  startKnop.hidden = true;
-  kaart.appendChild(startKnop);
-
-  const terugLink = el('a', 'kg-online-terug', t('online.backLocal')) as HTMLAnchorElement;
-  terugLink.href = location.pathname;
-  kaart.appendChild(terugLink);
-
-  ui.appendChild(overlay);
-
-  let verbindenCb: ((naam: string) => void) | null = null;
-  let startCb: (() => void) | null = null;
-
-  verbindKnop.addEventListener('click', () => {
-    const naam = naamInput.value.trim() || t('online.defaultName');
-    verbindKnop.disabled = true;
-    naamInput.disabled = true;
-    verbindenCb?.(naam);
-  });
-  startKnop.addEventListener('click', () => startCb?.());
-
-  function tekenStoelen(room: RoomInfo, mySeat?: Seat): void {
-    stoelenLijst.innerHTML = '';
-    for (const p of room.players) {
-      const li = el('li', undefined, `${p.seat + 1}. ${p.config.name}${p.seat === mySeat ? ' (jij)' : ''}`);
-      stoelenLijst.appendChild(li);
-    }
-  }
-
-  return {
-    onVerbinden(cb) {
-      verbindenCb = cb;
-    },
-    onStart(cb) {
-      startCb = cb;
-    },
-    toonWachtkamer(room, mySeat) {
-      status.textContent = t('online.joined', { num: mySeat + 1 });
-      tekenStoelen(room, mySeat);
-      startKnop.hidden = false;
-    },
-    update(room) {
-      tekenStoelen(room);
-    },
-    setStatus(state) {
-      if (state === 'connecting') status.textContent = t('online.connecting');
-      else if (state === 'connected' && startKnop.hidden) status.textContent = t('online.connected');
-      else if (state === 'disconnected') status.textContent = t('online.disconnected');
-    },
-    verberg() {
-      overlay.hidden = true;
-    },
-  };
-}

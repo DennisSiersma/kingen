@@ -100,6 +100,56 @@
   border-color: var(--kg-gold-bright, #e8c75a);
   color: #fff;
 }
+.kg-btn--klein { padding: 4px 10px; font-size: 0.82rem; }
+.kg-btn--stil { background: transparent; opacity: 0.8; }
+
+/* Lobby (Fase 2) */
+.kg-lobby-fase { display: flex; flex-direction: column; gap: 10px; }
+.kg-lobby-kop {
+  margin: 2px 0;
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 0.92rem;
+  color: var(--kg-gold-bright, #e8c75a);
+}
+.kg-lobby-tafels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 28vh;
+  overflow-y: auto;
+}
+.kg-lobby-tafel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+.kg-lobby-tafel__naam { color: var(--kg-text, #efe7d6); font-size: 0.9rem; }
+.kg-lobby-leeg { color: var(--kg-muted, #b9ad93); font-size: 0.86rem; font-style: italic; }
+.kg-lobby-veld {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  font-size: 0.78rem;
+  color: var(--kg-muted, #b9ad93);
+}
+.kg-lobby-code {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(201, 162, 39, 0.14);
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  color: var(--kg-gold-bright, #e8c75a);
+  font-family: var(--kg-serif, Georgia, serif);
+  letter-spacing: 0.04em;
+}
 
 /* Online-chatpaneel (rechtsonder, inklapbaar). */
 .kg-chat {

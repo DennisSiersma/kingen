@@ -88,15 +88,13 @@ function maakClient(id: string, naam: string, room: Room): TestClient {
 
 async function main(): Promise<void> {
   // AI zonder denkvertraging zodat een hele partij in milliseconden speelt.
-  const room = new Room('ONLINE', 'Testtafel', undefined, [0, 0]);
+  const room = new Room({ id: ROOM_ID, naam: 'Testtafel', code: 'KTEST', aiThinkDelayMs: [0, 0] });
 
   const a = maakClient('A', 'Dennis', room);
   const b = maakClient('B', 'Kaia', room);
 
-  room.connect(a);
-  room.connect(b);
-  room.handleMessage('A', { kind: 'hello', clientId: 'cid-A', name: 'Dennis' });
-  room.handleMessage('B', { kind: 'hello', clientId: 'cid-B', name: 'Kaia' });
+  room.join(a, 'cid-A', 'Dennis');
+  room.join(b, 'cid-B', 'Kaia');
 
   assert.equal(a.seat, 0, 'client A zou stoel 0 moeten krijgen');
   assert.equal(b.seat, 1, 'client B zou stoel 1 moeten krijgen');
