@@ -11,9 +11,13 @@ import { existsSync } from 'node:fs';
 import { WebSocketServer, type WebSocket } from 'ws';
 import sirv from 'sirv';
 import type { NetMessage } from '@kingen/shared/net/protocol.ts';
+import { registerBuiltinGames } from '@kingen/shared/games/registry.ts';
 import type { ClientConn, Room } from './room.ts';
 import { RoomManager } from './roomManager.ts';
 import { Stats } from './stats.ts';
+
+// Registreer de ingebouwde spellen in het GameRegistry vóór er tafels ontstaan.
+registerBuiltinGames();
 
 const PORT = Number(process.env.PORT ?? 8080);
 const PUBLIC_DIR = process.env.PUBLIC_DIR ?? './public';
@@ -109,9 +113,10 @@ function verwerk(sessie: Sessie, msg: NetMessage): void {
         break;
       }
       const zicht = msg.zichtbaarheid === 'prive' ? 'prive' : 'open';
-      const room = manager.create(msg.naam, msg.maxPlayers, zicht);
+      const gameId = isStr(msg.gameId) ? msg.gameId : 'kingen';
+      const room = manager.create(msg.naam, gameId, msg.maxPlayers, zicht);
       if (!room) {
-        sessie.conn.send({ kind: 'error', code: 'max-tafels', melding: 'Maximaal aantal tafels bereikt' });
+        sessie.conn.send({ kind: 'error', code: 'max-tafels', melding: 'Tafel maken mislukt (vol of onbekend spel)' });
         break;
       }
       if (room.join(sessie.conn, sessie.clientId, sessie.name)) sessie.room = room;

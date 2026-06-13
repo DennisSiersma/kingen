@@ -5,7 +5,7 @@
  */
 
 import type { RoomInfo } from '@kingen/shared/net/protocol.ts';
-import { DEFAULT_VARIANT } from '@kingen/shared/games/kingen/types.ts';
+import { getGame } from '@kingen/shared/core/gameRegistry.ts';
 import { Room } from './room.ts';
 
 export interface RoomManagerOpts {
@@ -38,17 +38,21 @@ export class RoomManager {
     return this.rooms.size;
   }
 
-  /** Maak een tafel. Null als het maximum bereikt is. */
-  create(naam: string, maxPlayers: number, zichtbaarheid: 'open' | 'prive'): Room | null {
+  /** Maak een tafel voor `gameId`. Null bij onbekend spel of als het maximum bereikt is. */
+  create(naam: string, gameId: string, maxPlayers: number, zichtbaarheid: 'open' | 'prive'): Room | null {
     if (this.rooms.size >= this.opts.maxRooms) return null;
+    const entry = getGame(gameId);
+    if (!entry) return null;
     const id = `r${++this.teller}`;
-    const aantal = Math.min(5, Math.max(3, Math.round(maxPlayers))) as 3 | 4 | 5;
+    const aantal = Math.min(entry.maxPlayers, Math.max(entry.minPlayers, Math.round(maxPlayers)));
     const room = new Room({
       id,
-      naam: naam.trim().slice(0, 40) || 'Tafel',
+      naam: naam.trim().slice(0, 40) || entry.naam,
       code: this.uniekeCode(),
       zichtbaarheid,
-      variant: { ...DEFAULT_VARIANT, playerCount: aantal },
+      gameId,
+      config: entry.configForPlayers(aantal),
+      maxPlayers: aantal,
       aiThinkDelayMs: this.opts.aiThinkDelayMs,
       moveTimeoutMs: this.opts.moveTimeoutMs,
       onChange: () => this.opRoomWijziging(room),

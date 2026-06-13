@@ -10,15 +10,17 @@ import { TurnManager } from '@kingen/shared/core/turnManager.ts';
 import { createGameEventBus } from '@kingen/shared/core/events.ts';
 import { AiPlayer, type PlayerController } from '@kingen/shared/core/player.ts';
 import { getStrategyForDifficulty } from '@kingen/shared/ai/strategies.ts';
-import { createKingenDefinition } from '@kingen/shared/games/kingen/engine.ts';
-import type { KingenVariantConfig } from '@kingen/shared/games/kingen/types.ts';
-import type { GameEvent, PlayerConfig, Seat } from '@kingen/shared/core/types.ts';
+import { getGame } from '@kingen/shared/core/gameRegistry.ts';
+import type { GameDefinition, GameEvent, PlayerConfig, Seat } from '@kingen/shared/core/types.ts';
 import { RemotePlayerController, type MoveRequestPayload } from './remotePlayer.ts';
 
 export interface GameHostDeps {
   roomId: string;
   players: PlayerConfig[];
-  variant: KingenVariantConfig;
+  /** Welk spel deze tafel speelt (opgezocht in het GameRegistry). */
+  gameId: string;
+  /** Spel-specifieke config (variant), doorgegeven aan de TurnManager. */
+  config: unknown;
   /** Stoelen die door een mens bespeeld worden (rest = AI). */
   humanSeats: Set<Seat>;
   /** Vraag de client op `seat` om een zet. */
@@ -36,11 +38,14 @@ export interface GameHostDeps {
 export class GameHost {
   private readonly remotes = new Map<Seat, RemotePlayerController>();
   private readonly manager;
-  private readonly definition = createKingenDefinition();
+  private readonly definition: GameDefinition<unknown, unknown, unknown>;
   private running = false;
 
   constructor(private readonly deps: GameHostDeps, seed: number) {
-    const definition = this.definition;
+    const entry = getGame(deps.gameId);
+    if (!entry) throw new Error(`Onbekend spel: ${deps.gameId}`);
+    const definition = entry.createDefinition() as GameDefinition<unknown, unknown, unknown>;
+    this.definition = definition;
     const bus = createGameEventBus();
     bus.onAny((ev) => this.deps.forwardEvent(ev));
 
@@ -67,7 +72,7 @@ export class GameHost {
     this.manager = new TurnManager({
       definition,
       players: deps.players,
-      config: deps.variant,
+      config: deps.config,
       controllers,
       bus,
       seed,

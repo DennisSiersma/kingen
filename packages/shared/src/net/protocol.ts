@@ -64,8 +64,8 @@ export type NetMessage =
   | { kind: 'listRooms' }
   /** Lobby: lijst met open tafels (antwoord). */
   | { kind: 'roomList'; rooms: RoomInfo[] }
-  /** Lobby: maak een nieuwe tafel en treed toe als host. */
-  | { kind: 'createRoom'; naam: string; maxPlayers: number; zichtbaarheid: 'open' | 'prive' }
+  /** Lobby: maak een nieuwe tafel en treed toe als host. `gameId` default 'kingen'. */
+  | { kind: 'createRoom'; naam: string; gameId?: string; maxPlayers: number; zichtbaarheid: 'open' | 'prive' }
   /** Lobby: treed toe tot een bestaande tafel via code. */
   | { kind: 'joinRoom'; code: string }
   /** Verlaat de huidige tafel (terug naar de lobby). */

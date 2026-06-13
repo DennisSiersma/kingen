@@ -8,8 +8,6 @@
 
 import type { GameEvent, PlayerConfig, Seat } from '@kingen/shared/core/types.ts';
 import type { ChatMessage, NetMessage, RoomInfo } from '@kingen/shared/net/protocol.ts';
-import type { KingenVariantConfig } from '@kingen/shared/games/kingen/types.ts';
-import { DEFAULT_VARIANT } from '@kingen/shared/games/kingen/types.ts';
 import { GameHost } from './gameHost.ts';
 import type { MoveRequestPayload } from './remotePlayer.ts';
 
@@ -26,7 +24,12 @@ export interface RoomOpts {
   naam: string;
   code: string;
   zichtbaarheid?: 'open' | 'prive';
-  variant?: KingenVariantConfig;
+  /** Welk spel deze tafel speelt (id in het GameRegistry). */
+  gameId: string;
+  /** Spel-specifieke config (variant). */
+  config: unknown;
+  /** Aantal stoelen aan deze tafel. */
+  maxPlayers: number;
   aiThinkDelayMs?: [number, number];
   moveTimeoutMs?: number;
   /** Aangeroepen bij elke wijziging die de lobbylijst raakt (join/leave/start/eind). */
@@ -42,8 +45,8 @@ export class Room {
   readonly naam: string;
   readonly code: string;
   readonly zichtbaarheid: 'open' | 'prive';
-  readonly gameId = 'kingen';
-  readonly variant: KingenVariantConfig;
+  readonly gameId: string;
+  private readonly config: unknown;
   readonly maxPlayers: number;
 
   private readonly conns = new Map<string, ClientConn>();
@@ -68,8 +71,9 @@ export class Room {
     this.naam = opts.naam;
     this.code = opts.code;
     this.zichtbaarheid = opts.zichtbaarheid ?? 'open';
-    this.variant = structuredClone(opts.variant ?? DEFAULT_VARIANT);
-    this.maxPlayers = this.variant.playerCount;
+    this.gameId = opts.gameId;
+    this.config = structuredClone(opts.config);
+    this.maxPlayers = opts.maxPlayers;
     this.aiThinkDelayMs = opts.aiThinkDelayMs;
     this.moveTimeoutMs = opts.moveTimeoutMs ?? 60000;
     this.onChange = opts.onChange;
@@ -236,7 +240,8 @@ export class Room {
       {
         roomId: this.id,
         players,
-        variant: this.variant,
+        gameId: this.gameId,
+        config: this.config,
         humanSeats,
         sendRequestMove: (seat, payload) => this.sendRequestMove(seat, payload),
         forwardEvent: (event) => this.broadcastEvent(event),

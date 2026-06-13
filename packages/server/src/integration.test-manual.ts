@@ -11,10 +11,13 @@
  */
 
 import { strict as assert } from 'node:assert';
-import type { Card, Seat, Suit } from '@kingen/shared/core/types.ts';
+import type { Seat } from '@kingen/shared/core/types.ts';
 import type { NetMessage } from '@kingen/shared/net/protocol.ts';
+import { getGame } from '@kingen/shared/core/gameRegistry.ts';
+import { registerBuiltinGames } from '@kingen/shared/games/registry.ts';
 import { Room, type ClientConn } from './room.ts';
 
+registerBuiltinGames();
 const ROOM_ID = 'ONLINE';
 
 interface TestClient extends ClientConn {
@@ -81,7 +84,16 @@ function maakClient(id: string, naam: string, room: Room): TestClient {
 
 async function main(): Promise<void> {
   // AI zonder denkvertraging zodat een hele partij in milliseconden speelt.
-  const room = new Room({ id: ROOM_ID, naam: 'Testtafel', code: 'KTEST', aiThinkDelayMs: [0, 0] });
+  const kingen = getGame('kingen')!;
+  const room = new Room({
+    id: ROOM_ID,
+    naam: 'Testtafel',
+    code: 'KTEST',
+    gameId: 'kingen',
+    config: kingen.configForPlayers(4),
+    maxPlayers: 4,
+    aiThinkDelayMs: [0, 0],
+  });
 
   const a = maakClient('A', 'Dennis', room);
   const b = maakClient('B', 'Kaia', room);
