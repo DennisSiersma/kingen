@@ -104,6 +104,19 @@
 .kg-btn--stil { background: transparent; opacity: 0.8; }
 
 /* Lobby (Fase 2) */
+.kg-online-kop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.kg-lobby-taal {
+  display: flex;
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  border-radius: 9px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
 .kg-lobby-fase { display: flex; flex-direction: column; gap: 10px; }
 .kg-lobby-kop {
   margin: 2px 0;
@@ -149,6 +162,24 @@
   color: var(--kg-gold-bright, #e8c75a);
   font-family: var(--kg-serif, Georgia, serif);
   letter-spacing: 0.04em;
+}
+
+/* Zwevende naamlabels boven de tegenstanders (zien wie links/rechts zit). */
+.kg-naamtag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(15, 12, 10, 0.7);
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  color: var(--kg-gold-bright, #e8c75a);
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: opacity 200ms ease;
+  will-change: transform;
 }
 
 /* Online-chatpaneel (rechtsonder, inklapbaar). */

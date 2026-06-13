@@ -26,6 +26,8 @@ export interface KingenSceneManager extends SceneManager {
   setViewerSeat(seat: Seat): void;
   /** Herbouw de tafel direct uit een momentopname (reconnect). */
   toonSnapshot(view: PublicGameView): void;
+  /** Spelersnamen voor de zwevende naamlabels boven de tegenstanders. */
+  setSeatNames(names: string[]): void;
 }
 
 const wacht = (ms: number): Promise<void> => new Promise((res) => setTimeout(res, ms));
@@ -142,6 +144,46 @@ export async function createSceneManager(
     camera.lookAt(kijkDoel);
   };
   plaatsCamera();
+
+  // --- naamlabels boven de tegenstanders (zien wie links/rechts zit) ---
+  const labelLaag = document.createElement('div');
+  labelLaag.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;';
+  container.appendChild(labelLaag);
+  const naamLabels = new Map<number, HTMLElement>();
+  let spelerNamen: string[] = [];
+  const labelVec = new THREE.Vector3();
+
+  const herbouwLabels = (): void => {
+    for (const elLabel of naamLabels.values()) elLabel.remove();
+    naamLabels.clear();
+    for (let seat = 0; seat < stoelen; seat++) {
+      if (seat === viewerSeat) continue; // jezelf zit onderin, geen label nodig
+      const tag = document.createElement('div');
+      tag.className = 'kg-naamtag';
+      tag.textContent = spelerNamen[seat] ?? '';
+      labelLaag.appendChild(tag);
+      naamLabels.set(seat, tag);
+    }
+  };
+
+  const plaatsLabels = (): void => {
+    if (naamLabels.size === 0) return;
+    const b = labelLaag.clientWidth;
+    const h = labelLaag.clientHeight;
+    for (const [seat, tag] of naamLabels) {
+      const a = layout.seatAngle(seat as Seat, stoelen);
+      labelVec.set(Math.cos(a) * env.tableRadius * 1.04, env.tableSurfaceY + 0.42, Math.sin(a) * env.tableRadius * 1.04);
+      labelVec.project(camera);
+      if (labelVec.z > 1) {
+        tag.style.opacity = '0';
+        continue;
+      }
+      const x = (labelVec.x * 0.5 + 0.5) * b;
+      const y = (-labelVec.y * 0.5 + 0.5) * h;
+      tag.style.opacity = '1';
+      tag.style.transform = `translate(-50%,-50%) translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`;
+    }
+  };
 
   // --- resize ---
   const herschaal = (): void => {
@@ -348,6 +390,7 @@ export async function createSceneManager(
       mesh.position.set(basis.x, basis.y + 0.05 * lift, basis.z + 0.04 * lift);
     }
 
+    plaatsLabels();
     renderer.render(scene, camera);
   };
 
@@ -405,6 +448,12 @@ export async function createSceneManager(
     setViewerSeat(seat: Seat): void {
       viewerSeat = seat;
       animator.setViewerSeat(seat);
+      herbouwLabels();
+    },
+
+    setSeatNames(names: string[]): void {
+      spelerNamen = names.slice();
+      herbouwLabels();
     },
 
     toonSnapshot(view: PublicGameView): void {
@@ -431,6 +480,7 @@ export async function createSceneManager(
       animator.clearTable();
       envDispose();
       cardRenderer.dispose();
+      labelLaag.remove();
       renderer.dispose();
       renderer.domElement.remove();
     },

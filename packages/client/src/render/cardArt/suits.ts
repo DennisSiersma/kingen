@@ -10,10 +10,10 @@
 
 import type { Suit } from '@shared/core/types.ts';
 
-/** Diep speelkaart-rood. */
-export const RED_SUIT = '#c0152d';
-/** Bijna-zwart met een vleugje warmte. */
-export const BLACK_SUIT = '#1d1c22';
+/** Levendig speelkaart-rood (verzadigd zodat het ook in dim licht spat). */
+export const RED_SUIT = '#e00b2b';
+/** Diep zwart met een vleugje warmte. */
+export const BLACK_SUIT = '#15141b';
 
 export function isRedSuit(suit: Suit): boolean {
   return suit === 'hearts' || suit === 'diamonds';

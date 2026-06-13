@@ -174,38 +174,45 @@ function maakViltTexture(basis: string): THREE.CanvasTexture {
 
 /** Lichte keukentegels, herhaalbaar. */
 function maakTegelVloer(): THREE.CanvasTexture {
+  // Moderne, frisse vloer: grote lichte matte tegels met heel subtiele veining
+  // en dunne lichte voegen (geen drukke beige marmer meer).
   const s = 1024;
   const { canvas, ctx } = maakCanvas(s, s);
-  const n = 4;
+  const n = 2; // grote tegels
   const ts = s / n;
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
-      const tint = 226 + Math.floor(Math.random() * 16);
-      ctx.fillStyle = `rgb(${tint},${tint - 4},${tint - 14})`;
+      const base = 236 + Math.floor(Math.random() * 6);
+      const grad = ctx.createLinearGradient(i * ts, j * ts, (i + 1) * ts, (j + 1) * ts);
+      grad.addColorStop(0, `rgb(${base},${base - 1},${base - 5})`);
+      grad.addColorStop(1, `rgb(${base - 9},${base - 11},${base - 16})`);
+      ctx.fillStyle = grad;
       ctx.fillRect(i * ts, j * ts, ts, ts);
-      // Subtiele marmering.
-      for (let k = 0; k < 7; k++) {
-        ctx.strokeStyle = 'rgba(150,140,120,0.08)';
-        ctx.lineWidth = 1 + Math.random() * 2;
+      // Heel subtiele, lichte aders.
+      for (let k = 0; k < 4; k++) {
+        ctx.strokeStyle = 'rgba(186,182,174,0.06)';
+        ctx.lineWidth = 1 + Math.random() * 1.4;
+        const x0 = i * ts + Math.random() * ts;
+        const y0 = j * ts + Math.random() * ts;
         ctx.beginPath();
-        ctx.moveTo(i * ts + Math.random() * ts, j * ts + Math.random() * ts);
+        ctx.moveTo(x0, y0);
         ctx.quadraticCurveTo(
-          i * ts + Math.random() * ts, j * ts + Math.random() * ts,
-          i * ts + Math.random() * ts, j * ts + Math.random() * ts,
+          x0 + (Math.random() - 0.5) * ts, y0 + (Math.random() - 0.5) * ts,
+          x0 + (Math.random() - 0.5) * ts, y0 + (Math.random() - 0.5) * ts,
         );
         ctx.stroke();
       }
     }
   }
-  // Voegen.
-  ctx.strokeStyle = 'rgba(120,112,98,0.9)';
-  ctx.lineWidth = 4;
+  // Dunne, lichte voegen.
+  ctx.strokeStyle = 'rgba(208,203,194,0.85)';
+  ctx.lineWidth = 3;
   for (let i = 0; i <= n; i++) {
     ctx.beginPath(); ctx.moveTo(i * ts, 0); ctx.lineTo(i * ts, s); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, i * ts); ctx.lineTo(s, i * ts); ctx.stroke();
   }
-  voegRuisToe(ctx, s, s, 8);
-  return naarTexture(canvas, { herhaal: [5, 5] });
+  voegRuisToe(ctx, s, s, 3);
+  return naarTexture(canvas, { herhaal: [3, 3] });
 }
 
 /** Donkerrood casinotapijt met goudkleurig ruitpatroon, herhaalbaar. */
@@ -588,8 +595,9 @@ export function createKeukentafelEnvironment(): Environment {
 
   const maakTafelMateriaal = (): THREE.Material =>
     new THREE.MeshStandardMaterial({
-      map: maakHoutTexture({ licht: '#dcbd8e', donker: '#c4a06a', nerf: 'rgba(120,88,48,', knoesten: 3 }),
-      roughness: 0.6,
+      // Frisse, lichte Scandinavische eik (paler en koeler dan voorheen).
+      map: maakHoutTexture({ licht: '#ece0c8', donker: '#dccaa8', nerf: 'rgba(160,134,96,', knoesten: 2 }),
+      roughness: 0.5,
       metalness: 0.02,
     });
 
@@ -635,19 +643,20 @@ export function createKeukentafelEnvironment(): Environment {
     createTableMaterial: maakTafelMateriaal,
 
     async setup(scene: THREE.Scene): Promise<() => void> {
-      scene.background = new THREE.Color(0xe7e0d0);
-      scene.fog = new THREE.Fog(0xe7e0d0, 7, 14);
+      // Luchtige, koel-lichte ruimte (fris en modern).
+      scene.background = new THREE.Color(0xeef1f3);
+      scene.fog = new THREE.Fog(0xeef1f3, 8, 15);
 
       const groep = new THREE.Group();
       groep.name = 'omgeving-keukentafel';
 
-      // Tafel: licht eiken met vier poten.
+      // Tafel: lichte Scandinavische eik met vier poten.
       const tafel = createTable({
         radius: tableRadius,
         surfaceY: tableSurfaceY,
         topMaterial: maakTafelMateriaal(),
-        rimMaterial: new THREE.MeshStandardMaterial({ color: 0xb98f5c, roughness: 0.55 }),
-        legMaterial: new THREE.MeshStandardMaterial({ color: 0xa8824f, roughness: 0.6 }),
+        rimMaterial: new THREE.MeshStandardMaterial({ color: 0xd8c6a4, roughness: 0.5 }),
+        legMaterial: new THREE.MeshStandardMaterial({ color: 0xcdbb98, roughness: 0.55 }),
         legStyle: 'vierPoten',
         rimStyle: 'hout',
       });

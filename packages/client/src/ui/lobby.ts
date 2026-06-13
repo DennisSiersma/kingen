@@ -12,7 +12,7 @@ import type { RoomInfo } from '@shared/net/protocol.ts';
 import type { ConnectionState } from '@shared/net/protocol.ts';
 import type { Seat } from '@shared/core/types.ts';
 import { el } from './uiBus.ts';
-import { t } from './i18n.ts';
+import { getLang, onLangChange, setLang, t, type Lang } from './i18n.ts';
 
 export interface CreateOpts {
   naam: string;
@@ -48,7 +48,18 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
   const kaart = el('div', 'kg-online-kaart');
   overlay.appendChild(kaart);
 
-  kaart.appendChild(el('h2', undefined, t('online.title')));
+  const kop = el('div', 'kg-online-kop');
+  const titel = el('h2', undefined, t('online.title'));
+  const taalwissel = el('div', 'kg-lobby-taal');
+  const nlKnop = el('button', 'kg-taalwissel__knop', 'NL') as HTMLButtonElement;
+  const enKnop = el('button', 'kg-taalwissel__knop', 'EN') as HTMLButtonElement;
+  nlKnop.type = 'button';
+  enKnop.type = 'button';
+  nlKnop.addEventListener('click', () => setLang('nl'));
+  enKnop.addEventListener('click', () => setLang('en'));
+  taalwissel.append(nlKnop, enKnop);
+  kop.append(titel, taalwissel);
+  kaart.appendChild(kop);
   const status = el('p', 'kg-online-status', t('online.disconnected'));
   kaart.appendChild(status);
 
@@ -68,47 +79,51 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
   // --- Fase 2: browser ---
   const browserFase = el('div', 'kg-lobby-fase');
   browserFase.hidden = true;
-  browserFase.appendChild(el('h3', 'kg-lobby-kop', t('lobby.openTables')));
+  const kopOpen = el('h3', 'kg-lobby-kop');
+  browserFase.appendChild(kopOpen);
   const tafelLijst = el('ul', 'kg-lobby-tafels');
   browserFase.appendChild(tafelLijst);
 
   browserFase.appendChild(el('hr', 'kg-divider'));
-  browserFase.appendChild(el('h3', 'kg-lobby-kop', t('lobby.newTable')));
+  const kopNieuw = el('h3', 'kg-lobby-kop');
+  browserFase.appendChild(kopNieuw);
   const naamTafelInput = el('input', 'kg-online-input') as HTMLInputElement;
   naamTafelInput.type = 'text';
   naamTafelInput.maxLength = 40;
   browserFase.appendChild(naamTafelInput);
   const opt2 = el('div', 'kg-online-rij');
-  const spelersLabel = el('label', 'kg-lobby-veld', t('lobby.players'));
+  const spelersTekst = el('span');
+  const spelersLabel = el('label', 'kg-lobby-veld');
   const spelersSel = el('select', 'kg-select') as HTMLSelectElement;
-  for (const n of [3, 4, 5]) {
-    const o = el('option', undefined, String(n));
-    o.value = String(n);
-    if (n === 4) o.selected = true;
+  for (const num of [3, 4, 5]) {
+    const o = el('option', undefined, String(num));
+    o.value = String(num);
+    if (num === 4) o.selected = true;
     spelersSel.appendChild(o);
   }
-  spelersLabel.appendChild(spelersSel);
-  const zichtbaarLabel = el('label', 'kg-lobby-veld', t('lobby.visibility'));
+  spelersLabel.append(spelersTekst, spelersSel);
+  const zichtbaarTekst = el('span');
+  const zichtbaarLabel = el('label', 'kg-lobby-veld');
   const zichtbaarSel = el('select', 'kg-select') as HTMLSelectElement;
-  for (const [v, k] of [['open', t('lobby.open')], ['prive', t('lobby.private')]] as const) {
-    const o = el('option', undefined, k);
-    o.value = v;
-    zichtbaarSel.appendChild(o);
-  }
-  zichtbaarLabel.appendChild(zichtbaarSel);
+  const optOpen = el('option') as HTMLOptionElement;
+  optOpen.value = 'open';
+  const optPrive = el('option') as HTMLOptionElement;
+  optPrive.value = 'prive';
+  zichtbaarSel.append(optOpen, optPrive);
+  zichtbaarLabel.append(zichtbaarTekst, zichtbaarSel);
   opt2.append(spelersLabel, zichtbaarLabel);
   browserFase.appendChild(opt2);
-  const maakKnop = el('button', 'kg-btn kg-btn--primair', t('lobby.create')) as HTMLButtonElement;
+  const maakKnop = el('button', 'kg-btn kg-btn--primair') as HTMLButtonElement;
   browserFase.appendChild(maakKnop);
 
   browserFase.appendChild(el('hr', 'kg-divider'));
-  browserFase.appendChild(el('h3', 'kg-lobby-kop', t('lobby.joinByCode')));
+  const kopCode = el('h3', 'kg-lobby-kop');
+  browserFase.appendChild(kopCode);
   const codeRij = el('div', 'kg-online-rij');
   const codeInput = el('input', 'kg-online-input') as HTMLInputElement;
   codeInput.type = 'text';
   codeInput.maxLength = 8;
-  codeInput.placeholder = t('lobby.codePlaceholder');
-  const codeKnop = el('button', 'kg-btn', t('lobby.join')) as HTMLButtonElement;
+  const codeKnop = el('button', 'kg-btn') as HTMLButtonElement;
   codeRij.append(codeInput, codeKnop);
   browserFase.appendChild(codeRij);
   kaart.appendChild(browserFase);
@@ -116,22 +131,51 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
   // --- Fase 3: wachtkamer ---
   const wachtFase = el('div', 'kg-lobby-fase');
   wachtFase.hidden = true;
-  const wachtKop = el('h3', 'kg-lobby-kop', t('lobby.waitingRoom'));
+  const wachtKop = el('h3', 'kg-lobby-kop');
   wachtFase.appendChild(wachtKop);
   const codeRegel = el('p', 'kg-lobby-code');
   wachtFase.appendChild(codeRegel);
   const stoelenLijst = el('ul', 'kg-online-stoelen');
   wachtFase.appendChild(stoelenLijst);
-  const startKnop = el('button', 'kg-btn kg-btn--primair', t('online.start')) as HTMLButtonElement;
-  const verlaatKnop = el('button', 'kg-btn kg-btn--stil', t('lobby.leave')) as HTMLButtonElement;
+  const startKnop = el('button', 'kg-btn kg-btn--primair') as HTMLButtonElement;
+  const verlaatKnop = el('button', 'kg-btn kg-btn--stil') as HTMLButtonElement;
   wachtFase.append(startKnop, verlaatKnop);
   kaart.appendChild(wachtFase);
 
-  const terugLink = el('a', 'kg-online-terug', t('online.backLocal')) as HTMLAnchorElement;
+  const terugLink = el('a', 'kg-online-terug') as HTMLAnchorElement;
   terugLink.href = location.pathname;
   kaart.appendChild(terugLink);
 
   ui.appendChild(overlay);
+
+  // Onthoud de laatst getoonde data zodat hertekenen (taalwissel) klopt.
+  let huidigeRooms: RoomInfo[] = [];
+  let huidigeRoom: RoomInfo | null = null;
+
+  /** (Her)zet alle zichtbare teksten in de actieve taal. */
+  function herteken(): void {
+    titel.textContent = t('online.title');
+    naamInput.placeholder = t('online.namePlaceholder');
+    verbindKnop.textContent = t('online.connect');
+    kopOpen.textContent = t('lobby.openTables');
+    kopNieuw.textContent = t('lobby.newTable');
+    spelersTekst.textContent = t('lobby.players');
+    zichtbaarTekst.textContent = t('lobby.visibility');
+    optOpen.textContent = t('lobby.open');
+    optPrive.textContent = t('lobby.private');
+    maakKnop.textContent = t('lobby.create');
+    kopCode.textContent = t('lobby.joinByCode');
+    codeInput.placeholder = t('lobby.codePlaceholder');
+    codeKnop.textContent = t('lobby.join');
+    wachtKop.textContent = t('lobby.waitingRoom');
+    startKnop.textContent = t('online.start');
+    verlaatKnop.textContent = t('lobby.leave');
+    terugLink.textContent = t('online.backLocal');
+    nlKnop.classList.toggle('is-actief', getLang() === 'nl');
+    enKnop.classList.toggle('is-actief', getLang() === 'en');
+    tekenTafels(huidigeRooms);
+    if (huidigeRoom) codeRegel.textContent = t('lobby.shareCode', { code: huidigeRoom.code ?? '' });
+  }
 
   // --- gedrag ---
   verbindKnop.addEventListener('click', () => {
@@ -192,6 +236,9 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
 
   let mijnStoel: Seat | undefined;
 
+  herteken();
+  onLangChange(() => herteken());
+
   return {
     onConnect(cb) {
       cbConnect = cb;
@@ -220,15 +267,18 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
       toonFase('browser');
     },
     updateRoomList(rooms) {
+      huidigeRooms = rooms;
       tekenTafels(rooms);
     },
     toonWachtkamer(room, mySeat) {
       mijnStoel = mySeat;
+      huidigeRoom = room;
       codeRegel.textContent = t('lobby.shareCode', { code: room.code ?? '' });
       tekenStoelen(room, mySeat);
       toonFase('wacht');
     },
     updateRoom(room) {
+      huidigeRoom = room;
       tekenStoelen(room, mijnStoel);
     },
     getNaam() {

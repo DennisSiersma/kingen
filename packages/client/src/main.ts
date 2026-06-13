@@ -169,6 +169,7 @@ async function speelPartij(ctx: AppContext, setup: SetupConfig): Promise<'opnieu
 
   // --- HUD/scorebord in beginstand ---
   hud.setPlayers(namen, soorten);
+  scene.setSeatNames(namen);
   hud.setRound('', 0, params.totalRounds);
   hud.setTrump(null);
   hud.setTrickCounts(new Array<number>(n).fill(0));

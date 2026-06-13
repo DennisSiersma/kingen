@@ -37,6 +37,9 @@ export const CARD_THICKNESS = 0.0035;
 /** Aanbevolen lift (wereldeenheden) voor een gehoverde handkaart. */
 export const HOVER_LIFT = 0.05;
 
+/** Basis-emissive van de kaarttextuur: subtiele zelf-oplichting voor vivide kleuren. */
+const BASIS_GLOED = 0.22;
+
 /** Visuele status van een kaartmesh in de hand. */
 export type CardHighlight = 'none' | 'hover' | 'selected' | 'dimmed';
 
@@ -49,26 +52,29 @@ export function setCardHighlight(mesh: THREE.Mesh, state: CardHighlight): void {
   const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
   for (const material of materials) {
     if (!(material instanceof THREE.MeshPhysicalMaterial)) continue;
+    // De emissiveMap (de kaarttextuur) laat de gedrukte kleuren zelf oplichten,
+    // zodat kaarten ook in dim/warm licht levendig blijven. We variëren alleen
+    // de emissive-kleur/-sterkte per status (de map blijft staan).
     switch (state) {
       case 'hover':
         material.color.setScalar(1);
-        material.emissive.set('#ffdf91');
-        material.emissiveIntensity = 0.16;
+        material.emissive.set('#fff0cf');
+        material.emissiveIntensity = 0.42;
         break;
       case 'selected':
         material.color.setScalar(1);
-        material.emissive.set('#ffd066');
-        material.emissiveIntensity = 0.3;
+        material.emissive.set('#ffe9b0');
+        material.emissiveIntensity = 0.56;
         break;
       case 'dimmed':
-        material.color.setScalar(0.62);
-        material.emissive.set('#000000');
-        material.emissiveIntensity = 0;
+        material.color.setScalar(0.6);
+        material.emissive.set('#ffffff');
+        material.emissiveIntensity = 0.08;
         break;
       default:
         material.color.setScalar(1);
-        material.emissive.set('#000000');
-        material.emissiveIntensity = 0;
+        material.emissive.set('#ffffff');
+        material.emissiveIntensity = BASIS_GLOED;
         break;
     }
   }
@@ -230,6 +236,11 @@ export function createCardRenderer(options?: CardTextureOptions): CardRenderer {
       sheen: 0.08,
       sheenRoughness: 0.7,
       sheenColor: new THREE.Color('#fff6e0'),
+      // De textuur ook als emissiveMap: gedrukte kleuren lichten subtiel zelf op
+      // (vivide rood/zwart, ook in het dimme café/casino).
+      emissive: new THREE.Color('#ffffff'),
+      emissiveMap: map,
+      emissiveIntensity: BASIS_GLOED,
       // Afgeronde hoeken: transparante texture-hoeken via alphaTest wegsnijden
       // (geen sorteer-artefacten zoals bij transparent=true).
       alphaTest: 0.5,

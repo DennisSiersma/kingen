@@ -94,6 +94,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
         for (let i = 0; i < n; i++) slagen.push(0);
         hud.setPlayers(names, ev.players.map((p) => p.kind));
         hud.setScores(new Array<number>(n).fill(0));
+        scene.setSeatNames(names);
         hud.show();
         break;
       case 'roundStart':
@@ -287,6 +288,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
     // Soort per stoel is in de view niet bekend; eigen stoel = mens, rest = computer
     // (best-effort label; weggevallen mensen worden toch door de AI gedekt).
     hud.setPlayers(names, names.map((_, i) => (i === mySeat ? 'human' : 'ai')));
+    scene.setSeatNames(names);
     hud.setRound(view.round.kind, view.round.index, totalRondes);
     hud.setTrump(view.round.trump);
     hud.setTrickCounts(view.trickCounts);
