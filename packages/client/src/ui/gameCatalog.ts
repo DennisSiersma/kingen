@@ -136,6 +136,28 @@ export const GAME_FAMILIES: GameFamily[] = [
     localKind: 'generic',
     variants: [{ gameId: 'fritzen', labelKey: 'catalog.fritzen.title', descKey: 'variant.fritzen.standaard' }],
   },
+  {
+    key: 'yahtzee',
+    category: 'dobbel',
+    titleKey: 'catalog.yahtzee.title',
+    descKey: 'catalog.yahtzee.desc',
+    players: '1–8',
+    accent: '#16a085',
+    embleem: '🎲',
+    localKind: 'generic',
+    variants: [{ gameId: 'yahtzee', labelKey: 'catalog.yahtzee.title', descKey: 'variant.yahtzee.standaard' }],
+  },
+  {
+    key: 'tienduizend',
+    category: 'dobbel',
+    titleKey: 'catalog.tienduizend.title',
+    descKey: 'catalog.tienduizend.desc',
+    players: '1–8',
+    accent: '#8e44ad',
+    embleem: '🎲',
+    localKind: 'generic',
+    variants: [{ gameId: 'tienduizend', labelKey: 'catalog.tienduizend.title', descKey: 'variant.tienduizend.standaard' }],
+  },
 ];
 
 /** Zoek een familie op key. */
