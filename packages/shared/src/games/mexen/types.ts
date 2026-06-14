@@ -24,6 +24,8 @@ export interface MexenVariantConfig {
   flatMexOnRoll: boolean;
   /** "Beker ongezien doorgeven" als zet toestaan (default true). */
   allowPassUnseen: boolean;
+  /** Max. aantal worpen per beurt vóór je iets moet roepen en doorgeven (default 3). */
+  maxRolls: number;
   /** v1: alleen eliminatie (strepen-variant kan later). */
   scoreMode: 'elimination';
 }
@@ -36,6 +38,7 @@ export const MEXEN_DEFAULT: MexenVariantConfig = {
   mexPenalty: 2,
   flatMexOnRoll: false,
   allowPassUnseen: true,
+  maxRolls: 3,
   scoreMode: 'elimination',
 };
 
@@ -79,6 +82,8 @@ export interface MexenState {
   roundIndex: number;
   /** Doorlopende worp-teller voor deterministische, onafhankelijke worpen. */
   rollSeq: number;
+  /** Aantal worpen dat de huidige houder deze beurt al deed (max config.maxRolls). */
+  rollsThisTurn: number;
   /** Resterende levens per stoel; 0 = af. */
   lives: number[];
   /** Afgeleid gemak: heeft deze stoel nog levens? */

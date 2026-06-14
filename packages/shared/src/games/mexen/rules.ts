@@ -42,7 +42,10 @@ export function mexenLegalMoves(state: MexenState, seat: Seat): MexenMove[] {
 
   if (state.phase === 'announcing') {
     const codes = announceableCodes(state.currentAnnouncement, state.config.announceMode);
-    return codes.map((value) => ({ type: 'announce', value }));
+    const moves: MexenMove[] = codes.map((value) => ({ type: 'announce', value }));
+    // Nog eens gooien mag tot je het maximum aantal worpen deze beurt hebt gehad.
+    if (state.rollsThisTurn < state.config.maxRolls) moves.push({ type: 'roll' });
+    return moves;
   }
 
   if (state.phase === 'responding') {

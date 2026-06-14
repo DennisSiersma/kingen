@@ -197,11 +197,209 @@ export function createCup(): THREE.Group {
 
 /** Geef de resources van een beker-group vrij. */
 export function disposeCup(group: THREE.Group): void {
+  disposeGroup(group);
+}
+
+// ---------------------------------------------------------------------------
+// Bierviltje (waar de beker omgekeerd op geschud wordt)
+// ---------------------------------------------------------------------------
+
+/** Straal van het viltje (ruim groter dan de bekermonding). */
+export const COASTER_RADIUS = CUP_RADIUS * 1.7;
+
+/**
+ * Biervilt-ontwerpen. Bewust ORIGINEEL (verzonnen namen + eigen, generieke
+ * emblemen) en NIET de beschermde merklogo's — alleen de kroegsfeer + de
+ * kleur/motief-families (pils, bock, ster, leeuw/kroon, stier) zijn nagebootst.
+ */
+interface CoasterDesign {
+  naam: string;
+  onder: string;
+  bg: string;
+  rim: string;
+  ink: string;
+  accent: string;
+  emblem: 'hop' | 'shield' | 'star' | 'crown' | 'sunburst';
+}
+
+const COASTER_DESIGNS: readonly CoasterDesign[] = [
+  { naam: "'t Groene Hart", onder: 'PILSNER', bg: '#1f7a3d', rim: '#f3ead2', ink: '#f6efdc', accent: '#e7c66a', emblem: 'hop' },
+  { naam: 'Havenbock', onder: 'BOCKBIER', bg: '#8f1d1d', rim: '#e7c66a', ink: '#f3ead2', accent: '#e7c66a', emblem: 'shield' },
+  { naam: 'Noorderlicht', onder: 'LAGER', bg: '#15314f', rim: '#f3ead2', ink: '#f3ead2', accent: '#cfe3f2', emblem: 'star' },
+  { naam: 'Gouden Leeuw', onder: 'ROYAL', bg: '#c89b2c', rim: '#2a2118', ink: '#2a2118', accent: '#8a1f1f', emblem: 'crown' },
+  { naam: 'Zwarte Stier', onder: 'STOUT', bg: '#16130f', rim: '#d9442f', ink: '#e9c46a', accent: '#d9442f', emblem: 'sunburst' },
+];
+
+/** Aantal beschikbare vilt-ontwerpen (voor willekeurige keuze per partij). */
+export const COASTER_COUNT = COASTER_DESIGNS.length;
+
+function tekenEmblem(ctx: CanvasRenderingContext2D, d: CoasterDesign, cx: number, cy: number, r: number): void {
+  ctx.save();
+  ctx.fillStyle = d.ink;
+  ctx.strokeStyle = d.ink;
+  ctx.lineWidth = r * 0.12;
+  ctx.lineJoin = 'round';
+  switch (d.emblem) {
+    case 'star':
+      tekenSter(ctx, cx, cy, r, 5);
+      ctx.fill();
+      break;
+    case 'sunburst': {
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a) * r * 0.45, cy + Math.sin(a) * r * 0.45);
+        ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.32, 0, Math.PI * 2);
+      ctx.fillStyle = d.accent;
+      ctx.fill();
+      break;
+    }
+    case 'crown': {
+      ctx.beginPath();
+      ctx.moveTo(cx - r, cy + r * 0.5);
+      ctx.lineTo(cx - r, cy - r * 0.2);
+      ctx.lineTo(cx - r * 0.5, cy + r * 0.15);
+      ctx.lineTo(cx, cy - r * 0.6);
+      ctx.lineTo(cx + r * 0.5, cy + r * 0.15);
+      ctx.lineTo(cx + r, cy - r * 0.2);
+      ctx.lineTo(cx + r, cy + r * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'shield': {
+      ctx.beginPath();
+      ctx.moveTo(cx - r * 0.8, cy - r * 0.8);
+      ctx.lineTo(cx + r * 0.8, cy - r * 0.8);
+      ctx.lineTo(cx + r * 0.8, cy + r * 0.15);
+      ctx.quadraticCurveTo(cx + r * 0.8, cy + r * 0.8, cx, cy + r);
+      ctx.quadraticCurveTo(cx - r * 0.8, cy + r * 0.8, cx - r * 0.8, cy + r * 0.15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = d.accent;
+      tekenSter(ctx, cx, cy - r * 0.1, r * 0.42, 5);
+      ctx.fill();
+      break;
+    }
+    case 'hop': {
+      // Gestileerde hopbel: een ovaal met overlappende "schubben".
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, r * 0.6, r * 0.9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = d.bg;
+      ctx.lineWidth = r * 0.07;
+      for (let k = -2; k <= 2; k++) {
+        ctx.beginPath();
+        ctx.arc(cx, cy + k * r * 0.28, r * 0.55, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+      }
+      break;
+    }
+  }
+  ctx.restore();
+}
+
+function tekenSter(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, punten: number): void {
+  ctx.beginPath();
+  for (let i = 0; i < punten * 2; i++) {
+    const rad = i % 2 === 0 ? r : r * 0.42;
+    const a = (i / (punten * 2)) * Math.PI * 2 - Math.PI / 2;
+    const x = cx + Math.cos(a) * rad;
+    const y = cy + Math.sin(a) * rad;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+/** Teken één vilt-ontwerp op een canvas en maak er een texture van. */
+export function createCoasterTexture(variant: number): THREE.CanvasTexture {
+  const d = COASTER_DESIGNS[((variant % COASTER_COUNT) + COASTER_COUNT) % COASTER_COUNT]!;
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const c = size / 2;
+
+  // Achtergrondvlak + crème/contrast rand.
+  ctx.fillStyle = d.bg;
+  ctx.beginPath();
+  ctx.arc(c, c, c, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = size * 0.05;
+  ctx.strokeStyle = d.rim;
+  ctx.beginPath();
+  ctx.arc(c, c, c - ctx.lineWidth, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.lineWidth = size * 0.012;
+  ctx.beginPath();
+  ctx.arc(c, c, c * 0.7, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Embleem in het midden.
+  tekenEmblem(ctx, d, c, c * 0.92, size * 0.17);
+
+  // Naam boven, soort onder.
+  ctx.fillStyle = d.ink;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `700 ${size * 0.1}px Georgia, "Times New Roman", serif`;
+  ctx.fillText(d.naam, c, size * 0.26);
+  ctx.font = `600 ${size * 0.05}px system-ui, sans-serif`;
+  ctx.fillStyle = d.accent;
+  ctx.fillText(d.onder, c, size * 0.74);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+/**
+ * Maak een rond bierviltje met één van de originele ontwerpen (`variant`, of
+ * willekeurig). Lokaal nulpunt in het midden; leg het net boven het tafelblad.
+ */
+export function createCoaster(variant: number = Math.floor(Math.random() * COASTER_COUNT)): THREE.Group {
+  const group = new THREE.Group();
+  // Dunne schijf als basis (zijkant in de randkleur).
+  const basis = new THREE.Mesh(
+    new THREE.CylinderGeometry(COASTER_RADIUS, COASTER_RADIUS, 0.006, 48),
+    new THREE.MeshStandardMaterial({ color: 0xece3d2, roughness: 0.92 }),
+  );
+  basis.receiveShadow = true;
+  // Bovenvlak met het bedrukte ontwerp.
+  const top = new THREE.Mesh(
+    new THREE.CircleGeometry(COASTER_RADIUS, 48),
+    new THREE.MeshStandardMaterial({ map: createCoasterTexture(variant), roughness: 0.85 }),
+  );
+  top.rotation.x = -Math.PI / 2;
+  top.position.y = 0.0032;
+  top.receiveShadow = true;
+  group.add(basis, top);
+  group.userData['coaster'] = true;
+  return group;
+}
+
+/** Geef de resources van een viltje-group vrij. */
+export function disposeCoaster(group: THREE.Group): void {
+  disposeGroup(group);
+}
+
+function disposeGroup(group: THREE.Group): void {
   group.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
     mesh.geometry.dispose();
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    for (const m of mats) m.dispose();
+    for (const m of mats) {
+      const map = (m as THREE.MeshStandardMaterial).map;
+      if (map) map.dispose();
+      m.dispose();
+    }
   });
 }

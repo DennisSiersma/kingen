@@ -21,6 +21,8 @@ interface MexenViewExtras {
   phase: string;
   currentAnnouncement: number | null;
   myRoll: [number, number] | null;
+  rollsThisTurn?: number;
+  maxRolls?: number;
 }
 
 function clamp(x: number, lo: number, hi: number): number {
@@ -61,10 +63,11 @@ export class MexenAi implements PlayerController {
 
     const extras = (view.viewExtras ?? {}) as MexenViewExtras;
 
-    // Aankondigen: kies eerlijk-minimaal, anders de kleinste leugen.
+    // Aankondigen (eventueel met de optie om nog eens te gooien).
     const announceMoves = moves.filter((m): m is Extract<MexenMove, { type: 'announce' }> => m.type === 'announce');
     if (announceMoves.length > 0) {
-      return this.kiesAankondiging(announceMoves, extras);
+      const herworp = moves.find((m) => m.type === 'roll');
+      return this.kiesAankondiging(announceMoves, herworp, extras);
     }
 
     // Reageren: twijfelen of geloven.
@@ -74,19 +77,41 @@ export class MexenAi implements PlayerController {
     return this.wilTwijfelen(extras) ? (doubt ?? believe) : believe;
   }
 
-  /** Eerlijk de laagste geldige waarde ≥ eigen worp; anders de kleinste leugen. */
+  /**
+   * Kies een aankondiging — of gooi nog eens als dat mag en de eigen worp de
+   * vorige aankondiging (nog) niet eerlijk kan verslaan.
+   *  - kan eerlijk: kondig de láágste geldige waarde aan (geeft het minst weg, en
+   *    is waar want de eigen worp is minstens zo hoog);
+   *  - kan niet eerlijk + mag nog gooien: gooi opnieuw (kans op een echte worp);
+   *  - kan niet eerlijk + geen worpen meer: de kleinste leugen.
+   */
   private kiesAankondiging(
     moves: Extract<MexenMove, { type: 'announce' }>[],
+    herworp: MexenMove | undefined,
     extras: MexenViewExtras,
   ): MexenMove {
     const sorted = [...moves].sort((a, b) => rankOf(a.value) - rankOf(b.value));
+    const laagste = sorted[0]!;
     const myRoll = extras.myRoll;
     if (myRoll) {
       const ownRank = rankOf(rollToCode([myRoll[0] as 1, myRoll[1] as 1]));
-      const eerlijk = sorted.find((m) => rankOf(m.value) >= ownRank);
-      if (eerlijk) return eerlijk; // waarheid of minimale over-claim
+      // Eerlijk mogelijk = eigen worp haalt minstens de laagste geldige waarde.
+      if (ownRank >= rankOf(laagste.value)) return laagste;
+      // Anders: nog eens gooien als het mag (kans-afhankelijk van de moeilijkheid).
+      if (herworp && Math.random() < this.herworpKans()) return herworp;
+    } else if (herworp && Math.random() < this.herworpKans()) {
+      return herworp;
     }
-    return sorted[0]!; // moet bluffen → kleinste leugen
+    return laagste; // moet bluffen → kleinste leugen
+  }
+
+  /** Hoe gretig de AI nog eens gooit als de huidige worp te laag is. */
+  private herworpKans(): number {
+    switch (this.difficulty) {
+      case 'makkelijk': return 0.55;
+      case 'moeilijk': return 1.0;
+      default: return 0.85;
+    }
   }
 
   /** Twijfelkans op basis van hoe hoog/onwaarschijnlijk de aankondiging is. */
