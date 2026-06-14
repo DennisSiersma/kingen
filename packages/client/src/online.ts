@@ -247,7 +247,11 @@ export async function runOnlineGame(
         // Mexen-events: beurt, aankondiging, onthulling, levensverlies.
         if (isMexen) {
           const d = ev.data as Record<string, unknown>;
-          if (ev.subtype === 'turn') {
+          if (ev.subtype === 'mexenLives') {
+            // Levens per stoel ook als getal in de spelerschips (vanaf de start).
+            const lives = (d['lives'] as number[] | undefined) ?? [];
+            hud.setScores(Array.from({ length: n }, (_, i) => lives[i] ?? 0));
+          } else if (ev.subtype === 'turn') {
             hud.setTurn(Number(d['seat']) as Seat);
           } else if (ev.subtype === 'announced') {
             const seat = Number(d['seat']);

@@ -13,7 +13,7 @@
 
 import * as THREE from 'three';
 import type { Seat } from '@shared/core/types.ts';
-import type { Roll } from '@shared/games/dice/dice.ts';
+import type { DieValue, Roll } from '@shared/games/dice/dice.ts';
 import type { TableLayout } from '../types.ts';
 import { startTween, easeInOutCubic, easeOutCubic } from '../animations.ts';
 import {
@@ -27,6 +27,9 @@ const LIFT = CUP_HEIGHT * 1.1;
 const CUP_RADIUS_FACTOR = 0.52;
 /** Omgekeerde beker: 180° gekanteld zodat de monding naar beneden wijst. */
 const INVERT = Math.PI;
+/** Schaal en plek (vanaf het midden) van de levensdobbelstenen per stoel. */
+const LIFE_SCALE = 0.82;
+const LIFE_R_FACTOR = 0.82;
 
 export class DiceScene {
   private readonly scene: THREE.Scene;
@@ -36,6 +39,8 @@ export class DiceScene {
   private cup: THREE.Group | null = null;
   private coaster: THREE.Group | null = null;
   private dice: [THREE.Mesh, THREE.Mesh] | null = null;
+  /** Eén levensdobbelsteen per stoel: het bovenvlak toont de resterende levens. */
+  private lifeDice: THREE.Mesh[] = [];
   private holder: Seat = 0 as Seat;
   /** Of de beker momenteel opgetild is (onthuld). */
   private opgetild = false;
@@ -54,6 +59,15 @@ export class DiceScene {
     this.coaster = createCoaster();
     this.dice = [createDie(), createDie()];
     this.scene.add(this.cup, this.coaster, this.dice[0], this.dice[1]);
+    // Eén levensdobbelsteen vóór elke stoel (start op 6 tot het levens-event komt).
+    this.lifeDice = [];
+    for (let s = 0; s < seatCount; s++) {
+      const die = createDie();
+      die.scale.setScalar(LIFE_SCALE);
+      this.scene.add(die);
+      this.lifeDice.push(die);
+      this.plaatsLevensDobbelsteen(s as Seat);
+    }
     this.holder = starter;
     this.opgetild = false;
     this.plaatsBeker(starter);
@@ -78,6 +92,38 @@ export class DiceScene {
         disposeDie(d);
       }
       this.dice = null;
+    }
+    for (const d of this.lifeDice) {
+      this.scene.remove(d);
+      disposeDie(d);
+    }
+    this.lifeDice = [];
+  }
+
+  /** Plaats de levensdobbelsteen van een stoel vóór die speler op tafel. */
+  private plaatsLevensDobbelsteen(seat: Seat): void {
+    const die = this.lifeDice[seat];
+    if (!die) return;
+    const a = this.layout.seatAngle(seat, this.seatCount);
+    const r = this.layout.getRadius() * LIFE_R_FACTOR;
+    const sc = DIE_SIZE * LIFE_SCALE;
+    die.position.set(Math.cos(a) * r, this.surfaceY() + sc / 2, Math.sin(a) * r);
+    die.quaternion.copy(faceQuaternion(6, a)); // 6 = startlevens; lichte draai per stoel
+  }
+
+  /** Werk de levensdobbelstenen bij: bovenvlak = resterende levens (af = verborgen). */
+  setLives(lives: readonly number[]): void {
+    for (let s = 0; s < this.lifeDice.length; s++) {
+      const die = this.lifeDice[s]!;
+      const l = lives[s] ?? 0;
+      if (l <= 0) {
+        die.visible = false;
+        continue;
+      }
+      die.visible = true;
+      const face = Math.max(1, Math.min(6, l)) as DieValue;
+      const a = this.layout.seatAngle(s as Seat, this.seatCount);
+      die.quaternion.copy(faceQuaternion(face, a));
     }
   }
 

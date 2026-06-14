@@ -28,6 +28,11 @@ function toRecord(values: readonly number[]): Record<number, number> {
   return out;
 }
 
+/** Event met de actuele levens per stoel (voert de levensdobbelstenen in de UI). */
+function livesEvent(state: MexenState): GameEvent {
+  return { type: 'custom', subtype: 'mexenLives', data: { lives: state.lives.slice() } };
+}
+
 /** Eerste levende stoel vanaf 0 (voor de allereerste beurt). */
 function firstAlive(state: MexenState): Seat {
   for (let s = 0; s < state.seatCount; s++) if (state.alive[s]) return s as Seat;
@@ -125,6 +130,7 @@ function resolveDoubt(state: MexenState): GameEvent[] {
   state.scoresPerRound.push(loss.map((l) => -l));
   events.push({ type: 'roundEnd', roundIndex: state.roundIndex, roundKind: 'mexen', scores: toRecord(loss.map((l) => -l)) });
   events.push({ type: 'scoreUpdate', totals: toRecord(state.totals) });
+  events.push(livesEvent(state));
 
   state.roundIndex += 1;
 
@@ -196,6 +202,7 @@ export function createMexenDefinition(): MexenDefinition {
       const events: GameEvent[] = [
         { type: 'gameStart', gameId: `mexen-${state.seed}`, players: structuredClone(state.players), seatCount: state.seatCount },
         { type: 'roundStart', roundIndex: state.roundIndex, roundKind: 'mexen', roundLabel: '', dealer: state.cupHolder },
+        livesEvent(state),
         { type: 'custom', subtype: 'turn', data: { seat: state.cupHolder, phase: 'rolling' } },
       ];
       return events;
