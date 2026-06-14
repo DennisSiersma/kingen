@@ -12,6 +12,7 @@ import { klaverjasAmsterdamsGame, klaverjasGame } from './klaverjassen/index.ts'
 import { rikkenGame } from './rikken/index.ts';
 import { toepenGame } from './toepen/index.ts';
 import { mexenGame } from './mexen/index.ts';
+import { qwixxGame } from './qwixx/index.ts';
 
 let gedaan = false;
 
@@ -26,4 +27,5 @@ export function registerBuiltinGames(): void {
   registerGame(rikkenGame);
   registerGame(toepenGame);
   registerGame(mexenGame);
+  registerGame(qwixxGame);
 }
