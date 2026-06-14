@@ -7,6 +7,7 @@
 
 import { registerGame } from '../core/gameRegistry.ts';
 import { kingenGame } from './kingen/index.ts';
+import { hartenjagenGame } from './hartenjagen/index.ts';
 
 let gedaan = false;
 
@@ -14,4 +15,5 @@ export function registerBuiltinGames(): void {
   if (gedaan) return;
   gedaan = true;
   registerGame(kingenGame);
+  registerGame(hartenjagenGame);
 }
