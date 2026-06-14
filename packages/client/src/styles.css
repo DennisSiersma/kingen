@@ -1289,6 +1289,35 @@
   flex-wrap: wrap;
 }
 
+/* Hartenjagen: 3 kaarten doorgeven (multi-select). */
+.kg-doorgeef__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 8px 0 14px;
+  max-width: 440px;
+}
+.kg-doorgeefkaart {
+  min-width: 46px;
+  padding: 10px 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 2px solid rgba(201, 162, 39, 0.3);
+  background: #faf6ea;
+  cursor: pointer;
+  transition: transform 0.08s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.kg-doorgeefkaart.kg-suit-rood { color: #b3122a; }
+.kg-doorgeefkaart.kg-suit-zwart { color: #1c1c1c; }
+.kg-doorgeefkaart:hover { transform: translateY(-2px); }
+.kg-doorgeefkaart.is-gekozen {
+  border-color: var(--kg-gold-bright, #e8c75a);
+  box-shadow: 0 0 0 2px rgba(232, 199, 90, 0.5), 0 4px 10px rgba(0, 0, 0, 0.35);
+  transform: translateY(-4px);
+}
+
 .kg-troefknop {
   width: 92px;
   padding: 14px 0 10px;

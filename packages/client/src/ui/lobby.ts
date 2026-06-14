@@ -16,9 +16,16 @@ import { getLang, onLangChange, setLang, t, type Lang } from './i18n.ts';
 
 export interface CreateOpts {
   naam: string;
+  gameId: string;
   maxPlayers: number;
   zichtbaarheid: 'open' | 'prive';
 }
+
+/** Spellen die in de lobby gekozen kunnen worden (client kent ze statisch; server valideert via de registry). */
+const SPELLEN: { id: string; naam: string }[] = [
+  { id: 'kingen', naam: 'Kingen' },
+  { id: 'hartenjagen', naam: 'Hartenjagen' },
+];
 
 export interface Lobby {
   onConnect(cb: (name: string) => void): void;
@@ -87,6 +94,17 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
   browserFase.appendChild(el('hr', 'kg-divider'));
   const kopNieuw = el('h3', 'kg-lobby-kop');
   browserFase.appendChild(kopNieuw);
+  // Spelkeuze (welk kaartspel deze tafel speelt).
+  const spelLabel = el('label', 'kg-lobby-veld');
+  const spelTekst = el('span');
+  const spelSel = el('select', 'kg-select') as HTMLSelectElement;
+  for (const g of SPELLEN) {
+    const o = el('option', undefined, g.naam) as HTMLOptionElement;
+    o.value = g.id;
+    spelSel.appendChild(o);
+  }
+  spelLabel.append(spelTekst, spelSel);
+  browserFase.appendChild(spelLabel);
   const naamTafelInput = el('input', 'kg-online-input') as HTMLInputElement;
   naamTafelInput.type = 'text';
   naamTafelInput.maxLength = 40;
@@ -160,6 +178,7 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
     verbindKnop.textContent = t('online.connect');
     kopOpen.textContent = t('lobby.openTables');
     kopNieuw.textContent = t('lobby.newTable');
+    spelTekst.textContent = t('lobby.game');
     spelersTekst.textContent = t('lobby.players');
     zichtbaarTekst.textContent = t('lobby.visibility');
     optOpen.textContent = t('lobby.open');
@@ -194,6 +213,7 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
     const tafelNaam = naamTafelInput.value.trim() || t('lobby.defaultTableName', { name: naam });
     cbCreate?.({
       naam: tafelNaam,
+      gameId: spelSel.value,
       maxPlayers: Number(spelersSel.value),
       zichtbaarheid: zichtbaarSel.value as 'open' | 'prive',
     });

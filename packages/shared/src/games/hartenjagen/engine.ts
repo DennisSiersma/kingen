@@ -338,11 +338,11 @@ function applyPlayCard(state: HartenjagenState, seat: Seat, played: Card): GameE
   const n = state.seatCount;
   state.hands[seat] = (state.hands[seat] ?? []).filter((c) => c.id !== card.id);
   state.currentTrick.plays.push({ seat, card });
-  if (card.suit === 'hearts' && !state.heartsBroken) {
-    state.heartsBroken = true;
-  }
+  const brakHarten = card.suit === 'hearts' && !state.heartsBroken;
+  if (brakHarten) state.heartsBroken = true;
 
   const events: GameEvent[] = [{ type: 'playCard', seat, card, trickIndex: state.currentTrick.index }];
+  if (brakHarten) events.push({ type: 'custom', subtype: 'heartsBroken', data: {} });
 
   if (state.currentTrick.plays.length === n) {
     const winner = trickWinner(state.currentTrick.plays, null);

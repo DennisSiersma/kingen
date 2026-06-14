@@ -4,7 +4,7 @@
  * Alle zichtbare teksten lopen via src/ui/i18n.ts (NL/EN).
  */
 
-import type { PlayerConfig, Seat, Suit } from '@shared/core/types.ts';
+import type { Card, PlayerConfig, Seat, Suit } from '@shared/core/types.ts';
 import type { SnelheidNiveau } from '@shared/core/speed.ts';
 import type { KingenRoundKind, KingenVariantConfig } from '@shared/games/kingen/types.ts';
 import type { EnvironmentId } from '../render/types.ts';
@@ -109,6 +109,8 @@ export interface ChoiceDialogs {
   vraagTroef(legal: Suit[]): Promise<Suit>;
   /** Spelkeuze voor dubbelkingen (uitgeputte keuzes uitgeschakeld weergeven). */
   vraagRondeKeuze(available: KingenRoundKind[]): Promise<KingenRoundKind>;
+  /** Hartenjagen: kies precies 3 kaarten om door te geven (richting = pass.left/right/...). */
+  vraagDoorgeven(hand: Card[], richting: string): Promise<Card[]>;
   /** Einde partij: uitslag + "Nog een keer?" */
   toonEindstand(names: string[], totals: number[], winners: Seat[]): Promise<'opnieuw' | 'setup'>;
 }

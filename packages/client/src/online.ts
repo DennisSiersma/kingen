@@ -63,6 +63,8 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
   let inRoom = false;
   // Terug-naar-wachtkamer-timer na een partij; annuleerbaar als de speler eerder weggaat.
   let replayTimer: ReturnType<typeof setTimeout> | null = null;
+  // Laatste doorgeefrichting (Hartenjagen), uit het passRequest-event; voor de doorgeefdialoog.
+  let laatstePassRichting = 'left';
   const leesOpgeslagen = (key: string): string => {
     try {
       return localStorage.getItem(key) ?? '';
@@ -137,6 +139,18 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
         hud.setScores(sheet.getTotals());
         break;
       }
+      case 'custom':
+        // Spel-specifieke events (o.a. Hartenjagen: doorgeven, harten gebroken, maan).
+        if (ev.subtype === 'passRequest') {
+          const d = ev.data as { direction?: string };
+          if (typeof d?.direction === 'string') laatstePassRichting = d.direction;
+        } else if (ev.subtype === 'heartsBroken') {
+          void notifications.toon(t('toast.heartsBroken'), { soort: 'info', duurMs: 1600 });
+        } else if (ev.subtype === 'shootMoon') {
+          const d = ev.data as { seat?: number };
+          void notifications.toon(t('toast.shootMoon', { name: naamVan(d?.seat ?? 0) }), { soort: 'succes', duurMs: 3500 });
+        }
+        break;
       default:
         break;
     }
@@ -253,7 +267,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
   };
   lobby.onConnect(verbind);
   lobby.onCreate((o) =>
-    transport.send({ kind: 'createRoom', naam: o.naam, maxPlayers: o.maxPlayers, zichtbaarheid: o.zichtbaarheid }),
+    transport.send({ kind: 'createRoom', naam: o.naam, gameId: o.gameId, maxPlayers: o.maxPlayers, zichtbaarheid: o.zichtbaarheid }),
   );
   lobby.onJoinCode((code) => transport.send({ kind: 'joinRoom', code }));
   lobby.onStart(() => {
@@ -322,7 +336,8 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
     | { type: 'playCard'; card: Card }
     | { type: 'chooseTrump'; suit: Suit }
     | { type: 'chooseRoundKind'; kind: string }
-    | { type: 'claimHand' };
+    | { type: 'claimHand' }
+    | { type: 'passCards'; cards: Card[] };
 
   async function handleRequest(msg: Extract<import('@shared/net/protocol.ts').NetMessage, { kind: 'requestMove' }>): Promise<void> {
     // Wacht tot de animaties bij zijn, zodat de keuze-UI synchroon loopt.
@@ -366,6 +381,16 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
       const kinds = legalMoves.flatMap((m) => (m.type === 'chooseRoundKind' ? [m.kind] : [])) as KingenRoundKind[];
       const kind = await dialogs.vraagRondeKeuze(kinds);
       const move = legalMoves.find((m) => m.type === 'chooseRoundKind' && m.kind === kind) ?? legalMoves[0];
+      if (move) stuur(move);
+    } else if (msg.moveType === 'passCards') {
+      // De legalMoves zijn alle 3-kaart-combinaties; de hand = de unie ervan.
+      const handMap = new Map<string, Card>();
+      for (const m of legalMoves) if (m.type === 'passCards') for (const c of m.cards) handMap.set(c.id, c);
+      const gekozen = await dialogs.vraagDoorgeven([...handMap.values()], laatstePassRichting);
+      const ids = new Set(gekozen.map((c) => c.id));
+      const move =
+        legalMoves.find((m) => m.type === 'passCards' && m.cards.length === 3 && m.cards.every((c) => ids.has(c.id))) ??
+        legalMoves[0];
       if (move) stuur(move);
     }
   }

@@ -5,11 +5,11 @@
  */
 
 import '../styles.css';
-import type { Seat, Suit } from '@shared/core/types.ts';
+import type { Card, Seat, Suit } from '@shared/core/types.ts';
 import { SUITS, SUIT_SYMBOLS } from '@shared/core/types.ts';
 import type { KingenRoundKind } from '@shared/games/kingen/types.ts';
 import { ALL_ROUND_KINDS } from '@shared/games/kingen/types.ts';
-import { roundKindExplanation, roundKindName, suitName, t } from './i18n.ts';
+import { rankLabels, roundKindExplanation, roundKindName, suitName, t } from './i18n.ts';
 import type { ChoiceDialogs, Notifications } from './types.ts';
 import { el } from './uiBus.ts';
 
@@ -140,6 +140,52 @@ export function createChoiceDialogs(root: HTMLElement): ChoiceDialogs {
           lijst.appendChild(knop);
         }
         panel.appendChild(lijst);
+      });
+    },
+
+    vraagDoorgeven(hand: Card[], richting: string): Promise<Card[]> {
+      return new Promise((resolve) => {
+        const { overlay, panel } = maakDialoog('kg-dialoog kg-doorgeef', true);
+        panel.appendChild(el('h3', undefined, t('dialog.passTitle')));
+        const richtingTekst = t(`pass.${richting}` as Parameters<typeof t>[0]);
+        panel.appendChild(el('p', 'kg-dialoog__sub', t('dialog.passSub', { dir: richtingTekst })));
+
+        const grid = el('div', 'kg-doorgeef__grid');
+        const labels = rankLabels();
+        const gekozen = new Set<string>();
+        const bevestig = el('button', 'kg-btn kg-btn--primair') as HTMLButtonElement;
+        bevestig.type = 'button';
+        const update = (): void => {
+          bevestig.disabled = gekozen.size !== 3;
+          bevestig.textContent = t('dialog.passConfirm', { n: gekozen.size });
+        };
+        for (const card of hand) {
+          const knop = el(
+            'button',
+            `kg-doorgeefkaart ${isRedSuit(card.suit) ? 'kg-suit-rood' : 'kg-suit-zwart'}`,
+            `${labels[card.rank]}${SUIT_SYMBOLS[card.suit]}`,
+          ) as HTMLButtonElement;
+          knop.type = 'button';
+          knop.addEventListener('click', () => {
+            if (gekozen.has(card.id)) {
+              gekozen.delete(card.id);
+              knop.classList.remove('is-gekozen');
+            } else if (gekozen.size < 3) {
+              gekozen.add(card.id);
+              knop.classList.add('is-gekozen');
+            }
+            update();
+          });
+          grid.appendChild(knop);
+        }
+        bevestig.addEventListener('click', () => {
+          if (gekozen.size !== 3) return;
+          overlay.remove();
+          resolve(hand.filter((c) => gekozen.has(c.id)));
+        });
+        update();
+        panel.appendChild(grid);
+        panel.appendChild(bevestig);
       });
     },
 
