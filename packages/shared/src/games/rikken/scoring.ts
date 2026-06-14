@@ -19,7 +19,54 @@
  */
 
 import { doelSlagen, heeftMaat, type BidKind } from './bids.ts';
-import type { RikkenContract, RikkenVariantConfig } from './types.ts';
+import type { Card, Seat } from '../../core/types.ts';
+import type { PassGame, RikkenContract, RikkenVariantConfig } from './types.ts';
+
+const SCHOPPENVROUW_ID = 'spades-12';
+
+type Trick = { winner?: Seat; plays: { seat: Seat; card: Card }[] };
+
+/**
+ * Telling van de passspellen (Schoppen Mie / 1-of-5). Per-tegenspeler, nulsom.
+ *  - Schoppen Mie: wie de ♠V binnenhaalt −5 per tegenspeler; wie de laatste slag
+ *    haalt −5 per tegenspeler (dezelfde speler beide = −10 p.s., max −30).
+ *  - 1-of-5: wie exact 1 óf exact 5 slagen haalt wint en krijgt +10 per
+ *    verliezende speler (elke verliezer betaalt 10 per winnaar).
+ */
+export function scorePassGame(
+  passGame: PassGame,
+  trickCounts: readonly number[],
+  completedTricks: readonly Trick[],
+): number[] {
+  const n = trickCounts.length;
+  const deltas = new Array<number>(n).fill(0);
+
+  if (passGame === 'schoppenMie') {
+    const straf = (seat: number | undefined): void => {
+      if (seat === undefined || seat < 0) return;
+      for (let o = 0; o < n; o++) {
+        if (o === seat) continue;
+        deltas[seat]! -= 5;
+        deltas[o]! += 5;
+      }
+    };
+    const mieSlag = completedTricks.find((t) => t.plays.some((p) => p.card.id === SCHOPPENVROUW_ID));
+    straf(mieSlag?.winner);
+    straf(completedTricks[completedTricks.length - 1]?.winner);
+    return deltas;
+  }
+
+  // 1-of-5
+  const winnaars: number[] = [];
+  const verliezers: number[] = [];
+  for (let s = 0; s < n; s++) {
+    if (trickCounts[s] === 1 || trickCounts[s] === 5) winnaars.push(s);
+    else verliezers.push(s);
+  }
+  for (const w of winnaars) deltas[w]! += 10 * verliezers.length;
+  for (const l of verliezers) deltas[l]! -= 10 * winnaars.length;
+  return deltas;
+}
 
 /** Verlies-schaal voor rik/beter rik/8-alleen: 7=-10 … 0=-45 (stap -5). */
 function rikVerlies(tricks: number): number {
