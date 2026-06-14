@@ -63,8 +63,13 @@ export function legalPlays(state: KlaverjasState, seat: Seat): Card[] {
   // --- Bekennen (gevraagde kleur in de hand) ---
   if (follow.length > 0) {
     if (led === trump) {
-      // Troef gevraagd: bekennen + overtroeven indien mogelijk; anders een
-      // (lagere) troef bijspelen (ondertroeven, want geen keus binnen de kleur).
+      // Troef gevraagd: bekennen is altijd verplicht. AMSTERDAMS: staat de maat al
+      // hoog, dan hoef je hem niet te overtroeven → elke troef mag. Anders (Rotterdams,
+      // of tegenstander hoog) overtroeven indien mogelijk; lukt dat niet, dan een
+      // lagere troef bijspelen (ondertroeven, want geen keus binnen de kleur).
+      if (state.config.gewest === 'amsterdams' && maatStaatHoog(plays, seat, trump, n)) {
+        return follow;
+      }
       const hoogste = hoogsteTroefKracht(plays, trump);
       const hoger = follow.filter((c) => klaverjasRankValue(c, trump) > hoogste);
       return hoger.length > 0 ? hoger : follow;

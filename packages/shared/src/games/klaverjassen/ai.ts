@@ -54,7 +54,9 @@ export class KlaverjasAi implements PlayerController {
   async chooseMove(view: PublicGameView, legalMoves: readonly unknown[]): Promise<unknown> {
     await this.think();
     const moves = legalMoves as KlaverjasMove[];
-    if (moves.length === 0) return moves[0];
+    // 0 zetten hoort niet voor te komen (de engine vraagt alleen aan de beurt);
+    // 1 zet = geen keuze. Beide gevallen kort sluiten.
+    if (moves.length <= 1) return moves[0];
     if (moves[0]!.type === 'bid') return this.kiesBod(view, moves);
     return this.kiesSpeelkaart(view, moves);
   }
@@ -191,9 +193,29 @@ export class KlaverjasAi implements PlayerController {
 
 // --- kleine helpers --------------------------------------------------------
 
+// Loop i.p.v. reduce: reduce zonder beginwaarde gooit op een lege array. De
+// callers leveren altijd ≥1 kaart, maar dit is robuust (geeft cards[0] terug).
 function minBy(cards: Card[], score: (c: Card) => number): Card {
-  return cards.reduce((a, b) => (score(b) < score(a) ? b : a));
+  let best = cards[0]!;
+  let bestScore = score(best);
+  for (let i = 1; i < cards.length; i++) {
+    const s = score(cards[i]!);
+    if (s < bestScore) {
+      best = cards[i]!;
+      bestScore = s;
+    }
+  }
+  return best;
 }
 function maxBy(cards: Card[], score: (c: Card) => number): Card {
-  return cards.reduce((a, b) => (score(b) > score(a) ? b : a));
+  let best = cards[0]!;
+  let bestScore = score(best);
+  for (let i = 1; i < cards.length; i++) {
+    const s = score(cards[i]!);
+    if (s > bestScore) {
+      best = cards[i]!;
+      bestScore = s;
+    }
+  }
+  return best;
 }

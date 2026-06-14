@@ -133,4 +133,16 @@ check('Rotterdams: maat hoog → toch troefplicht', setEq(
   ['clubs-11'],
 ));
 
+// 13. Troef GELEID + maat hoog. Stoel 0 (partner van 2) staat hoog met 9♣.
+//     Amsterdams: bekennen verplicht maar NIET overtroeven → elke troef mag.
+check('Amsterdams: troef geleid, maat hoog → niet overtroeven', setEq(
+  legalPlays(st({ seat: 2, hand: ['clubs-11', 'clubs-8'], trump: 'clubs', gewest: 'amsterdams', plays: [play(1, 'clubs-7'), play(0, 'clubs-9')] }), 2 as Seat),
+  ['clubs-11', 'clubs-8'],
+));
+// 14. Zelfde situatie Rotterdams → overtroeven verplicht (alleen de hogere troef).
+check('Rotterdams: troef geleid, maat hoog → toch overtroeven', setEq(
+  legalPlays(st({ seat: 2, hand: ['clubs-11', 'clubs-8'], trump: 'clubs', gewest: 'rotterdams', plays: [play(1, 'clubs-7'), play(0, 'clubs-9')] }), 2 as Seat),
+  ['clubs-11'],
+));
+
 console.log(`rules.test-manual: ${geslaagd} checks geslaagd ✓`);

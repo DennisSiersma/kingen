@@ -196,6 +196,14 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
           void notifications.toon(t('toast.shootMoon', { name: naamVan(d?.seat ?? 0) }), { soort: 'succes', duurMs: 3500 });
         } else if (ev.subtype === 'phaseReversed') {
           void notifications.toon(t('toast.phaseReversed'), { soort: 'info', duurMs: 4000 });
+        } else if (ev.subtype === 'bidMade') {
+          // Leids bieden: het spelende team wordt pas bij het bod bekend (niet de
+          // voorhand). Corrigeer het team-paneel zodra een bod het team vastlegt.
+          const d = ev.data as { makingTeam?: number };
+          if (typeof d?.makingTeam === 'number') {
+            kjMakingTeam = (d.makingTeam % 2) as 0 | 1;
+            updateTeamPaneel();
+          }
         } else if (ev.subtype === 'roemDeclared') {
           const d = ev.data as { team?: number; seat?: number; points?: number };
           if (typeof d?.team === 'number' && typeof d?.points === 'number') {
