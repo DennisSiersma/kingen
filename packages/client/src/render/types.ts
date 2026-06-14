@@ -53,6 +53,8 @@ export interface Environment {
 export interface CardTextureOptions {
   /** Texture-resolutie van de voorkant in px (breedte; hoogte = breedte * 1.4). Default 1024. */
   resolution?: number;
+  /** Anisotrope filtering (1-16). Lager = goedkoper op mobiele GPU's. Default 8. */
+  anisotropy?: number;
   /** Rugkleur-thema. */
   backTheme?: 'blauw' | 'rood' | 'groen';
   /** Korte rang-labels (taalafhankelijk: NL B/V/H, EN J/Q/K). Default NL. */

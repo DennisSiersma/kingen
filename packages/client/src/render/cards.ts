@@ -137,6 +137,7 @@ function makeRoundedCardGeometry(w: number, h: number, t: number, r: number): TH
 export function createCardRenderer(options?: CardTextureOptions): CardRenderer {
   const resolution = Math.max(256, Math.round(options?.resolution ?? 1024));
   const texHeight = Math.round(resolution * CARD_ASPECT);
+  const anisotropy = Math.max(1, Math.round(options?.anisotropy ?? 8));
   const backTheme = options?.backTheme ?? 'blauw';
 
   const cardSize = { width: CARD_WIDTH, height: CARD_HEIGHT, thickness: CARD_THICKNESS } as const;
@@ -165,7 +166,7 @@ export function createCardRenderer(options?: CardTextureOptions): CardRenderer {
 
   function configureTexture(texture: THREE.CanvasTexture): void {
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 8;
+    texture.anisotropy = anisotropy;
     texture.generateMipmaps = true;
     texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.magFilter = THREE.LinearFilter;

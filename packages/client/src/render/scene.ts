@@ -10,6 +10,7 @@ import type { Card, GameEvent, PublicGameView, Seat } from '@shared/core/types.t
 import { createDeck, sortHand } from '@shared/core/deck.ts';
 import type { GameEventBus } from '@shared/core/events.ts';
 import { createCardRenderer } from './cards.ts';
+import { isCompactDevice } from './device.ts';
 import { getEnvironment } from './environments.ts';
 import { createCardAnimator, createTableLayout } from './animations.ts';
 import type { EnvironmentId, SceneManager, SceneRenderPlugin } from './types.ts';
@@ -72,10 +73,14 @@ export async function createSceneManager(
   renderPlugin?: SceneRenderPlugin,
 ): Promise<KingenSceneManager> {
   // --- renderer ---
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // Mobiel/touch (F3): lichter render-pad om iOS-geheugendruk/oververhitting te
+  // vermijden — geen MSAA, lagere pixel-ratio en goedkopere (Basic) schaduwen.
+  // Desktop houdt antialias + PCFSoft + ratio 2.
+  const compact = isCompactDevice();
+  const renderer = new THREE.WebGLRenderer({ antialias: !compact });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, compact ? 1.5 : 2));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = compact ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
   // Neutral (Khronos PBR Neutral) i.p.v. ACES: ACES desatureert/wast felle
   // highlights uit, waardoor de kaarten onder de tafelspot kleurloos werden.
   renderer.toneMapping = THREE.NeutralToneMapping;
@@ -90,7 +95,13 @@ export async function createSceneManager(
   let envDispose = await env.setup(scene);
 
   // --- kaarten, layout, animator ---
-  const cardRenderer = createCardRenderer();
+  // Kaart-textures zijn veruit de grootste GPU-geheugenpost. Op mobiel 384px
+  // (~0,8 MB i.p.v. ~5,9 MB per kaart) + lage anisotropy; altijd geclampt tegen
+  // de GPU-limieten zodat een zwak toestel niet over zijn texture-budget gaat.
+  const cardRenderer = createCardRenderer({
+    resolution: Math.min(compact ? 384 : 1024, renderer.capabilities.maxTextureSize),
+    anisotropy: Math.min(compact ? 2 : 8, renderer.capabilities.getMaxAnisotropy()),
+  });
   const layout = createTableLayout(env.tableSurfaceY, env.tableRadius);
   const animator = createCardAnimator(scene, cardRenderer, layout, 4);
   // Welke stoel is "ik" (komt onderaan). Offline = 0; online = de eigen stoel.

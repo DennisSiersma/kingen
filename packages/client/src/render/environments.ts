@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import type { Environment, EnvironmentId } from './types.ts';
 import { createTable } from './table.ts';
+import { isCompactDevice } from './device.ts';
 
 // ---------------------------------------------------------------------------
 // Canvas-helpers (procedurele textures)
@@ -62,7 +63,7 @@ interface HoutOpties {
 
 /** Procedurele houtnerf: gradient + golvende nerflijnen + knoesten + ruis. */
 function maakHoutTexture(opties: HoutOpties): THREE.CanvasTexture {
-  const s = opties.formaat ?? 1024;
+  const s = opties.formaat ?? (isCompactDevice() ? 512 : 1024);
   const { canvas, ctx } = maakCanvas(s, s);
 
   const grad = ctx.createLinearGradient(0, 0, 0, s);
@@ -114,7 +115,7 @@ function maakHoutTexture(opties: HoutOpties): THREE.CanvasTexture {
 
 /** Plankenvloer (donker of licht), herhaalbaar. */
 function maakPlankenVloer(licht: string, donker: string, voeg: string): THREE.CanvasTexture {
-  const s = 1024;
+  const s = isCompactDevice() ? 512 : 1024;
   const { canvas, ctx } = maakCanvas(s, s);
   const planken = 8;
   const ph = s / planken;
@@ -151,7 +152,7 @@ function maakPlankenVloer(licht: string, donker: string, voeg: string): THREE.Ca
 
 /** Groen casinovilt: vlakke kleur met fijne stofruis en donkere vignettering. */
 function maakViltTexture(basis: string): THREE.CanvasTexture {
-  const s = 1024;
+  const s = isCompactDevice() ? 512 : 1024;
   const { canvas, ctx } = maakCanvas(s, s);
   ctx.fillStyle = basis;
   ctx.fillRect(0, 0, s, s);
@@ -243,8 +244,9 @@ function maakTapijtTexture(): THREE.CanvasTexture {
 
 /** Café-achtergrond: schemerige wand met flessenplanken en barcontour als silhouet. */
 function maakCafeAchtergrond(): THREE.CanvasTexture {
-  const w = 2048;
-  const h = 512;
+  const compact = isCompactDevice();
+  const w = compact ? 1024 : 2048;
+  const h = compact ? 256 : 512;
   const { canvas, ctx } = maakCanvas(w, h);
 
   // Donkere, warm-bruine waas met lichtere zweem in het midden.
@@ -463,12 +465,16 @@ function maakHandLicht(
 
 function stelSchaduwIn(licht: THREE.SpotLight | THREE.DirectionalLight, formaat = 1024): void {
   licht.castShadow = true;
-  licht.shadow.mapSize.set(formaat, formaat);
+  // Mobiel: shadow map cappen op 512 (minder GPU-geheugen + render-pass-kosten).
+  const compact = isCompactDevice();
+  const mapFormaat = compact ? Math.min(formaat, 512) : formaat;
+  licht.shadow.mapSize.set(mapFormaat, mapFormaat);
   licht.shadow.bias = -0.0004;
   // normalBias voorkomt "peter-panning": de lichte spleet tussen een kaart en
   // zijn eigen slagschaduw waar de gebruiker over klaagde.
   licht.shadow.normalBias = 0.02;
-  licht.shadow.radius = 5;
+  // BasicShadowMap (mobiel) negeert radius; lage waarde is verder onschadelijk.
+  licht.shadow.radius = compact ? 1 : 5;
   if ((licht as THREE.SpotLight).isSpotLight) {
     licht.shadow.camera.near = 0.4;
     licht.shadow.camera.far = 6;
