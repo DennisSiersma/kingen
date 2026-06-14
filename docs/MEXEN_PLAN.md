@@ -25,12 +25,16 @@
 - `online.ts`: plugin aangehangen + Mexen-tak in `handleRequest`, levens in de HUD, event-toasts;
   Mexen kiesbaar in de lobby.
 
+**Follow-ups gedaan (2026-06-14):**
+- ✅ i18n voor het actiepaneel én de event-toasts (NL/EN via `t()`).
+- ✅ Lobby-selector spel-afhankelijk: Mexen **4-8** spelers (overige spellen 3-5).
+
 **Nog te doen / open:**
 - **Visuele verificatie in de browser** (bekerposities per stoel, animatie-timing, optil-onthul) —
   niet mogelijk in deze headless omgeving.
-- i18n voor het actiepaneel (nu Nederlandse literals i.p.v. `t()`-keys).
-- Spelersbereik 6-8 in de lobby-selector (nu 3-5; server bewaakt min. 4).
-- Optioneel: schud-jitter van de stenen, dobbelsteen-skin-keuze, personalize-hardening (§7).
+- `codeLabel` (Mex/Paar-termen) komt uit de shared engine en blijft Nederlands, ook in EN-modus;
+  voor volledige EN-weergave zou dat naar de UI-i18n moeten.
+- Optioneel: schud-jitter/settle van de stenen, dobbelsteen-skin-keuze, personalize-hardening (§7).
 
 ## 0. Samenvatting & belangrijkste ontwerpbeslissing
 
