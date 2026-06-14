@@ -16,10 +16,12 @@ import type { Seat } from '@kingen/shared/core/types.ts';
 import type { NetMessage } from '@kingen/shared/net/protocol.ts';
 import { getGame } from '@kingen/shared/core/gameRegistry.ts';
 import { registerBuiltinGames } from '@kingen/shared/games/registry.ts';
-import { HARTENJAGEN_DEFAULT } from '@kingen/shared/games/hartenjagen/types.ts';
+import { HARTENJAGEN_A } from '@kingen/shared/games/hartenjagen/types.ts';
 import { Room, type ClientConn } from './room.ts';
 
 registerBuiltinGames();
+// Profiel A ('hearts') want dit test de doorgeeffase (profiel B kent geen doorgeven).
+const GAME_ID = 'hearts';
 const ROOM_ID = 'HARTEN';
 
 interface TestClient extends ClientConn {
@@ -88,13 +90,13 @@ function maakClient(id: string, room: Room): TestClient {
 }
 
 async function main(): Promise<void> {
-  const hartenjagen = getGame('hartenjagen')!;
+  const hearts = getGame(GAME_ID)!;
   const room = new Room({
     id: ROOM_ID,
     naam: 'Hartentafel',
     code: 'HTEST',
-    gameId: 'hartenjagen',
-    config: hartenjagen.configForPlayers(4),
+    gameId: GAME_ID,
+    config: hearts.configForPlayers(4),
     maxPlayers: 4,
     aiThinkDelayMs: [0, 0],
   });
@@ -129,7 +131,7 @@ async function main(): Promise<void> {
   // 3. Partij speelde echt en eindigde via endScore.
   assert.ok(a.ontvangen.play > 50, `te weinig playCard-events: ${a.ontvangen.play}`);
   const maxTotal = Math.max(...Object.values(resA.totals));
-  assert.ok(maxTotal >= HARTENJAGEN_DEFAULT.endScore, `partij eindigde zonder endScore: ${maxTotal}`);
+  assert.ok(maxTotal >= HARTENJAGEN_A.endScore, `partij eindigde zonder endScore: ${maxTotal}`);
 
   // 4. Beide clients zien dezelfde eindstand; winnaar = laagste.
   assert.deepEqual(resA.totals, resB.totals, 'A en B zien verschillende eindstand');

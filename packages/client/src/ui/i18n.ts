@@ -38,7 +38,7 @@ const nl = {
 
   // Rondesoorten (KingenRoundKind)
   'round.hartenjagen': 'Hartenjagen',
-  'roundInfo.hartenjagen': 'Vermijd slagen met harten (1 strafpunt elk) en ♠V (13). Wie alle 26 pakt, schiet de maan.',
+  'roundInfo.hartenjagen': 'Vermijd slagen met strafkaarten (harten, ♠V en in de NL-variant ♣B). Het laagste totaal wint.',
   'round.geenSlagen': 'Geen slagen',
   'round.geenHarten': 'Geen harten',
   'round.geenHerenBoeren': 'Geen heren en boeren',
@@ -203,8 +203,10 @@ const nl = {
   'lobby.game': 'Spel',
   'game.kingen': 'Kingen',
   'game.hartenjagen': 'Hartenjagen',
+  'game.hearts': 'Hearts (internationaal)',
   'toast.heartsBroken': 'Harten zijn gebroken!',
   'toast.shootMoon': '{name} schiet de maan! 🌙',
+  'toast.phaseReversed': 'Omslag! Vanaf nu dalen de scores — pak juist strafpunten.',
   'dialog.chooseGame': 'Kies het spel voor deze ronde',
   'dialog.chooseGameSub': 'Jij bent de deler — bekijk je hand onderin beeld. Uitgespeelde keuzes zijn uitgeschakeld.',
   'dialog.unavailable': 'niet meer beschikbaar',
@@ -295,7 +297,7 @@ const en: Record<TranslationKey, string> = {
 
   // Round kinds
   'round.hartenjagen': 'Hearts',
-  'roundInfo.hartenjagen': 'Avoid tricks with hearts (1 penalty each) and ♠Q (13). Take all 26 to shoot the moon.',
+  'roundInfo.hartenjagen': 'Avoid tricks with penalty cards (hearts, ♠Q, and ♣J in the Dutch variant). Lowest total wins.',
   'round.geenSlagen': 'No tricks',
   'round.geenHarten': 'No hearts',
   'round.geenHerenBoeren': 'No kings & jacks',
@@ -457,8 +459,10 @@ const en: Record<TranslationKey, string> = {
   'lobby.game': 'Game',
   'game.kingen': 'Kingen',
   'game.hartenjagen': 'Hearts',
+  'game.hearts': 'Hearts (international)',
   'toast.heartsBroken': 'Hearts have been broken!',
   'toast.shootMoon': '{name} shot the moon! 🌙',
+  'toast.phaseReversed': 'Reversal! Scores now go down — grab penalty cards instead.',
   'dialog.chooseTrump': 'Choose the trump suit',
   'dialog.chooseTrumpSub': 'Every trick you win this round scores 1 point.',
   'dialog.suitNotAllowed': 'This suit is not allowed right now',

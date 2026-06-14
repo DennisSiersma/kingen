@@ -25,6 +25,7 @@ export interface CreateOpts {
 const SPELLEN: { id: string; naam: string }[] = [
   { id: 'kingen', naam: 'Kingen' },
   { id: 'hartenjagen', naam: 'Hartenjagen' },
+  { id: 'hearts', naam: 'Hearts' },
 ];
 
 export interface Lobby {

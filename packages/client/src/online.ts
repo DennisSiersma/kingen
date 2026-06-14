@@ -152,6 +152,8 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
         } else if (ev.subtype === 'shootMoon') {
           const d = ev.data as { seat?: number };
           void notifications.toon(t('toast.shootMoon', { name: naamVan(d?.seat ?? 0) }), { soort: 'succes', duurMs: 3500 });
+        } else if (ev.subtype === 'phaseReversed') {
+          void notifications.toon(t('toast.phaseReversed'), { soort: 'info', duurMs: 4000 });
         }
         break;
       default:

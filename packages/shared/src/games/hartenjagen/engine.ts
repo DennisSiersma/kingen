@@ -20,8 +20,8 @@ import type {
   PassDirection,
 } from './types.ts';
 
-const CLUB_TWO_ID = 'clubs-2';
 const QUEEN_SPADES_ID = 'spades-12';
+const JACK_CLUBS_ID = 'clubs-11';
 
 // ---------------------------------------------------------------------------
 // Hulpfuncties
@@ -44,17 +44,32 @@ function passDirForRound(roundIndex: number, config: HartenjagenVariantConfig): 
   return cyclus[roundIndex % cyclus.length]!;
 }
 
+/** Het deck voor deze config: 32 piketkaarten (B) of 52 (A). */
+function deckForConfig(config: HartenjagenVariantConfig): Card[] {
+  if (config.deck32) {
+    const weg: string[] = [];
+    for (const s of ['clubs', 'diamonds', 'hearts', 'spades']) {
+      for (const r of [2, 3, 4, 5, 6]) weg.push(`${s}-${r}`);
+    }
+    return createDeck(weg);
+  }
+  return createDeck();
+}
+
 function cardPenalty(card: Card, config: HartenjagenVariantConfig): number {
   if (card.id === QUEEN_SPADES_ID) return config.queenPenalty;
+  if (card.id === JACK_CLUBS_ID) return config.jackClubsPenalty;
   if (card.suit === 'hearts') return config.heartPenalty;
   return 0;
 }
 
-const tricksPerRound = (n: number): number => Math.floor(52 / n);
+/** Aantal slagen per ronde = handgrootte = deck / spelers. */
+const tricksPerRound = (state: HartenjagenState): number =>
+  Math.floor((state.config.deck32 ? 32 : 52) / state.seatCount);
 
-function holderOfClubTwo(hands: Card[][]): Seat {
+function holderOf(hands: Card[][], cardId: string): Seat {
   for (let s = 0; s < hands.length; s++) {
-    if (hands[s]!.some((c) => c.id === CLUB_TWO_ID)) return s as Seat;
+    if (hands[s]!.some((c) => c.id === cardId)) return s as Seat;
   }
   return 0 as Seat;
 }
@@ -85,14 +100,15 @@ function combos3(cards: Card[]): Card[][] {
 /** Legale te spelen kaarten voor `seat` (alleen tijdens 'playing' en aan de beurt). */
 function legalPlays(state: HartenjagenState, seat: Seat): Card[] {
   const hand = state.hands[seat] ?? [];
+  const config = state.config;
   const trick = state.currentTrick;
   const leading = trick.plays.length === 0;
 
   if (leading) {
-    // Eerste slag: de ♣2-houder komt verplicht met ♣2 uit.
-    if (state.firstTrick) return hand.filter((c) => c.id === CLUB_TWO_ID);
-    // Harten mag pas geleid worden nadat ze gebroken zijn (tenzij alleen harten).
-    if (!state.heartsBroken) {
+    // Eerste slag: de openingskaart-houder komt er verplicht mee uit.
+    if (state.firstTrick) return hand.filter((c) => c.id === config.openingCardId);
+    // Harten-breekregel (profiel A): harten pas leiden na breken (tenzij alleen harten).
+    if (config.heartsBreakRule && !state.heartsBroken) {
       const nonHarten = hand.filter((c) => c.suit !== 'hearts');
       return nonHarten.length > 0 ? nonHarten : hand;
     }
@@ -103,9 +119,9 @@ function legalPlays(state: HartenjagenState, seat: Seat): Card[] {
   const bekennen = hand.filter((c) => c.suit === led);
   if (bekennen.length > 0) return bekennen;
 
-  // Niet kunnen bekennen → afgooien. In de eerste slag geen strafkaarten
-  // (harten/♠V), tenzij je niets anders hebt.
-  if (state.firstTrick) {
+  // Niet kunnen bekennen → afgooien. Eerste-slag-strafverbod (profiel A): geen
+  // harten/♠V in slag 1, tenzij je niets anders hebt.
+  if (config.firstTrickNoPenalty && state.firstTrick) {
     const veilig = hand.filter((c) => c.suit !== 'hearts' && c.id !== QUEEN_SPADES_ID);
     return veilig.length > 0 ? veilig : hand;
   }
@@ -153,8 +169,7 @@ const nominalDealer = (state: HartenjagenState): Seat =>
 /** Deel de kaarten voor deze ronde en reset de rondestate. */
 function dealCards(state: HartenjagenState): void {
   const n = state.seatCount;
-  const removed = removedFor(n);
-  const deck = createDeck(removed);
+  const deck = deckForConfig(state.config);
   const rng = mulberry(state.seed + state.roundIndex * 7919);
   const geschud = shuffleWith(deck, rng);
   const hands = deal(geschud, n, nominalDealer(state));
@@ -167,16 +182,6 @@ function dealCards(state: HartenjagenState): void {
   state.firstTrick = true;
   state.currentTrick = { index: 0, leader: 0 as Seat, plays: [] };
   state.turn = null;
-}
-
-/** Welke kaarten worden uit het deck verwijderd om 52 deelbaar te maken door n. */
-function removedFor(n: number): string[] {
-  // Standaardvariant = 4 spelers (geen verwijdering). Andere aantallen volgen
-  // als variant; hier minimaal: 3 → ♦2 weg (51), 5 → ♦2+♣2 weg (50), 6 → 4 weg.
-  if (n === 3) return ['diamonds-2'];
-  if (n === 5) return ['diamonds-2', 'clubs-2'];
-  if (n === 6) return ['diamonds-2', 'diamonds-3', 'clubs-2', 'clubs-3'];
-  return [];
 }
 
 // Lokale deterministische shuffle (zelfde mulberry32 als core/deck, maar met
@@ -224,9 +229,9 @@ function performPass(state: HartenjagenState): void {
   state.hands = state.hands.map((h) => sortHand(h));
 }
 
-/** Start de speelfase: de ♣2-houder komt uit. */
+/** Start de speelfase: de openingskaart-houder komt uit. */
 function startPlaying(state: HartenjagenState): void {
-  const leider = holderOfClubTwo(state.hands);
+  const leider = holderOf(state.hands, state.config.openingCardId);
   state.phase = 'playing';
   state.firstTrick = true;
   state.currentTrick = { index: 0, leader: leider, plays: [] };
@@ -242,37 +247,55 @@ function computeWinners(state: HartenjagenState): Seat[] {
   return winners;
 }
 
-/** Rond de ronde af: scoren (incl. maan), totaliseren, en door naar de volgende of einde. */
+/** Rond de ronde af: scoren (incl. maan), totaliseren volgens de eindmodus, en door. */
 function finishRound(state: HartenjagenState): GameEvent[] {
   const n = state.seatCount;
+  const config = state.config;
   const events: GameEvent[] = [];
-  const maxStraf = state.config.heartPenalty * 13 + state.config.queenPenalty; // 26 standaard
+  const hartenAantal = config.deck32 ? 8 : 13;
+  const maxStraf = config.heartPenalty * hartenAantal + config.queenPenalty + config.jackClubsPenalty;
 
   let scores = state.pointsTaken.slice();
-  let maanSchutter = -1;
-  if (state.config.shootMoon) {
+
+  // Schiet de maan (profiel A): wie alle strafpunten pakt, kiest auto-optimaal.
+  if (config.shootMoon) {
+    let maanSchutter = -1;
     for (let s = 0; s < n; s++) if (state.pointsTaken[s] === maxStraf) maanSchutter = s;
-  }
-  if (maanSchutter >= 0) {
-    // Canon: de schutter kiest tussen (a) alle anderen +26 of (b) zichzelf −26,
-    // wat het voordeligst is. Auto-keuze (host/AI): kies (a) alleen als dat de
-    // partij nú winnend afsluit voor de schutter; anders (b) (extra marge).
-    const optieA = state.pointsTaken.map((_, s) => (s === maanSchutter ? 0 : maxStraf));
-    const optieB = state.pointsTaken.map((_, s) => (s === maanSchutter ? -maxStraf : 0));
-    const totA = state.totals.map((t, s) => t + (optieA[s] ?? 0));
-    const winntNuMetA = Math.max(...totA) >= state.config.endScore && totA[maanSchutter] === Math.min(...totA);
-    const variant = winntNuMetA ? 'anderen+26' : 'zelf-26';
-    scores = winntNuMetA ? optieA : optieB;
-    events.push({ type: 'custom', subtype: 'shootMoon', data: { seat: maanSchutter, variant } });
+    if (maanSchutter >= 0) {
+      const optieA = state.pointsTaken.map((_, s) => (s === maanSchutter ? 0 : maxStraf));
+      const optieB = state.pointsTaken.map((_, s) => (s === maanSchutter ? -maxStraf : 0));
+      const totA = state.totals.map((t, s) => t + (optieA[s] ?? 0));
+      const winntNuMetA = Math.max(...totA) >= config.endScore && totA[maanSchutter] === Math.min(...totA);
+      scores = winntNuMetA ? optieA : optieB;
+      events.push({ type: 'custom', subtype: 'shootMoon', data: { seat: maanSchutter, variant: winntNuMetA ? 'anderen+26' : 'zelf-26' } });
+    }
   }
 
   state.scoresPerRound.push(scores.slice());
-  state.totals = state.totals.map((t, i) => t + (scores[i] ?? 0));
+
+  // Totaliseren + einde-bepaling volgens de modus.
+  let klaar = false;
+  if (config.endMode === 'twoPhase') {
+    if (!state.descending) {
+      state.totals = state.totals.map((t, i) => t + (scores[i] ?? 0)); // stijgen
+      if (Math.max(...state.totals) >= config.endScore) {
+        state.descending = true;
+        events.push({ type: 'custom', subtype: 'phaseReversed', data: {} });
+      }
+    } else {
+      state.totals = state.totals.map((t, i) => t - (scores[i] ?? 0)); // dalen naar 0
+      if (Math.min(...state.totals) <= 0) klaar = true;
+    }
+  } else {
+    state.totals = state.totals.map((t, i) => t + (scores[i] ?? 0));
+    if (Math.max(...state.totals) >= config.endScore) klaar = true;
+  }
+
   events.push({ type: 'roundEnd', roundIndex: state.roundIndex, roundKind: 'hartenjagen', scores: toRecord(scores) });
   events.push({ type: 'scoreUpdate', totals: toRecord(state.totals) });
 
   state.roundIndex += 1;
-  if (Math.max(...state.totals) >= state.config.endScore) {
+  if (klaar) {
     state.phase = 'finished';
     state.turn = null;
     events.push({ type: 'gameEnd', winners: computeWinners(state), totals: toRecord(state.totals) });
@@ -350,7 +373,8 @@ function applyPlayCard(state: HartenjagenState, seat: Seat, played: Card): GameE
   if (brakHarten) state.heartsBroken = true;
 
   const events: GameEvent[] = [{ type: 'playCard', seat, card, trickIndex: state.currentTrick.index }];
-  if (brakHarten) events.push({ type: 'custom', subtype: 'heartsBroken', data: {} });
+  // De "harten gebroken"-melding alleen bij de breekregel (profiel A).
+  if (brakHarten && state.config.heartsBreakRule) events.push({ type: 'custom', subtype: 'heartsBroken', data: {} });
 
   if (state.currentTrick.plays.length === n) {
     const winner = trickWinner(state.currentTrick.plays, null);
@@ -364,7 +388,7 @@ function applyPlayCard(state: HartenjagenState, seat: Seat, played: Card): GameE
     state.firstTrick = false;
     state.currentTrick = { index: voltooid.index + 1, leader: winner, plays: [] };
 
-    if (state.completedTricks.length >= tricksPerRound(n)) {
+    if (state.completedTricks.length >= tricksPerRound(state)) {
       events.push(...finishRound(state));
     } else {
       state.turn = winner;
@@ -409,6 +433,7 @@ export function createHartenjagenDefinition(): HartenjagenDefinition {
         pointsTaken: new Array<number>(n).fill(0),
         heartsBroken: false,
         firstTrick: true,
+        descending: false,
         turn: null,
         totals: new Array<number>(n).fill(0),
         scoresPerRound: [],
@@ -461,6 +486,8 @@ export function createHartenjagenDefinition(): HartenjagenDefinition {
           passDir: state.passDir,
           heartsBroken: state.heartsBroken,
           pointsTaken: state.pointsTaken.slice(),
+          descending: state.descending,
+          profile: state.config.profile,
         },
       };
     },

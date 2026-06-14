@@ -92,6 +92,11 @@ export class HartenjagenAi implements PlayerController {
     const plays = trick?.plays ?? [];
     if (legaal.length === 1) return legaal[0]!;
 
+    // Profiel B fase 2 (dalen naar 0): het doel keert om — je WILT juist
+    // strafpunten pakken om je totaal te verlagen. Speel dan om te winnen.
+    const descending = (view.viewExtras as { descending?: boolean } | undefined)?.descending === true;
+    if (descending) return this.zoekPunten(legaal, plays);
+
     // 1. Uitkomen (lege slag): laag en veilig leiden.
     if (plays.length === 0) {
       // Vermijd hoge schoppen leiden (kan de ♠V aantrekken/zelf winnen).
@@ -128,12 +133,27 @@ export class HartenjagenAi implements PlayerController {
     return maxBy(legaal, (c) => this.afgooiGevaar(c));
   }
 
+  /** Profiel B daalfase: pak juist strafpunten — win slagen die punten bevatten. */
+  private zoekPunten(legaal: Card[], plays: { seat: Seat; card: Card }[]): Card {
+    if (plays.length === 0) return hoogste(legaal); // leiden: speel hoog om te kunnen winnen
+    const led = plays[0]!.card.suit;
+    const punten = plays.reduce((s, p) => s + this.straf(p.card), 0);
+    const bekennen = legaal.filter((c) => c.suit === led);
+    if (punten > 0) {
+      // Probeer de punten-slag te winnen: hoogste in de leidkleur, anders hoogste.
+      return bekennen.length > 0 ? hoogste(bekennen) : hoogste(legaal);
+    }
+    // Geen punten in de slag: speel laag, bewaar hoog voor punten-slagen.
+    return bekennen.length > 0 ? laagste(bekennen) : laagste(legaal);
+  }
+
   private isHoogSchoppen(c: Card): boolean {
     return c.id === QUEEN_SPADES_ID || c.id === KING_SPADES_ID || c.id === ACE_SPADES_ID;
   }
 
   private straf(c: Card): number {
     if (c.id === QUEEN_SPADES_ID) return this.variant.queenPenalty;
+    if (c.id === 'clubs-11') return this.variant.jackClubsPenalty;
     if (c.suit === 'hearts') return this.variant.heartPenalty;
     return 0;
   }
