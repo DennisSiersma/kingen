@@ -7,6 +7,7 @@
 
 import type { GameEntry } from '../../core/gameRegistry.ts';
 import { createRikkenDefinition } from './engine.ts';
+import { RikkenAi } from './ai.ts';
 import { RIKKEN_STICHTING } from './types.ts';
 import type { RikkenMove, RikkenState, RikkenVariantConfig } from './types.ts';
 
@@ -19,4 +20,6 @@ export const rikkenGame: Entry = {
   maxPlayers: 4,
   configForPlayers: () => ({ ...RIKKEN_STICHTING, playerCount: 4 }),
   createDefinition: () => createRikkenDefinition(),
+  createAiController: (seat, config, player, thinkDelayMs) =>
+    new RikkenAi(seat, player, config, thinkDelayMs),
 };

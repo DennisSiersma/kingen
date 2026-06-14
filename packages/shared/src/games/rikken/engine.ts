@@ -444,6 +444,8 @@ function buildView(state: RikkenState, seat: Seat): PublicGameView {
         trump: c.trump,
         target: c.target,
         askedSuit: c.askedSuit,
+        // De GEVRAAGDE kaart is publiek (aangezegd); alleen de HOUDER (partner) is geheim.
+        askedAceId: c.askedAceId,
         partner: state.partnerRevealed ? c.partner : null,
         passGame: c.passGame,
       }
