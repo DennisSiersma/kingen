@@ -88,6 +88,12 @@ export type NetMessage =
       seat: Seat;
       moveType: string;
       legalMoves: unknown[];
+      /**
+       * Spel-specifieke view-extra's van de aan-zet-zijnde stoel (alleen voor hem
+       * zichtbaar), bijv. Mexen's eigen verborgen worp. Optioneel; kaartspellen
+       * laten dit weg.
+       */
+      viewExtras?: unknown;
     }
   /** Een zet van een client naar de host/server (host valideert). */
   | { kind: 'moveRequest'; roomId: string; seat: Seat; move: unknown }

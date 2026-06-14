@@ -19,10 +19,12 @@ const wacht = (ms: number): Promise<void> => new Promise((res) => setTimeout(res
 
 export class MexenRenderPlugin implements SceneRenderPlugin {
   private dice: DiceScene | null = null;
+  /** Alleen actief tijdens een Mexen-partij (de plugin hangt altijd aan de scene). */
+  private active = false;
 
-  /** Toegankelijk voor de mens-controller (eigen-worp-blik). */
+  /** Toegankelijk voor de mens-controller (eigen-worp-blik); null buiten Mexen. */
   get scene(): DiceScene | null {
-    return this.dice;
+    return this.active ? this.dice : null;
   }
 
   attach(ctx: RenderPluginContext): void {
@@ -34,11 +36,16 @@ export class MexenRenderPlugin implements SceneRenderPlugin {
     if (!d) return false;
 
     if (ev.type === 'gameStart') {
-      d.reset(ev.seatCount, 0 as Seat);
-      return true;
+      this.active = ev.gameId.startsWith('mexen');
+      if (this.active) {
+        d.reset(ev.seatCount, 0 as Seat);
+        return true;
+      }
+      d.clear(); // ander spel: geen dobbel-objecten in de scene
+      return false;
     }
 
-    if (ev.type !== 'custom') return false;
+    if (!this.active || ev.type !== 'custom') return false;
     const data = (ev.data ?? {}) as Record<string, unknown>;
 
     switch (ev.subtype) {
