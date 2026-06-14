@@ -6,7 +6,8 @@
  * geen enkel onderdeel meer hardcoded aan Kingen gebonden.
  */
 
-import type { GameDefinition } from './types.ts';
+import type { GameDefinition, PlayerConfig, Seat } from './types.ts';
+import type { PlayerController } from './player.ts';
 
 export interface GameEntry<TState = unknown, TMove = unknown, TConfig = unknown> {
   /** Uniek id, bijv. 'kingen', 'hartenjagen'. */
@@ -19,6 +20,17 @@ export interface GameEntry<TState = unknown, TMove = unknown, TConfig = unknown>
   configForPlayers(players: number): TConfig;
   /** Maak een verse GameDefinition voor dit spel. */
   createDefinition(): GameDefinition<TState, TMove, TConfig>;
+  /**
+   * Optioneel: maak de AI-controller voor een computerstoel. Ontbreekt deze,
+   * dan valt GameHost terug op de generieke Kingen-AiPlayer. Spellen met eigen
+   * zet-types (Hartenjagen: passCards) leveren hier hun eigen heuristiek.
+   */
+  createAiController?(
+    seat: Seat,
+    config: TConfig,
+    player: PlayerConfig,
+    thinkDelayMs?: [number, number],
+  ): PlayerController;
 }
 
 const registry = new Map<string, GameEntry>();

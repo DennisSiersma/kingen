@@ -61,6 +61,10 @@ export class GameHost {
         this.remotes.set(seat, rp);
         return rp;
       }
+      // Per-spel AI als de registry-entry die levert; anders de Kingen-AiPlayer.
+      if (entry.createAiController) {
+        return entry.createAiController(seat, deps.config, cfg, deps.aiThinkDelayMs);
+      }
       return new AiPlayer(
         seat,
         cfg,

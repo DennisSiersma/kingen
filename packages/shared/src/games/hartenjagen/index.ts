@@ -6,6 +6,7 @@
 
 import type { GameEntry } from '../../core/gameRegistry.ts';
 import { createHartenjagenDefinition } from './engine.ts';
+import { HartenjagenAi } from './ai.ts';
 import { HARTENJAGEN_DEFAULT } from './types.ts';
 import type { HartenjagenMove, HartenjagenState, HartenjagenVariantConfig } from './types.ts';
 
@@ -17,4 +18,6 @@ export const hartenjagenGame: GameEntry<HartenjagenState, HartenjagenMove, Harte
   maxPlayers: 4,
   configForPlayers: () => ({ ...HARTENJAGEN_DEFAULT, playerCount: 4 }),
   createDefinition: () => createHartenjagenDefinition(),
+  createAiController: (seat, config, player, thinkDelayMs) =>
+    new HartenjagenAi(seat, player, config, thinkDelayMs),
 };
