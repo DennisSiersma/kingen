@@ -269,6 +269,56 @@ de vier rijen **− 5 per strafvak**. Hoogste wint.
 
 ---
 
+# 5A. REGENWORMEN (Heckmeck am Bratwurmeck / Pickomino) — toegevoegd 2026-06-14
+
+**Ontwerper:** Reiner Knizia (2005). **Familie:** push-your-luck met set-aside én een
+**gedeelde, steelbare voorraad tegels**. **Spelers:** 2–7. **Vertrouwen:** kern hoog (NL/EN/DE
+verbatim bevestigd); geen echte bronafwijkingen op de kernregels.
+Bronnen o.a.: Wikipedia NL *Regenwormen (spel)*, UltraBoardGames/Pickomino, spelregels.eu,
+leukebordspellen.nl, 1d6chan *Heckmeck*.
+
+## 5A.1 Materiaal
+- **8 dobbelstenen** met vlakken **1-2-3-4-5 + worm**. De **worm telt als 5** bij het optellen.
+- **16 tegels** met waarden **21 t/m 36**, elk met een aantal wormen:
+  - **21–24 → 1 worm**, **25–28 → 2 wormen**, **29–32 → 3 wormen**, **33–36 → 4 wormen**.
+    (formule: `Math.floor((tegel-21)/4)+1`). In totaal 40 wormen op tafel.
+- Bij start liggen alle 16 tegels open in het midden ("de braadworst-rij").
+
+## 5A.2 Beurtverloop (push-your-luck met set-aside)
+1. Gooi alle nog beschikbare stenen (start: 8).
+2. **Kies precies één ogenwaarde** die in de worp voorkomt **en die je deze beurt nog niet apart
+   legde**, en leg **álle** stenen van die waarde apart. (Je mag een waarde maar één keer per
+   beurt vastleggen.)
+3. Kies: **stoppen** (een tegel pakken) of **de rest opnieuw gooien**. Heb je alle 8 stenen
+   vastgelegd, dan moet je stoppen.
+4. **Stoppen / tegel pakken** mag alleen als je **minstens één worm** apart hebt liggen én je som
+   **≥ 21** is:
+   - Pak uit het midden de tegel met waarde **== je som**, of anders de **hoogste tegel < je som**.
+   - **Of steel** de **bovenste** tegel van een tegenstander als die **exact** je som is.
+
+## 5A.3 Mislukken (bust)
+Je beurt mislukt zodra je **geen nieuwe waarde** kunt vastleggen, of je stopt **zonder worm**,
+of je **kunt geen tegel pakken** (som < 21, of geen geschikte tegel/steal). Gevolg:
+- Leg je **bovenste** veroverde tegel terug in het midden (open), **en**
+- draai de **hoogste tegel in het midden** om (uit het spel). *(Eerst terugleggen, dán de
+  hoogste verwijderen — de teruggelegde tegel kan dus zelf de hoogste zijn.)*
+- Had je geen tegel, dan verdwijnt alleen de hoogste midden-tegel.
+
+## 5A.4 Einde & winst
+Het spel eindigt zodra er **geen tegels meer in het midden** liggen. Iedere speler telt de
+**wormen op zijn (zichtbare) tegelstapel**; **de meeste wormen wint**. Tie-break: officieel niet
+strak gespecificeerd → implementatiekeuze (hier: gedeelde winst).
+
+## 5A.5 Implementatienoten (deze engine)
+- Stenen 1..6 met **6 = worm**; `punten(v) = v===6?5:v`. Volledig open worp (geen verborgen info).
+- Set-aside per waarde (alle stenen van die waarde tegelijk), max. 6 distincte waarden per beurt.
+- Gedeelde state: `center` (resterende midden-tegels), `stacks` (veroverde tegels per stoel, top
+  = laatste). Score-HUD toont **wormen-totaal** per stoel.
+- Bust-detectie wordt in de engine afgehandeld (geen lege legale-zetten-lijst): na elke worp en
+  na elk vastleggen checkt de engine of doorgaan/pakken kan; zo niet → bust.
+
+---
+
 # 6. ZILVERVLOOT — niet gevonden
 
 Geen gedocumenteerd dobbel-/bordspel "Zilvervloot" gevonden. Zoekresultaten betreffen het

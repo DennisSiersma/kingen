@@ -24,6 +24,7 @@ import { QwixxRenderPlugin } from './render/dice/qwixxRenderPlugin.ts';
 import { FritzenRenderPlugin } from './render/dice/fritzenRenderPlugin.ts';
 import { YahtzeeRenderPlugin } from './render/dice/yahtzeeRenderPlugin.ts';
 import { TienduizendRenderPlugin } from './render/dice/tienduizendRenderPlugin.ts';
+import { RegenwormenRenderPlugin } from './render/dice/regenwormenRenderPlugin.ts';
 import type { CardAnimator, RenderPluginContext, SceneRenderPlugin } from './render/types.ts';
 import { createHud } from './ui/hud.ts';
 import { createMexenPanel, type MexenMoveJSON } from './ui/mexenPanel.ts';
@@ -31,6 +32,7 @@ import { createQwixxSheet, type QwixxMoveJSON, type QwixxSheetExtras } from './u
 import { createFritzenPanel, type FritzenMoveJSON, type FritzenPanelExtras } from './ui/fritzenPanel.ts';
 import { createYahtzeePanel, type YahtzeeMoveJSON, type YahtzeePanelExtras } from './ui/yahtzeePanel.ts';
 import { createTienduizendPanel, type TienduizendMoveJSON, type TienduizendPanelExtras } from './ui/tienduizendPanel.ts';
+import { createRegenwormenPanel, type RegenwormenMoveJSON, type RegenwormenPanelExtras } from './ui/regenwormenPanel.ts';
 import { createScoreboard } from './ui/scoreboard.ts';
 import { createChatPanel } from './ui/chat.ts';
 import { createLobby } from './ui/lobby.ts';
@@ -74,13 +76,15 @@ export async function runOnlineGame(
   const fritzenPaneel = createFritzenPanel(ui);
   const yahtzeePaneel = createYahtzeePanel(ui);
   const tienduizendPaneel = createTienduizendPanel(ui);
+  const regenwormenPaneel = createRegenwormenPanel(ui);
   const mexenPlugin = new MexenRenderPlugin();
   const qwixxPlugin = new QwixxRenderPlugin();
   const fritzenPlugin = new FritzenRenderPlugin();
   const yahtzeePlugin = new YahtzeeRenderPlugin();
   const tienduizendPlugin = new TienduizendRenderPlugin();
+  const regenwormenPlugin = new RegenwormenRenderPlugin();
   // Eén scene, meerdere dobbel-render-plugins: elk handelt zijn eigen spel af.
-  const renderPlugins = [mexenPlugin, qwixxPlugin, fritzenPlugin, yahtzeePlugin, tienduizendPlugin];
+  const renderPlugins = [mexenPlugin, qwixxPlugin, fritzenPlugin, yahtzeePlugin, tienduizendPlugin, regenwormenPlugin];
   const renderPlugin: SceneRenderPlugin = {
     attach: (ctx: RenderPluginContext) => renderPlugins.forEach((p) => p.attach?.(ctx)),
     handleEvent: async (ev, anim: CardAnimator) => {
@@ -119,6 +123,7 @@ export async function runOnlineGame(
   let isFritzen = false;
   let isYahtzee = false;
   let isTienduizend = false;
+  let isRegenwormen = false;
   // Klaverjas-state voor het live team-paneel (Wij/Zij kaartpunten + roem deze boom).
   let isKlaverjas = false;
   let kjTrump: Suit | null = null;
@@ -185,6 +190,9 @@ export async function runOnlineGame(
         isTienduizend = ev.gameId.startsWith('tienduizend');
         if (isTienduizend) tienduizendPaneel.toon();
         else tienduizendPaneel.verberg();
+        isRegenwormen = ev.gameId.startsWith('regenwormen');
+        if (isRegenwormen) regenwormenPaneel.toon();
+        else regenwormenPaneel.verberg();
         if (isKlaverjas) teamPaneel.toon();
         else teamPaneel.verberg();
         isRikken = ev.gameId.startsWith('rikken');
@@ -269,7 +277,7 @@ export async function runOnlineGame(
       case 'scoreUpdate':
         // Mexen: totals = resterende levens; Qwixx: totals = score. In beide
         // gevallen direct in de spelerschips tonen.
-        if (isMexen || isQwixx || isFritzen || isYahtzee || isTienduizend) {
+        if (isMexen || isQwixx || isFritzen || isYahtzee || isTienduizend || isRegenwormen) {
           hud.setScores(Array.from({ length: n }, (_, i) => ev.totals[i] ?? 0));
         }
         break;
@@ -539,6 +547,7 @@ export async function runOnlineGame(
               fritzenPaneel.verberg();
               yahtzeePaneel.verberg();
               tienduizendPaneel.verberg();
+              regenwormenPaneel.verberg();
               if (huidigeRoom) lobby.toonWachtkamer(huidigeRoom, mySeat);
             }, 5000);
           });
@@ -622,6 +631,7 @@ export async function runOnlineGame(
     fritzenPaneel.verberg();
     yahtzeePaneel.verberg();
     tienduizendPaneel.verberg();
+    regenwormenPaneel.verberg();
     lobby.toonBrowser();
   });
 
@@ -809,6 +819,15 @@ export async function runOnlineGame(
       const legal = (msg.legalMoves ?? []) as TienduizendMoveJSON[];
       const extras = (msg.viewExtras ?? {}) as TienduizendPanelExtras;
       const move = await tienduizendPaneel.vraag(legal, extras);
+      transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move });
+      return;
+    }
+
+    // --- Regenwormen: gooien, een waarde apart leggen, doorgooien of tegel pakken/stelen ---
+    if (isRegenwormen) {
+      const legal = (msg.legalMoves ?? []) as RegenwormenMoveJSON[];
+      const extras = (msg.viewExtras ?? {}) as RegenwormenPanelExtras;
+      const move = await regenwormenPaneel.vraag(legal, extras);
       transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move });
       return;
     }

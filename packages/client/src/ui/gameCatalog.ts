@@ -158,6 +158,17 @@ export const GAME_FAMILIES: GameFamily[] = [
     localKind: 'generic',
     variants: [{ gameId: 'tienduizend', labelKey: 'catalog.tienduizend.title', descKey: 'variant.tienduizend.standaard' }],
   },
+  {
+    key: 'regenwormen',
+    category: 'dobbel',
+    titleKey: 'catalog.regenwormen.title',
+    descKey: 'catalog.regenwormen.desc',
+    players: '2–7',
+    accent: '#cd6133',
+    embleem: '🐛',
+    localKind: 'generic',
+    variants: [{ gameId: 'regenwormen', labelKey: 'catalog.regenwormen.title', descKey: 'variant.regenwormen.standaard' }],
+  },
 ];
 
 /** Zoek een familie op key. */
