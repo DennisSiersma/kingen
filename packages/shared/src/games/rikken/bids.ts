@@ -60,6 +60,11 @@ export const BID_LADDER: BidKind[] = (Object.keys(BID_RANK) as BidKind[]).sort(
 
 export const bidRank = (kind: BidKind): number => BID_RANK[kind];
 
+/** De (enige) soort op een gegeven rang 1..14, of undefined. */
+export function kindAtRank(rank: number): BidKind | undefined {
+  return BID_LADDER[rank - 1];
+}
+
 const ALLEEN: ReadonlySet<BidKind> = new Set<BidKind>([
   'alleen8', 'alleen9', 'alleen10', 'alleen11', 'alleen12', 'alleen13',
 ]);
