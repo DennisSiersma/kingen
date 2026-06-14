@@ -147,6 +147,9 @@ export async function createSceneManager(
   };
   plaatsCamera();
 
+  // Een per-spel render-plugin (bijv. Mexen) krijgt nu scene/camera/layout-toegang.
+  renderPlugin?.attach?.({ scene, camera, layout });
+
   // --- naamlabels boven de tegenstanders (zien wie links/rechts zit) ---
   const labelLaag = document.createElement('div');
   labelLaag.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;';
