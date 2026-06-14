@@ -8,7 +8,7 @@
     "build": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/index.cjs",
     "start": "node dist/index.cjs",
     "check": "tsc --noEmit -p tsconfig.json",
-    "test": "tsx src/integration.test-manual.ts && tsx src/integration.hartenjagen.test-manual.ts && tsx src/integration.klaverjassen.test-manual.ts && tsx src/integration.rikken.test-manual.ts && tsx src/integration.toepen.test-manual.ts && tsx src/integration.mexen.test-manual.ts && tsx src/integration.qwixx.test-manual.ts && tsx src/integration.fritzen.test-manual.ts && tsx src/integration.yahtzee.test-manual.ts && tsx src/integration.localhost.test-manual.ts"
+    "test": "tsx src/integration.test-manual.ts && tsx src/integration.hartenjagen.test-manual.ts && tsx src/integration.klaverjassen.test-manual.ts && tsx src/integration.rikken.test-manual.ts && tsx src/integration.toepen.test-manual.ts && tsx src/integration.mexen.test-manual.ts && tsx src/integration.qwixx.test-manual.ts && tsx src/integration.fritzen.test-manual.ts && tsx src/integration.yahtzee.test-manual.ts && tsx src/integration.tienduizend.test-manual.ts && tsx src/integration.localhost.test-manual.ts"
   },
   "dependencies": {
     "@kingen/shared": "*",

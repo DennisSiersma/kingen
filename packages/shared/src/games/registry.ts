@@ -15,6 +15,7 @@ import { mexenGame } from './mexen/index.ts';
 import { qwixxGame } from './qwixx/index.ts';
 import { fritzenGame } from './fritzen/index.ts';
 import { yahtzeeGame } from './yahtzee/index.ts';
+import { tienduizendGame } from './tienduizend/index.ts';
 
 let gedaan = false;
 
@@ -32,4 +33,5 @@ export function registerBuiltinGames(): void {
   registerGame(qwixxGame);
   registerGame(fritzenGame);
   registerGame(yahtzeeGame);
+  registerGame(tienduizendGame);
 }
