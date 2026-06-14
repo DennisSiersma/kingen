@@ -13,6 +13,8 @@ import { ScoreSheet } from '@shared/core/scoresheet.ts';
 import { SUITS, SUIT_SYMBOLS, type Card, type GameEvent, type PublicGameView, type Seat, type Suit } from '@shared/core/types.ts';
 import { DEFAULT_VARIANT, type KingenRoundKind } from '@shared/games/kingen/types.ts';
 import { getTableParams } from '@shared/games/kingen/params.ts';
+import { teamOf } from '@shared/games/klaverjassen/types.ts';
+import { cardPoints } from '@shared/games/klaverjassen/cards.ts';
 
 import { createSceneManager } from './render/scene.ts';
 import { createHud } from './ui/hud.ts';
@@ -20,7 +22,7 @@ import { createScoreboard } from './ui/scoreboard.ts';
 import { createChatPanel } from './ui/chat.ts';
 import { createLobby } from './ui/lobby.ts';
 import { createChoiceDialogs, createNotifications } from './ui/notifications.ts';
-import { onEnvironmentChange, onUiEvent } from './ui/uiBus.ts';
+import { el, onEnvironmentChange, onUiEvent } from './ui/uiBus.ts';
 import { onLangChange, rankLabels, roundKindName, suitName, t } from './ui/i18n.ts';
 import { WebSocketTransport, defaultWsUrl } from './net/wsTransport.ts';
 
@@ -43,6 +45,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
   const scoreboard = createScoreboard(ui);
   const notifications = createNotifications(ui);
   const dialogs = createChoiceDialogs(ui);
+  const teamPaneel = maakTeamPaneel(ui);
 
   const scene = await createSceneManager(app, bus, 'cafe');
   scene.start();
@@ -65,6 +68,15 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
   let replayTimer: ReturnType<typeof setTimeout> | null = null;
   // Laatste doorgeefrichting (Hartenjagen), uit het passRequest-event; voor de doorgeefdialoog.
   let laatstePassRichting = 'left';
+  // Klaverjas-state voor het live team-paneel (Wij/Zij kaartpunten + roem deze boom).
+  let isKlaverjas = false;
+  let kjTrump: Suit | null = null;
+  const kjCardPoints: [number, number] = [0, 0];
+  const kjRoem: [number, number] = [0, 0];
+  let kjMakingTeam: 0 | 1 | null = null;
+  const updateTeamPaneel = (): void => {
+    teamPaneel.set((mySeat % 2) as 0 | 1, kjCardPoints, kjRoem, kjMakingTeam);
+  };
   const leesOpgeslagen = (key: string): string => {
     try {
       return localStorage.getItem(key) ?? '';
@@ -97,6 +109,9 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
         n = ev.seatCount;
         // Kingen heeft een vast aantal rondes; andere spellen (Hartenjagen) zijn open einde.
         totalRondes = ev.gameId.startsWith('kingen') ? getTableParams(DEFAULT_VARIANT).totalRounds : 0;
+        isKlaverjas = ev.gameId.startsWith('klaverjas');
+        if (isKlaverjas) teamPaneel.toon();
+        else teamPaneel.verberg();
         sheet = new ScoreSheet(n);
         slagen.length = 0;
         for (let i = 0; i < n; i++) slagen.push(0);
@@ -110,13 +125,31 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
         hud.setRound(ev.roundKind, ev.roundIndex, totalRondes);
         hud.setTrump(null);
         hud.setTrickCounts([...slagen]);
+        if (isKlaverjas) {
+          kjTrump = null;
+          kjCardPoints[0] = 0;
+          kjCardPoints[1] = 0;
+          kjRoem[0] = 0;
+          kjRoem[1] = 0;
+          // Spelend team = team van de voorhand (links van de deler).
+          kjMakingTeam = teamOf(((ev.dealer + 1) % n) as Seat) as 0 | 1;
+          updateTeamPaneel();
+        }
         break;
       case 'trumpChosen':
         hud.setTrump(ev.trump);
-        void notifications.toon(
-          t('toast.trumpChosen', { name: naamVan(ev.chooser), suit: `${SUIT_SYMBOLS[ev.trump]} ${suitName(ev.trump)}` }),
-          { soort: 'info', duurMs: 1800 },
-        );
+        kjTrump = ev.trump;
+        if (isKlaverjas) {
+          void notifications.toon(
+            t('toast.klaverjasTrump', { suit: `${SUIT_SYMBOLS[ev.trump]} ${suitName(ev.trump)}` }),
+            { soort: 'info', duurMs: 2200 },
+          );
+        } else {
+          void notifications.toon(
+            t('toast.trumpChosen', { name: naamVan(ev.chooser), suit: `${SUIT_SYMBOLS[ev.trump]} ${suitName(ev.trump)}` }),
+            { soort: 'info', duurMs: 1800 },
+          );
+        }
         break;
       case 'roundKindChosen':
         void notifications.toon(t('toast.dealerPicks', { name: naamVan(ev.chooser) }), { duurMs: 1400 });
@@ -128,6 +161,13 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
         slagen[ev.winner] = (slagen[ev.winner] ?? 0) + 1;
         hud.setTrickCounts([...slagen]);
         hud.setTurn(null);
+        if (isKlaverjas && kjTrump !== null) {
+          const winTeam = (teamOf(ev.winner) as 0 | 1);
+          let pts = ev.trick.plays.reduce((s, p) => s + cardPoints(p.card, kjTrump), 0);
+          if (ev.trickIndex === Math.floor(32 / n) - 1) pts += 10; // laatste-slag-bonus
+          kjCardPoints[winTeam] += pts;
+          updateTeamPaneel();
+        }
         void notifications.toon(
           t('toast.trickWon', { name: naamVan(ev.winner), num: ev.trickIndex + 1 }),
           { soort: ev.winner === mySeat ? 'succes' : 'info', duurMs: 1500 },
@@ -136,7 +176,9 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
       case 'roundEnd': {
         if (!sheet) break;
         const scores = new Array<number>(n).fill(0);
-        for (let i = 0; i < n; i++) scores[i] = ev.scores[i] ?? 0;
+        // Klaverjas scoort per TEAM (scores gekeyd 0/1); map naar de stoelen van
+        // dat team (partners krijgen dezelfde rondescore). Andere spellen per stoel.
+        for (let i = 0; i < n; i++) scores[i] = isKlaverjas ? (ev.scores[i % 2] ?? 0) : (ev.scores[i] ?? 0);
         sheet.addRound(ev.roundIndex, ev.roundKind, roundKindName(ev.roundKind), scores);
         scoreboard.update([...sheet.getRows()], names);
         hud.setScores(sheet.getTotals());
@@ -154,6 +196,37 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
           void notifications.toon(t('toast.shootMoon', { name: naamVan(d?.seat ?? 0) }), { soort: 'succes', duurMs: 3500 });
         } else if (ev.subtype === 'phaseReversed') {
           void notifications.toon(t('toast.phaseReversed'), { soort: 'info', duurMs: 4000 });
+        } else if (ev.subtype === 'roemDeclared') {
+          const d = ev.data as { team?: number; seat?: number; points?: number };
+          if (typeof d?.team === 'number' && typeof d?.points === 'number') {
+            kjRoem[(d.team % 2) as 0 | 1] += d.points;
+            updateTeamPaneel();
+            void notifications.toon(t('toast.roem', { name: naamVan(d.seat ?? 0), points: d.points }), { soort: 'info', duurMs: 1600 });
+          }
+        } else if (ev.subtype === 'natResult') {
+          const d = ev.data as { makingTeam?: number; gehaald?: boolean; makingTotal?: number; defendingTotal?: number };
+          const myTeam = mySeat % 2;
+          const making = d?.makingTeam ?? 0;
+          const teamLabel = t(making === myTeam ? 'team.wij' : 'team.zij');
+          if (d?.gehaald) {
+            void notifications.toon(
+              t('toast.klaverjasGehaald', { team: teamLabel, making: String(d?.makingTotal ?? 0), def: String(d?.defendingTotal ?? 0) }),
+              { soort: making === myTeam ? 'succes' : 'info', duurMs: 3000 },
+            );
+          } else {
+            void notifications.toon(t('toast.klaverjasNat', { team: teamLabel }), {
+              soort: making === myTeam ? 'waarschuwing' : 'succes',
+              duurMs: 3500,
+            });
+          }
+        } else if (ev.subtype === 'pit') {
+          const d = ev.data as { team?: number };
+          const myTeam = mySeat % 2;
+          const team = d?.team ?? -1;
+          void notifications.toon(t('toast.klaverjasPit', { team: t(team === myTeam ? 'team.wij' : 'team.zij') }), {
+            soort: team === myTeam ? 'succes' : 'waarschuwing',
+            duurMs: 4000,
+          });
         }
         break;
       default:
@@ -215,6 +288,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
             replayTimer = setTimeout(() => {
               replayTimer = null;
               hud.hide();
+              teamPaneel.verberg();
               if (huidigeRoom) lobby.toonWachtkamer(huidigeRoom, mySeat);
             }, 5000);
           });
@@ -290,6 +364,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
     bewaar('kingen.roomCode', '');
     chat.verberg();
     hud.hide();
+    teamPaneel.verberg();
     lobby.toonBrowser();
   });
 
@@ -324,6 +399,23 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
     // (er komt geen passRequest-event opnieuw), zodat de dialoog 'm goed toont.
     const pd = (view.viewExtras as { passDir?: string } | undefined)?.passDir;
     if (typeof pd === 'string') laatstePassRichting = pd;
+    // Klaverjas: herstel het live team-paneel uit de view-extra's.
+    isKlaverjas = view.round.kind === 'klaverjassen';
+    if (isKlaverjas) {
+      const ex = view.viewExtras as
+        | { teamCardPoints?: number[]; teamRoem?: number[]; makingTeam?: number | null }
+        | undefined;
+      kjTrump = view.round.trump;
+      kjCardPoints[0] = ex?.teamCardPoints?.[0] ?? 0;
+      kjCardPoints[1] = ex?.teamCardPoints?.[1] ?? 0;
+      kjRoem[0] = ex?.teamRoem?.[0] ?? 0;
+      kjRoem[1] = ex?.teamRoem?.[1] ?? 0;
+      kjMakingTeam = (ex?.makingTeam ?? null) as 0 | 1 | null;
+      updateTeamPaneel();
+      teamPaneel.toon();
+    } else {
+      teamPaneel.verberg();
+    }
     if (!sheet) sheet = new ScoreSheet(n);
     lobby.verberg();
     hud.show();
@@ -403,5 +495,74 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
       if (move) stuur(move);
     }
   }
+}
+
+/**
+ * Live team-paneel voor Klaverjassen: toont per team (Wij/Zij, vanuit de kijker)
+ * de kaartpunten + roem van de huidige boom, met een "speelt"-badge op het
+ * verplichte (spelende) team. De client telt zelf mee uit de slag-events, dus het
+ * paneel werkt zonder extra serverberichten.
+ */
+function maakTeamPaneel(root: HTMLElement): {
+  toon(): void;
+  verberg(): void;
+  set(myTeam: 0 | 1, cp: readonly [number, number], roem: readonly [number, number], making: 0 | 1 | null): void;
+} {
+  const wrap = el('div', 'kg-teampaneel');
+  wrap.hidden = true;
+  const titel = el('div', 'kg-teampaneel__titel');
+  const rij = el('div', 'kg-teampaneel__rij');
+  const maakBlok = () => {
+    const blok = el('div', 'kg-teampaneel__team');
+    const naam = el('div', 'kg-teampaneel__naam');
+    const punten = el('div', 'kg-teampaneel__punten', '0');
+    const roem = el('div', 'kg-teampaneel__roem', '');
+    const badge = el('div', 'kg-teampaneel__badge');
+    badge.hidden = true;
+    blok.append(naam, punten, roem, badge);
+    return { blok, naam, punten, roem, badge };
+  };
+  const links = maakBlok();
+  const rechts = maakBlok();
+  rij.append(links.blok, rechts.blok);
+  wrap.append(titel, rij);
+  root.appendChild(wrap);
+
+  let laatste: { myTeam: 0 | 1; cp: [number, number]; roem: [number, number]; making: 0 | 1 | null } | null = null;
+
+  function teken(): void {
+    titel.textContent = t('klaverjas.deal');
+    links.naam.textContent = t('team.wij');
+    rechts.naam.textContent = t('team.zij');
+    links.badge.textContent = t('klaverjas.making');
+    rechts.badge.textContent = t('klaverjas.making');
+    if (!laatste) return;
+    const { myTeam, cp, roem, making } = laatste;
+    const other = (1 - myTeam) as 0 | 1;
+    links.punten.textContent = String(cp[myTeam]);
+    rechts.punten.textContent = String(cp[other]);
+    links.roem.textContent = roem[myTeam] > 0 ? `+${roem[myTeam]} ${t('klaverjas.roem')}` : '';
+    rechts.roem.textContent = roem[other] > 0 ? `+${roem[other]} ${t('klaverjas.roem')}` : '';
+    links.badge.hidden = making !== myTeam;
+    rechts.badge.hidden = making !== other;
+    links.blok.classList.toggle('is-speelt', making === myTeam);
+    rechts.blok.classList.toggle('is-speelt', making === other);
+  }
+
+  onLangChange(() => teken());
+  teken();
+
+  return {
+    toon(): void {
+      wrap.hidden = false;
+    },
+    verberg(): void {
+      wrap.hidden = true;
+    },
+    set(myTeam, cp, roem, making): void {
+      laatste = { myTeam, cp: [cp[0], cp[1]], roem: [roem[0], roem[1]], making };
+      teken();
+    },
+  };
 }
 
