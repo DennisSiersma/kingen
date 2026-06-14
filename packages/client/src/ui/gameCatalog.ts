@@ -114,6 +114,17 @@ export const GAME_FAMILIES: GameFamily[] = [
     localKind: 'generic',
     variants: [{ gameId: 'mexen', labelKey: 'catalog.mexen.title', descKey: 'variant.mexen.standaard' }],
   },
+  {
+    key: 'qwixx',
+    category: 'dobbel',
+    titleKey: 'catalog.qwixx.title',
+    descKey: 'catalog.qwixx.desc',
+    players: '2–5',
+    accent: '#9b59b6',
+    embleem: '🎲',
+    localKind: 'generic',
+    variants: [{ gameId: 'qwixx', labelKey: 'catalog.qwixx.title', descKey: 'variant.qwixx.standaard' }],
+  },
 ];
 
 /** Zoek een familie op key. */
