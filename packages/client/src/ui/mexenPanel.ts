@@ -9,7 +9,7 @@
 
 import { el } from './uiBus.ts';
 import { t } from './i18n.ts';
-import { codeLabel } from '@shared/games/mexen/ranking.ts';
+import { codeLabel, rankOf } from '@shared/games/mexen/ranking.ts';
 
 /** Mexen-zetvormen zoals de server ze in legalMoves aanlevert (geserialiseerd). */
 export type MexenMoveJSON =
@@ -31,19 +31,20 @@ export interface MexenPanel {
 export function createMexenPanel(root: HTMLElement): MexenPanel {
   const wrap = el('div', 'kg-mexen-paneel');
   wrap.style.cssText = [
-    'position:absolute', 'left:50%', 'bottom:18px', 'transform:translateX(-50%)',
-    'display:none', 'flex-direction:column', 'gap:10px', 'align-items:center',
-    'padding:14px 18px', 'border-radius:14px', 'pointer-events:auto', 'z-index:30',
+    'position:absolute', 'left:50%', 'bottom:12px', 'transform:translateX(-50%)',
+    'display:none', 'flex-direction:column', 'gap:8px', 'align-items:center',
+    'padding:10px 14px', 'border-radius:14px', 'pointer-events:auto', 'z-index:30',
     'background:rgba(20,24,28,0.82)', 'backdrop-filter:blur(6px)',
     'box-shadow:0 8px 30px rgba(0,0,0,0.45)', 'color:#f4efe3',
-    'font-family:system-ui,sans-serif', 'max-width:min(92vw,720px)',
+    'font-family:system-ui,sans-serif', 'max-width:min(88vw,560px)',
   ].join(';');
   root.appendChild(wrap);
 
   const titel = el('div');
-  titel.style.cssText = 'font-size:15px;font-weight:600;text-align:center;letter-spacing:0.2px;';
+  titel.style.cssText = 'font-size:14px;font-weight:600;text-align:center;letter-spacing:0.2px;';
   const knoppenRij = el('div');
-  knoppenRij.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;';
+  knoppenRij.style.cssText =
+    'display:flex;flex-wrap:wrap;gap:7px;justify-content:center;max-height:132px;overflow-y:auto;';
   wrap.append(titel, knoppenRij);
 
   let actief: ((move: MexenMoveJSON) => void) | null = null;
@@ -51,9 +52,9 @@ export function createMexenPanel(root: HTMLElement): MexenPanel {
   const maakKnop = (label: string, kleur: string): HTMLButtonElement => {
     const b = el('button', undefined, label) as HTMLButtonElement;
     b.style.cssText = [
-      'cursor:pointer', 'border:none', 'border-radius:10px', 'padding:9px 14px',
-      'font-size:14px', 'font-weight:600', 'color:#10140f', `background:${kleur}`,
-      'transition:transform 0.08s ease',
+      'cursor:pointer', 'border:none', 'border-radius:9px', 'padding:7px 11px',
+      'font-size:13px', 'font-weight:600', 'color:#10140f', `background:${kleur}`,
+      'transition:transform 0.08s ease', 'white-space:nowrap',
     ].join(';');
     b.addEventListener('pointerdown', () => (b.style.transform = 'scale(0.95)'));
     b.addEventListener('pointerup', () => (b.style.transform = 'scale(1)'));
@@ -101,8 +102,9 @@ export function createMexenPanel(root: HTMLElement): MexenPanel {
             ? t('mexen.youRolled', { dice: `${DICE_FACES[myRoll[0]] ?? ''}${DICE_FACES[myRoll[1]] ?? ''}` })
             : '';
           titel.textContent = t('mexen.announceTitle') + worp;
-          // Oplopend, zodat de laagste (eerlijke) keuze links staat.
-          for (const m of [...announces].sort((a, b) => a.value - b.value)) {
+          // Op RANG oplopend (niet numeriek!): 31 laag … Mex (21) hoog, zodat de
+          // laagste/eerlijke keuze links staat en Mex helemaal rechts.
+          for (const m of [...announces].sort((a, b) => rankOf(a.value) - rankOf(b.value))) {
             const knop = maakKnop(codeLabel(m.value), '#bfe3a3');
             knop.addEventListener('click', () => kies(m));
             knoppenRij.appendChild(knop);
@@ -123,7 +125,7 @@ export function createMexenPanel(root: HTMLElement): MexenPanel {
           knoppenRij.appendChild(b);
         }
         if (passes.length > 0) {
-          const laagste = [...passes].sort((a, b) => a.value - b.value)[0]!;
+          const laagste = [...passes].sort((a, b) => rankOf(a.value) - rankOf(b.value))[0]!;
           const b = maakKnop(t('mexen.passUnseen', { value: codeLabel(laagste.value) }), '#cdbfe3');
           b.addEventListener('click', () => kies(laagste));
           knoppenRij.appendChild(b);

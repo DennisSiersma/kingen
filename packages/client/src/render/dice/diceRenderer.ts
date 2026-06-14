@@ -13,11 +13,11 @@ import * as THREE from 'three';
 import type { DieValue } from '@shared/games/dice/dice.ts';
 
 /** Ribbe van één dobbelsteen in wereld-eenheden (past samen onder de beker). */
-export const DIE_SIZE = 0.05;
+export const DIE_SIZE = 0.062;
 /** Buitenstraal van de beker aan de monding. */
-export const CUP_RADIUS = 0.085;
+export const CUP_RADIUS = 0.1;
 /** Hoogte van de beker. */
-export const CUP_HEIGHT = 0.15;
+export const CUP_HEIGHT = 0.17;
 
 const UP = new THREE.Vector3(0, 1, 0);
 
