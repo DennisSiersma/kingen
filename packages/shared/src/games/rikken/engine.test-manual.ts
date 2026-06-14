@@ -90,4 +90,8 @@ for (const strat of strategieën) {
   for (let seed = 1; seed <= 6; seed++) speel(kort, seed * 17 + strat.length, strat);
 }
 
+// Iedereen past ZONDER passspellen → herdelen met stijgende roundIndex; moet netjes
+// eindigen (geen vastloper door identieke seed/handen).
+for (let seed = 1; seed <= 6; seed++) speel({ ...kort, passSpellen: false }, seed * 23, 'allpass');
+
 console.log(`engine.test-manual: ${geslaagd} checks geslaagd ✓`);

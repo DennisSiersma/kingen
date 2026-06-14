@@ -86,5 +86,13 @@ check('misère = 25 p.o.', perOpponent('misere', false, 0) === 25);
   const u = scoreRonde({ ...contract('misere', 0, null), target: 0 }, tc({ 0: 0, 1: 5, 2: 4, 3: 4 }), cfg);
   check('misère gehaald', u.gehaald && nulsom(u.deltas) && u.deltas[0] === 75);
 }
+// Meepieken: stoel 0 (pieker, 1 slag = gehaald) + stoel 2 (mee-pieker, 2 slagen = nat).
+// 0 ontvangt 15 van elk; 2 betaalt 15 aan elk → 0: +60, 2: −60, verdedigers 1,3: 0.
+{
+  const c = { ...contract('piek', 0, null), target: 1, claimers: [2 as Seat] };
+  const u = scoreRonde(c, tc({ 0: 1, 2: 2, 1: 5, 3: 5 }), cfg);
+  check('meepieken nulsom', nulsom(u.deltas));
+  check('meepieken deltas', u.deltas[0] === 60 && u.deltas[2] === -60 && u.deltas[1] === 0 && u.deltas[3] === 0);
+}
 
 console.log(`scoring.test-manual: ${geslaagd} checks geslaagd ✓`);

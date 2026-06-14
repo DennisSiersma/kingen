@@ -18,7 +18,7 @@
  *      voor solo's staat niet in de geverifieerde toppunten).
  */
 
-import { doelSlagen, heeftMaat, type BidKind } from './bids.ts';
+import { doelSlagen, heeftMaat, isClaimbaar, type BidKind } from './bids.ts';
 import type { Card, Seat } from '../../core/types.ts';
 import type { PassGame, RikkenContract, RikkenVariantConfig } from './types.ts';
 
@@ -141,6 +141,26 @@ export function scoreRonde(
 ): RondeUitslag {
   const n = trickCounts.length;
   const deltas = new Array<number>(n).fill(0);
+
+  // Meepieken/meemisèren: meerdere claimers spelen ieder voor zich (1 vs 3). Elke
+  // geslaagde claimer ontvangt zijn bedrag van elk van de 3 anderen; elke gefaalde
+  // betaalt elk van de 3. (Toggle config.meepieken; in v1 standaard uit.)
+  const claimers = contract.claimers ?? [];
+  if (claimers.length > 0 && isClaimbaar(contract.kind)) {
+    for (const solo of [contract.declarer, ...claimers]) {
+      const pt = trickCounts[solo] ?? 0;
+      const ok = contractGehaald(contract.kind, pt);
+      const bedrag = Math.abs(perOpponent(contract.kind, contract.beter, pt));
+      for (let opp = 0; opp < n; opp++) {
+        if (opp === solo) continue;
+        deltas[solo]! += ok ? bedrag : -bedrag;
+        deltas[opp]! += ok ? -bedrag : bedrag;
+      }
+    }
+    const ptDecl = trickCounts[contract.declarer] ?? 0;
+    return { deltas, gehaald: contractGehaald(contract.kind, ptDecl), partyTricks: ptDecl };
+  }
+
   const team = heeftMaat(contract.kind) && contract.partner !== null;
   const partySeats = team ? [contract.declarer, contract.partner as number] : [contract.declarer];
   const partySet = new Set(partySeats);

@@ -60,21 +60,39 @@ function legalAsks(state: RikkenState): string[] {
   const heeftAas = (s: Suit): boolean => hand.some((k) => k.suit === s && k.rank === 14);
   const azen = SUITS.filter(heeftAas);
 
-  // Alle 4 azen → vraag een niet-troef-heer die je zelf niet hebt.
-  if (azen.length === 4) {
-    return SUITS.filter((s) => s !== trump)
-      .map((s) => `${s}-13`)
-      .filter((id) => !hand.some((k) => k.id === id));
-  }
-
   const out: string[] = [];
-  for (const s of SUITS) {
-    if (s === trump || heeftAas(s)) continue;
-    if (hand.some((k) => k.suit === s)) out.push(`${s}-14`); // aas van niet-troefkleur waarvan je een kaart hebt
+  if (azen.length === 4) {
+    // Alle 4 azen → vraag een niet-troef-heer die je zelf niet hebt.
+    for (const s of SUITS) {
+      if (s === trump) continue;
+      const id = `${s}-13`;
+      if (!hand.some((k) => k.id === id)) out.push(id);
+    }
+  } else {
+    for (const s of SUITS) {
+      if (s === trump || heeftAas(s)) continue;
+      if (hand.some((k) => k.suit === s)) out.push(`${s}-14`); // aas van niet-troefkleur waarvan je een kaart hebt
+    }
+    // Vereenvoudigde fallback (geen blind-vragen in v1): elke niet-troef-aas die je mist.
+    if (out.length === 0) {
+      for (const s of SUITS) if (s !== trump && !heeftAas(s)) out.push(`${s}-14`);
+    }
   }
-  // Vereenvoudigde fallback (geen blind-vragen in v1): elke niet-troef-aas die je mist.
+  // Laatste vangnet (absurd zeldzaam, bv. alle azen + alle niet-troef-heren in één
+  // hand): er bestaat altijd ergens een niet-troefkaart die de declarer mist, dus
+  // de maat-vraag kan nooit leeg zijn.
   if (out.length === 0) {
-    for (const s of SUITS) if (s !== trump && !heeftAas(s)) out.push(`${s}-14`);
+    for (const s of SUITS) {
+      if (s === trump) continue;
+      for (let r = 14; r >= 2; r--) {
+        const id = `${s}-${r}`;
+        if (!hand.some((k) => k.id === id)) {
+          out.push(id);
+          break;
+        }
+      }
+      if (out.length > 0) break;
+    }
   }
   return out;
 }
@@ -240,18 +258,34 @@ function endBidding(state: RikkenState): GameEvent[] {
 }
 
 function allenGepast(state: RikkenState): GameEvent[] {
-  state.contract = {
-    kind: 'rik', beter: false, declarer: state.dealer, trump: null, target: 0, partner: null,
-  };
   if (state.config.passSpellen) {
+    state.contract = {
+      kind: 'rik', beter: false, declarer: state.dealer, trump: null, target: 0, partner: null,
+    };
     state.phase = 'choosingPassGame';
     state.turn = state.dealer;
     return [{ type: 'custom', subtype: 'choosePassGameTurn', data: { seat: state.dealer } }];
   }
-  // Geen passspellen: opnieuw delen met de volgende deler.
-  state.roundIndex += 0; // dezelfde gift telt niet door; gewoon herdelen
-  beginRound(state);
-  return roundOpeningEvents(state);
+  // Geen passspellen: een nul-ronde die wél meetelt voor het einde (anders zou de
+  // partij bij herhaald passen nooit eindigen; roundIndex moet stijgen voor een
+  // verse seed/hand).
+  const n = state.seatCount;
+  const deltas = new Array<number>(n).fill(0);
+  state.scoresPerRound.push(deltas.slice());
+  const events: GameEvent[] = [
+    { type: 'custom', subtype: 'allPassed', data: { dealer: state.dealer } },
+    { type: 'roundEnd', roundIndex: state.roundIndex, roundKind: 'rikken', scores: toRecord(deltas) },
+  ];
+  state.roundIndex += 1;
+  if (state.roundIndex >= state.config.rondes) {
+    state.phase = 'finished';
+    state.turn = null;
+    events.push({ type: 'gameEnd', winners: computeWinners(state), totals: toRecord(state.totals) });
+  } else {
+    beginRound(state);
+    events.push(...roundOpeningEvents(state));
+  }
+  return events;
 }
 
 /** Vroeg-stop voor piek/misère: doel definitief gemist? */

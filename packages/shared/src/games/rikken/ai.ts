@@ -257,11 +257,13 @@ export class RikkenAi implements PlayerController {
 
 // --- helpers ---------------------------------------------------------------
 
+// Beginwaarde cards[0] zodat een (in de praktijk onbereikbare) lege array niet
+// "Reduce of empty array" gooit.
 function laagste(cards: Card[]): Card {
-  return cards.reduce((a, b) => (b.rank < a.rank ? b : a));
+  return cards.reduce((a, b) => (b.rank < a.rank ? b : a), cards[0]!);
 }
 function hoogste(cards: Card[]): Card {
-  return cards.reduce((a, b) => (b.rank > a.rank ? b : a));
+  return cards.reduce((a, b) => (b.rank > a.rank ? b : a), cards[0]!);
 }
 /** Goedkoopste winnende kaart: liefst een lage niet-troef, anders de laagste troef. */
 function goedkoopsteWinner(winners: Card[], trump: Suit | null): Card {
