@@ -211,6 +211,18 @@ export async function createSceneManager(
   };
   herschaal();
   window.addEventListener('resize', herschaal);
+  // iOS: oriëntatiewissel en in/uit schuivende adresbalk vuren niet altijd een
+  // window-'resize'; visualViewport + orientationchange synct het canvas alsnog.
+  window.addEventListener('orientationchange', herschaal);
+  window.visualViewport?.addEventListener('resize', herschaal);
+  window.visualViewport?.addEventListener('scroll', herschaal);
+
+  // Render-loop pauzeren als de tab/het venster onzichtbaar is (batterij + GPU,
+  // en het houdt de GL-context minder 'heet' → kleinere kans op context-loss).
+  const opVisibility = (): void => {
+    renderer.setAnimationLoop(document.hidden ? null : tik);
+  };
+  document.addEventListener('visibilitychange', opVisibility);
 
   // --- raycasting: klikken & hoveren op de eigen hand ---
   const raycaster = new THREE.Raycaster();
@@ -264,6 +276,9 @@ export async function createSceneManager(
     drukX = e.clientX;
     drukY = e.clientY;
     drukTouch = e.pointerType === 'touch';
+    // Touch kent geen hover: geef directe feedback door de aangeraakte speelbare
+    // kaart al bij het neerdrukken op te tillen (de render-loop tilt hoverId).
+    if (drukTouch) hoverId = raycastHand(e.clientX, e.clientY);
   };
 
   const opPointerUp = (e: PointerEvent): void => {
@@ -271,11 +286,15 @@ export async function createSceneManager(
     // muis tussen down en up, dus op touch een ruimere drempel (16px i.p.v. 7px)
     // zodat een bedoelde tap niet stilzwijgend als sleep sneuvelt.
     const drempel = drukTouch || e.pointerType === 'touch' ? 16 : 7;
-    if (Math.hypot(e.clientX - drukX, e.clientY - drukY) > drempel) return;
-    const id = raycastHand(e.clientX, e.clientY);
-    if (id !== null && speelbaar.has(id)) {
-      for (const handler of [...klikHandlers]) handler(id);
+    const isSleep = Math.hypot(e.clientX - drukX, e.clientY - drukY) > drempel;
+    if (!isSleep) {
+      const id = raycastHand(e.clientX, e.clientY);
+      if (id !== null && speelbaar.has(id)) {
+        for (const handler of [...klikHandlers]) handler(id);
+      }
     }
+    // Geen blijvende hover op touch: de lift weer laten zakken na tap/sleep.
+    if (drukTouch) hoverId = null;
   };
 
   const opPointerCancel = (): void => {
@@ -523,6 +542,10 @@ export async function createSceneManager(
       renderer.setAnimationLoop(null);
       offBus();
       window.removeEventListener('resize', herschaal);
+      window.removeEventListener('orientationchange', herschaal);
+      window.visualViewport?.removeEventListener('resize', herschaal);
+      window.visualViewport?.removeEventListener('scroll', herschaal);
+      document.removeEventListener('visibilitychange', opVisibility);
       renderer.domElement.removeEventListener('pointermove', opPointerMove);
       renderer.domElement.removeEventListener('pointerdown', opPointerDown);
       renderer.domElement.removeEventListener('pointerup', opPointerUp);
