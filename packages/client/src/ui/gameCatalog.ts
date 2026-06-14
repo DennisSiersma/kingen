@@ -114,6 +114,28 @@ export const GAME_FAMILIES: GameFamily[] = [
     localKind: 'generic',
     variants: [{ gameId: 'mexen', labelKey: 'catalog.mexen.title', descKey: 'variant.mexen.standaard' }],
   },
+  {
+    key: 'qwixx',
+    category: 'dobbel',
+    titleKey: 'catalog.qwixx.title',
+    descKey: 'catalog.qwixx.desc',
+    players: '2–5',
+    accent: '#9b59b6',
+    embleem: '🎲',
+    localKind: 'generic',
+    variants: [{ gameId: 'qwixx', labelKey: 'catalog.qwixx.title', descKey: 'variant.qwixx.standaard' }],
+  },
+  {
+    key: 'fritzen',
+    category: 'dobbel',
+    titleKey: 'catalog.fritzen.title',
+    descKey: 'catalog.fritzen.desc',
+    players: '2–8',
+    accent: '#d35400',
+    embleem: '🎲',
+    localKind: 'generic',
+    variants: [{ gameId: 'fritzen', labelKey: 'catalog.fritzen.title', descKey: 'variant.fritzen.standaard' }],
+  },
 ];
 
 /** Zoek een familie op key. */

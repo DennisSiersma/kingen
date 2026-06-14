@@ -106,8 +106,12 @@ export function createDiePipTexture(value: DieValue): THREE.CanvasTexture {
   return tex;
 }
 
-/** Maak een dobbelsteen-mesh met de zes vlakken correct getextureerd. */
-export function createDie(): THREE.Mesh {
+/**
+ * Maak een dobbelsteen-mesh met de zes vlakken correct getextureerd. `tint`
+ * kleurt het ivoren vlak (vermenigvuldigt de map) voor de gekleurde Qwixx-stenen;
+ * default wit.
+ */
+export function createDie(tint: number = 0xffffff): THREE.Mesh {
   const geo = new THREE.BoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE);
   // Materiaal-volgorde volgt BoxGeometry-groepen [+X,-X,+Y,-Y,+Z,-Z].
   const volgorde: DieValue[] = [1, 6, 2, 5, 3, 4];
@@ -117,7 +121,7 @@ export function createDie(): THREE.Mesh {
       roughness: 0.35,
       clearcoat: 0.6,
       clearcoatRoughness: 0.3,
-      color: 0xffffff,
+      color: tint,
     }),
   );
   const mesh = new THREE.Mesh(geo, materials);
