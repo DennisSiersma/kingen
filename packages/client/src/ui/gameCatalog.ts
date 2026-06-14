@@ -112,7 +112,10 @@ export const GAME_FAMILIES: GameFamily[] = [
     accent: '#3a7ca5',
     embleem: '🎲',
     localKind: 'generic',
-    variants: [{ gameId: 'mexen', labelKey: 'catalog.mexen.title', descKey: 'variant.mexen.standaard' }],
+    variants: [
+      { gameId: 'mexen', labelKey: 'catalog.variant.mexen3', descKey: 'variant.mexen.standaard' },
+      { gameId: 'mexen-1worp', labelKey: 'catalog.variant.mexen1', descKey: 'variant.mexen.eenworp' },
+    ],
   },
   {
     key: 'qwixx',

@@ -89,12 +89,17 @@ export class RegenwormenAi implements PlayerController {
     const beste = takes[0]!;
     if (!rollMove) return beste;
 
-    if (wormsOfTile(beste.tile) >= 4) return beste; // topbuit altijd pakken
+    const wormen = wormsOfTile(beste.tile);
+    if (wormen >= 4) return beste; // topbuit altijd pakken
 
     const used = extras.usedValues?.length ?? 0;
     const remaining = extras.remaining ?? (8 - reserved.length);
     const bustKans = remaining > 0 ? Math.pow(used / 6, remaining) : 1;
-    const drempel = this.difficulty === 'makkelijk' ? 0.20 : this.difficulty === 'moeilijk' ? 0.45 : 0.32;
+    const basis = this.difficulty === 'makkelijk' ? 0.20 : this.difficulty === 'moeilijk' ? 0.45 : 0.32;
+    // §5A.6 (borg wormen vroeg): hoe meer wormen de tegel waard is, hoe eerder we 'm
+    // zeker stellen i.p.v. weggokken. Een 1-worm-tegel vergt nog de volle risico-
+    // drempel; een 2/3-worm-tegel pakken we al bij de helft/derde van dat risico.
+    const drempel = basis / Math.max(1, wormen);
     if (bustKans >= drempel) return beste;
     return rollMove;
   }

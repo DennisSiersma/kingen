@@ -11,7 +11,7 @@ import { hartenjagenGame, heartsGame } from './hartenjagen/index.ts';
 import { klaverjasAmsterdamsGame, klaverjasGame } from './klaverjassen/index.ts';
 import { rikkenGame } from './rikken/index.ts';
 import { toepenGame } from './toepen/index.ts';
-import { mexenGame } from './mexen/index.ts';
+import { mexenGame, mexenEenWorpGame } from './mexen/index.ts';
 import { qwixxGame } from './qwixx/index.ts';
 import { fritzenGame } from './fritzen/index.ts';
 import { yahtzeeGame } from './yahtzee/index.ts';
@@ -31,6 +31,7 @@ export function registerBuiltinGames(): void {
   registerGame(rikkenGame);
   registerGame(toepenGame);
   registerGame(mexenGame);
+  registerGame(mexenEenWorpGame);
   registerGame(qwixxGame);
   registerGame(fritzenGame);
   registerGame(yahtzeeGame);
