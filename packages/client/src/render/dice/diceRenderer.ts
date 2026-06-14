@@ -13,11 +13,11 @@ import * as THREE from 'three';
 import type { DieValue } from '@shared/games/dice/dice.ts';
 
 /** Ribbe van één dobbelsteen in wereld-eenheden (past samen onder de beker). */
-export const DIE_SIZE = 0.05;
+export const DIE_SIZE = 0.07;
 /** Buitenstraal van de beker aan de monding. */
-export const CUP_RADIUS = 0.085;
+export const CUP_RADIUS = 0.1;
 /** Hoogte van de beker. */
-export const CUP_HEIGHT = 0.15;
+export const CUP_HEIGHT = 0.17;
 
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -85,8 +85,9 @@ export function createDiePipTexture(value: DieValue): THREE.CanvasTexture {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, size);
 
-  // Ogen: donkere ingegraveerde stippen met lichte rand.
-  const pipR = size * 0.085;
+  // Ogen: donkere ingegraveerde stippen met lichte rand (groot + contrastrijk
+  // zodat ze ook op tafelafstand goed leesbaar zijn).
+  const pipR = size * 0.11;
   for (const [px, py] of PIP_LAYOUT[value]) {
     const x = px * size;
     const y = py * size;

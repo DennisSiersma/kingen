@@ -82,36 +82,34 @@ export class DiceScene {
     return new THREE.Vector3(Math.cos(a) * r, this.surfaceY(), Math.sin(a) * r);
   }
 
-  /** De twee rustplekken voor de stenen onder de beker op `seat`. */
-  private dieSpots(seat: Seat): [THREE.Vector3, THREE.Vector3] {
-    const c = this.cupSpot(seat);
-    const a = this.layout.seatAngle(seat, this.seatCount);
-    // Verschuif de stenen langs de tangens, half binnen de beker.
-    const tx = -Math.sin(a) * DIE_SIZE * 0.8;
-    const tz = Math.cos(a) * DIE_SIZE * 0.8;
-    const y = this.surfaceY() + DIE_SIZE / 2;
-    return [
-      new THREE.Vector3(c.x + tx, y, c.z + tz),
-      new THREE.Vector3(c.x - tx, y, c.z - tz),
-    ];
-  }
-
   private plaatsBeker(seat: Seat): void {
     if (!this.cup) return;
     const spot = this.cupSpot(seat);
     this.cup.position.set(spot.x, this.surfaceY(), spot.z);
   }
 
-  /** Leg de stenen op hun rustplek onder de beker op `seat`, hidden by the cup. */
-  private legStenen(seat: Seat, roll: Roll): void {
+  /** Centrale presentatieplek voor een onthulde/eigen worp (boven het paneel). */
+  private presentatieZ(): number {
+    return this.layout.getRadius() * 0.16;
+  }
+
+  /** Beker-pose recht boven de centrale presentatieplek, op hoogte `hoog`. */
+  private centerCupPose(hoog: number): THREE.Vector3 {
+    return new THREE.Vector3(0, this.surfaceY() + hoog, this.presentatieZ());
+  }
+
+  /** Leg de twee stenen centraal op tafel op de juiste ogen, zichtbaar. */
+  private presenteerStenen(roll: Roll): void {
     if (!this.dice) return;
-    const spots = this.dieSpots(seat);
+    const cz = this.presentatieZ();
+    const y = this.surfaceY() + DIE_SIZE / 2;
+    const offs = [-DIE_SIZE * 0.78, DIE_SIZE * 0.78];
     const spins = [Math.PI * 0.3, -Math.PI * 0.4];
     for (let i = 0; i < 2; i++) {
       const die = this.dice[i]!;
-      die.position.copy(spots[i]!);
+      die.position.set(offs[i]!, y, cz);
       die.quaternion.copy(faceQuaternion(roll[i]!, spins[i]!));
-      die.visible = false; // onder de (gesloten) beker
+      die.visible = true;
     }
   }
 
@@ -174,18 +172,21 @@ export class DiceScene {
    */
   async animateReveal(roll: Roll): Promise<void> {
     if (!this.cup || !this.dice) return;
-    this.legStenen(this.holder, roll);
-    for (const d of this.dice) d.visible = true;
+    // Presenteer de onthulde worp centraal (zichtbaar voor iedereen) en til de
+    // beker daar met een boogje vandaan.
+    this.presenteerStenen(roll);
     const cup = this.cup;
-    const baseY = this.surfaceY();
+    const start = cup.position.clone();
+    const doel = this.centerCupPose(LIFT);
     await startTween({
-      duur: 460,
+      duur: 480,
       ease: easeOutCubic,
       onUpdate: (t) => {
-        cup.position.y = baseY + LIFT * t;
+        cup.position.lerpVectors(start, doel, t);
+        cup.position.y = start.y + (doel.y - start.y) * t + Math.sin(Math.PI * t) * 0.03;
       },
     }).promise;
-    cup.position.y = baseY + LIFT;
+    cup.position.copy(doel);
     this.opgetild = true;
   }
 
@@ -196,38 +197,37 @@ export class DiceScene {
   showOwnRoll(seat: Seat, roll: Roll): void {
     if (!this.cup || !this.dice) return;
     this.holder = seat;
-    this.plaatsBeker(seat);
-    this.legStenen(seat, roll);
-    for (const d of this.dice) d.visible = true;
-    this.cup.position.y = this.surfaceY() + LIFT;
+    // Presenteer je eigen stenen centraal op tafel (boven het actiepaneel) met de
+    // beker erboven — alleen jij ziet ze.
+    this.presenteerStenen(roll);
+    this.cup.position.copy(this.centerCupPose(LIFT * 1.25));
     this.opgetild = true;
   }
 
-  /** Laat de beker weer zakken en verberg de stenen (bijv. na de eigen blik). */
+  /** Laat de beker weer zakken op de eigen plek en verberg de stenen (na de eigen blik). */
   hideRoll(): void {
     if (!this.cup) return;
-    this.cup.position.y = this.surfaceY();
     this.verbergStenen();
     this.opgetild = false;
+    this.plaatsBeker(this.holder);
   }
 
   /** Nieuwe ronde: beker laten zakken, stenen verbergen, naar de starter. */
   async animateRoundReset(starter: Seat): Promise<void> {
     if (!this.cup) return;
     const cup = this.cup;
-    const baseY = this.surfaceY();
-    if (this.opgetild) {
-      await startTween({
-        duur: 320,
-        ease: easeInOutCubic,
-        onUpdate: (t) => {
-          cup.position.y = baseY + LIFT * (1 - t);
-        },
-      }).promise;
-    }
+    const start = cup.position.clone();
+    const doel = this.cupSpot(starter);
+    await startTween({
+      duur: 380,
+      ease: easeInOutCubic,
+      onUpdate: (t) => {
+        cup.position.lerpVectors(start, doel, t);
+      },
+    }).promise;
+    cup.position.copy(doel);
     this.verbergStenen();
     this.opgetild = false;
-    this.plaatsBeker(starter);
     this.holder = starter;
   }
 
