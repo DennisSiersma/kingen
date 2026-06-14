@@ -269,6 +269,56 @@ de vier rijen **− 5 per strafvak**. Hoogste wint.
 
 ---
 
+# 5A. REGENWORMEN (Heckmeck am Bratwurmeck / Pickomino) — toegevoegd 2026-06-14
+
+**Ontwerper:** Reiner Knizia (2005). **Familie:** push-your-luck met set-aside én een
+**gedeelde, steelbare voorraad tegels**. **Spelers:** 2–7. **Vertrouwen:** kern hoog (NL/EN/DE
+verbatim bevestigd); geen echte bronafwijkingen op de kernregels.
+Bronnen o.a.: Wikipedia NL *Regenwormen (spel)*, UltraBoardGames/Pickomino, spelregels.eu,
+leukebordspellen.nl, 1d6chan *Heckmeck*.
+
+## 5A.1 Materiaal
+- **8 dobbelstenen** met vlakken **1-2-3-4-5 + worm**. De **worm telt als 5** bij het optellen.
+- **16 tegels** met waarden **21 t/m 36**, elk met een aantal wormen:
+  - **21–24 → 1 worm**, **25–28 → 2 wormen**, **29–32 → 3 wormen**, **33–36 → 4 wormen**.
+    (formule: `Math.floor((tegel-21)/4)+1`). In totaal 40 wormen op tafel.
+- Bij start liggen alle 16 tegels open in het midden ("de braadworst-rij").
+
+## 5A.2 Beurtverloop (push-your-luck met set-aside)
+1. Gooi alle nog beschikbare stenen (start: 8).
+2. **Kies precies één ogenwaarde** die in de worp voorkomt **en die je deze beurt nog niet apart
+   legde**, en leg **álle** stenen van die waarde apart. (Je mag een waarde maar één keer per
+   beurt vastleggen.)
+3. Kies: **stoppen** (een tegel pakken) of **de rest opnieuw gooien**. Heb je alle 8 stenen
+   vastgelegd, dan moet je stoppen.
+4. **Stoppen / tegel pakken** mag alleen als je **minstens één worm** apart hebt liggen én je som
+   **≥ 21** is:
+   - Pak uit het midden de tegel met waarde **== je som**, of anders de **hoogste tegel < je som**.
+   - **Of steel** de **bovenste** tegel van een tegenstander als die **exact** je som is.
+
+## 5A.3 Mislukken (bust)
+Je beurt mislukt zodra je **geen nieuwe waarde** kunt vastleggen, of je stopt **zonder worm**,
+of je **kunt geen tegel pakken** (som < 21, of geen geschikte tegel/steal). Gevolg:
+- Leg je **bovenste** veroverde tegel terug in het midden (open), **en**
+- draai de **hoogste tegel in het midden** om (uit het spel). *(Eerst terugleggen, dán de
+  hoogste verwijderen — de teruggelegde tegel kan dus zelf de hoogste zijn.)*
+- Had je geen tegel, dan verdwijnt alleen de hoogste midden-tegel.
+
+## 5A.4 Einde & winst
+Het spel eindigt zodra er **geen tegels meer in het midden** liggen. Iedere speler telt de
+**wormen op zijn (zichtbare) tegelstapel**; **de meeste wormen wint**. Tie-break: officieel niet
+strak gespecificeerd → implementatiekeuze (hier: gedeelde winst).
+
+## 5A.5 Implementatienoten (deze engine)
+- Stenen 1..6 met **6 = worm**; `punten(v) = v===6?5:v`. Volledig open worp (geen verborgen info).
+- Set-aside per waarde (alle stenen van die waarde tegelijk), max. 6 distincte waarden per beurt.
+- Gedeelde state: `center` (resterende midden-tegels), `stacks` (veroverde tegels per stoel, top
+  = laatste). Score-HUD toont **wormen-totaal** per stoel.
+- Bust-detectie wordt in de engine afgehandeld (geen lege legale-zetten-lijst): na elke worp en
+  na elk vastleggen checkt de engine of doorgaan/pakken kan; zo niet → bust.
+
+---
+
 # 6. ZILVERVLOOT — niet gevonden
 
 Geen gedocumenteerd dobbel-/bordspel "Zilvervloot" gevonden. Zoekresultaten betreffen het
@@ -356,46 +406,11 @@ parallelle, goedkope validatie van de scorekaart-HUD.
 
 ---
 
-# 8. REGENWORMEN (toegevoegd 2026-06-14) — Heckmeck am Bratwurmeck / Pickomino
+## 5A.6 AI-strategie & extra bronnen (aanvulling op §5A)
 
-> Onderzoek via NL-Wikipedia + 999 Games/spelregels.eu + academische strategie-paper (IEEE/ResearchGate) + Frozen Fractal EV-analyse. Origineel: Zoch, Reiner Knizia 2005. NL-uitgave: 999 Games. **Press-your-luck met gedeelde tegelmarkt + stelen** — een NIEUWE motor t.o.v. Mexen/Qwixx/Fritzen/Yahtzee/Tienduizend.
-
-## 8.1 Canonieke regels (NL-default)
-- **Spelers:** 2–7. **Materiaal:** 8 dobbelstenen + 16 wormtegels.
-- **Dobbelstenen:** vlakken `1,2,3,4,5,worm`; **worm = 5 punten** én het verplichte symbool om te incasseren.
-- **Tegels:** 21–36, open oplopend op tafel ("grill"). Wormwaarde: 21–24=1, 25–28=2, 29–32=3, 33–36=4.
-- **Beurt:** gooi alle resterende stenen → kies één symbool en leg ÁLLE stenen met dat symbool opzij → een symbool mag per beurt maar één keer → stop of gooi door. Totaal = som (worm=5).
-- **Tegel pakken (bij stoppen):** vereist totaal ≥21 ÉN ≥1 worm opzij. Van tafel: hoogste tegel met nummer ≤ totaal. Stelen: alleen bij EXACTE match op de BOVENSTE tegel van een tegenstanders (LIFO-)stapel; exacte match heeft voorrang.
-- **Bust:** als je geen nieuw symbool kunt opzijleggen, óf stopt met <21 / geen worm / geen pakbare tegel. Gevolg: eigen bovenste tegel terug op tafel + de hoogste open tafeltegel wordt omgedraaid (uit het spel). Markt krimpt altijd bij een bust.
-- **Einde & winnaar:** zodra de open rij leeg is. Meeste wormen wint. **Gelijkspel:** NL-Wikipedia laat het open; gangbare/officiële ruling = hoogst genummerde tegel wint → config-toggle (default "hoogste tegel").
-
-## 8.2 Variant-/configmatrix
-- Default = NL 999-Games/Heckmeck-standaard (boven). 2-spelervariant: stelen weegt extra zwaar.
-- Gelijkspel-regel als toggle (default hoogste tegel).
-- Edities buiten v1: Regenwormen Junior, XL/Extreme, Heckmeck Extrawurm-uitbreiding.
-
-## 8.3 Edge-cases voor de engine
-- "Gebruikte symbolen" per beurt bijhouden (set); ≥1 worm + ≥21 + pakbare tegel apart checken.
-- Bust met/zonder eigen tegel; teruggelegde tegel kan zelf de hoogste worden die meteen omgedraaid wordt.
-- Exacte-match-steal vóór tafel-pak; alleen bovenste tegel van een tegenstander.
-- Einde = open rij leeg (door pakken én omdraaien).
-
-## 8.4 AI-strategie
-- Diepste AI-spel van de familie; academisch onderzocht (Monte-Carlo "MC4C", ~10% risicodrempel presteert het best).
-- Symboolkeuze: punten verzamelen maar ZORG voor ≥1 worm ("pak wormen als het kan", zeker vanaf de 3e worp).
-- Stop-criterium: stop als EV(doorgooien) < zekere opbrengst. Praktische heuristiek: stop zodra (wormen op eigen stapel + wormen die je nu zou pakken) ≥ 2.
-- Stelen weegt dubbel in 2-speler (≈ w + w/(p−1)).
-- Aanpak voor ons: EV/Monte-Carlo-rollout over getLegalMoves/applyMove (gedeeld determinisatie-skelet) + heuristische fallback. Zelfs goede heuristiek ≈ 30–40% van perfect spel → heuristiek volstaat voor v1.
-
-## 8.5 Stack-fit
-- Nieuwe motor: press-your-luck + gedeelde markt + per-speler LIFO-tegelstapels + stelen. Beurtstaat = {opzijgelegd[], gebruikteSymbolen, totaal}, meerdere worpen per beurt.
-- dice.ts uitbreiden: nu DieValue 1-6 + worp-paar (Mexen); nodig: 8 stenen + worm-vlak (waarde 5, apart symbool) + keep/bank-helpers.
-- Render: bestaande 3D-dobbel-render (beker/stenen) + tegel-rij ("grill") + per-speler tegelstapels (nieuw, vgl. Qwixx-scorebord).
-- Galerij-tegel onder Dobbelspellen; i18n NL/EN; integratietest + localhost-smoke zoals de rest.
-
-## 8.6 Bronnen (Regenwormen)
-- NL Wikipedia: https://nl.wikipedia.org/wiki/Regenwormen_(spel)
-- 999 Games / spelregels.eu: https://www.spelregels.eu/regenwormen/
-- Heckmeck (1d6chan): https://1d6chan.miraheze.org/wiki/Heckmeck
-- Frozen Fractal — How to win at Pickomino: https://frozenfractal.com/blog/2015/5/3/how-to-win-at-pickomino/
-- Academisch (IEEE/ResearchGate): Determination and Evaluation of Efficient Strategies for Heckmeck am Bratwurmeck (Pickomino)
+- Diepste AI-spel van de dobbelfamilie; academisch onderzocht (Monte-Carlo, ~10% risicodrempel presteert het best).
+- Symboolkeuze: punten verzamelen maar ZORG voor >=1 worm ("pak wormen als het kan", zeker vanaf de 3e worp).
+- Stop-criterium: stop als EV(doorgooien) < zekere opbrengst. Praktische heuristiek: stop zodra (wormen op eigen stapel + wormen die je nu zou pakken) >= 2.
+- Stelen weegt dubbel in 2-speler (~ w + w/(p-1)).
+- Onze aanpak: EV/Monte-Carlo-rollout over getLegalMoves/applyMove + heuristische fallback. Goede heuristiek benadert ~30-40% van perfect spel -> heuristiek volstaat voor v1.
+- Extra bronnen: Frozen Fractal "How to win at Pickomino" (frozenfractal.com); IEEE/ResearchGate "Determination and Evaluation of Efficient Strategies for Heckmeck am Bratwurmeck (Pickomino)".

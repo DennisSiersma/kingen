@@ -16,6 +16,7 @@ import { qwixxGame } from './qwixx/index.ts';
 import { fritzenGame } from './fritzen/index.ts';
 import { yahtzeeGame } from './yahtzee/index.ts';
 import { tienduizendGame } from './tienduizend/index.ts';
+import { regenwormenGame } from './regenwormen/index.ts';
 
 let gedaan = false;
 
@@ -34,4 +35,5 @@ export function registerBuiltinGames(): void {
   registerGame(fritzenGame);
   registerGame(yahtzeeGame);
   registerGame(tienduizendGame);
+  registerGame(regenwormenGame);
 }
