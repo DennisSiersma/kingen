@@ -353,3 +353,49 @@ render). Twee opties:
 Gezien je nadruk op grafische kwaliteit en op Mexen: ik adviseer **een korte Phase D0 met de
 DiceRenderer + beker als eerste tastbare resultaat**, en dan Mexen — desnoods met Yahtzee als
 parallelle, goedkope validatie van de scorekaart-HUD.
+
+---
+
+# 8. REGENWORMEN (toegevoegd 2026-06-14) — Heckmeck am Bratwurmeck / Pickomino
+
+> Onderzoek via NL-Wikipedia + 999 Games/spelregels.eu + academische strategie-paper (IEEE/ResearchGate) + Frozen Fractal EV-analyse. Origineel: Zoch, Reiner Knizia 2005. NL-uitgave: 999 Games. **Press-your-luck met gedeelde tegelmarkt + stelen** — een NIEUWE motor t.o.v. Mexen/Qwixx/Fritzen/Yahtzee/Tienduizend.
+
+## 8.1 Canonieke regels (NL-default)
+- **Spelers:** 2–7. **Materiaal:** 8 dobbelstenen + 16 wormtegels.
+- **Dobbelstenen:** vlakken `1,2,3,4,5,worm`; **worm = 5 punten** én het verplichte symbool om te incasseren.
+- **Tegels:** 21–36, open oplopend op tafel ("grill"). Wormwaarde: 21–24=1, 25–28=2, 29–32=3, 33–36=4.
+- **Beurt:** gooi alle resterende stenen → kies één symbool en leg ÁLLE stenen met dat symbool opzij → een symbool mag per beurt maar één keer → stop of gooi door. Totaal = som (worm=5).
+- **Tegel pakken (bij stoppen):** vereist totaal ≥21 ÉN ≥1 worm opzij. Van tafel: hoogste tegel met nummer ≤ totaal. Stelen: alleen bij EXACTE match op de BOVENSTE tegel van een tegenstanders (LIFO-)stapel; exacte match heeft voorrang.
+- **Bust:** als je geen nieuw symbool kunt opzijleggen, óf stopt met <21 / geen worm / geen pakbare tegel. Gevolg: eigen bovenste tegel terug op tafel + de hoogste open tafeltegel wordt omgedraaid (uit het spel). Markt krimpt altijd bij een bust.
+- **Einde & winnaar:** zodra de open rij leeg is. Meeste wormen wint. **Gelijkspel:** NL-Wikipedia laat het open; gangbare/officiële ruling = hoogst genummerde tegel wint → config-toggle (default "hoogste tegel").
+
+## 8.2 Variant-/configmatrix
+- Default = NL 999-Games/Heckmeck-standaard (boven). 2-spelervariant: stelen weegt extra zwaar.
+- Gelijkspel-regel als toggle (default hoogste tegel).
+- Edities buiten v1: Regenwormen Junior, XL/Extreme, Heckmeck Extrawurm-uitbreiding.
+
+## 8.3 Edge-cases voor de engine
+- "Gebruikte symbolen" per beurt bijhouden (set); ≥1 worm + ≥21 + pakbare tegel apart checken.
+- Bust met/zonder eigen tegel; teruggelegde tegel kan zelf de hoogste worden die meteen omgedraaid wordt.
+- Exacte-match-steal vóór tafel-pak; alleen bovenste tegel van een tegenstander.
+- Einde = open rij leeg (door pakken én omdraaien).
+
+## 8.4 AI-strategie
+- Diepste AI-spel van de familie; academisch onderzocht (Monte-Carlo "MC4C", ~10% risicodrempel presteert het best).
+- Symboolkeuze: punten verzamelen maar ZORG voor ≥1 worm ("pak wormen als het kan", zeker vanaf de 3e worp).
+- Stop-criterium: stop als EV(doorgooien) < zekere opbrengst. Praktische heuristiek: stop zodra (wormen op eigen stapel + wormen die je nu zou pakken) ≥ 2.
+- Stelen weegt dubbel in 2-speler (≈ w + w/(p−1)).
+- Aanpak voor ons: EV/Monte-Carlo-rollout over getLegalMoves/applyMove (gedeeld determinisatie-skelet) + heuristische fallback. Zelfs goede heuristiek ≈ 30–40% van perfect spel → heuristiek volstaat voor v1.
+
+## 8.5 Stack-fit
+- Nieuwe motor: press-your-luck + gedeelde markt + per-speler LIFO-tegelstapels + stelen. Beurtstaat = {opzijgelegd[], gebruikteSymbolen, totaal}, meerdere worpen per beurt.
+- dice.ts uitbreiden: nu DieValue 1-6 + worp-paar (Mexen); nodig: 8 stenen + worm-vlak (waarde 5, apart symbool) + keep/bank-helpers.
+- Render: bestaande 3D-dobbel-render (beker/stenen) + tegel-rij ("grill") + per-speler tegelstapels (nieuw, vgl. Qwixx-scorebord).
+- Galerij-tegel onder Dobbelspellen; i18n NL/EN; integratietest + localhost-smoke zoals de rest.
+
+## 8.6 Bronnen (Regenwormen)
+- NL Wikipedia: https://nl.wikipedia.org/wiki/Regenwormen_(spel)
+- 999 Games / spelregels.eu: https://www.spelregels.eu/regenwormen/
+- Heckmeck (1d6chan): https://1d6chan.miraheze.org/wiki/Heckmeck
+- Frozen Fractal — How to win at Pickomino: https://frozenfractal.com/blog/2015/5/3/how-to-win-at-pickomino/
+- Academisch (IEEE/ResearchGate): Determination and Evaluation of Efficient Strategies for Heckmeck am Bratwurmeck (Pickomino)
