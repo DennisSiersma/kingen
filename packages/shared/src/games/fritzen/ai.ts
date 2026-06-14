@@ -75,18 +75,29 @@ export class FritzenAi implements PlayerController {
       return vind(loose, true) ?? keeps.find((m) => m.stop) ?? moves[0];
     }
 
-    // Doel kiezen op basis van de huidige stenen (incl. al vastgelegde).
-    const alle = [...locked, ...loose];
-    const hoog = sum(alle) / alle.length >= 3.5;
+    // Doel VASTPINNEN: zodra er stenen vastliggen bepaalt DIE de richting (die kan
+    // niet meer wijzigen). Zou je het doel elke worp uit het gemengde gemiddelde
+    // herberekenen, dan kan het midden in de beurt omklappen en stuurt de AI zichzelf
+    // de strafzone in. Pas bij de eerste beslis-worp (nog niets vast) baseren we op
+    // de losse stenen.
+    const richtingBron = locked.length > 0 ? locked : loose;
+    const hoog = sum(richtingBron) / richtingBron.length >= 3.5;
 
-    // Stenen die bij het doel passen vasthouden; minstens één.
-    let keep = hoog ? loose.filter((v) => v >= 4) : loose.filter((v) => v <= 3);
+    // Alleen stenen die het doel echt halen vasthouden: ≥30 vergt gem. 5 per steen,
+    // ≤10 gem. ≤1,67 — dus hoog → 5/6, laag → 1/2 (een 4 of 3 vasthouden ondermijnt
+    // het doel juist).
+    const past = hoog ? loose.filter((v) => v >= 5) : loose.filter((v) => v <= 2);
+
+    // Geen passende steen: leg geen tegengestelde steen vast (dat breekt het doel).
+    // Hou de minst-schadelijke enkele steen aan en gooi de rest opnieuw.
+    let keep = past;
     if (keep.length === 0) keep = [hoog ? Math.max(...loose) : Math.min(...loose)];
 
     // Mag/wil opnieuw gooien? (er moet iets te herwerpen zijn én een stop:false-zet bestaan)
     const herworp = keep.length < loose.length ? vind(keep, false) : undefined;
-    // Makkelijk stopt soms te vroeg; moeilijk gooit door zolang het kan.
-    const stopKans = this.difficulty === 'makkelijk' ? 0.35 : this.difficulty === 'moeilijk' ? 0.0 : 0.12;
+    // 'moeilijk' is het scherpst (laagste stopkans, maar NIET 0 → stopt wél als
+    // doorgaan niet meer helpt); 'makkelijk' stopt eerder.
+    const stopKans = this.difficulty === 'makkelijk' ? 0.4 : this.difficulty === 'moeilijk' ? 0.08 : 0.18;
     if (herworp && Math.random() >= stopKans) return herworp;
 
     return vind(loose, true) ?? keeps.find((m) => m.stop) ?? moves[0];

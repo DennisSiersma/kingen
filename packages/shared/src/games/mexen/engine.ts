@@ -111,6 +111,10 @@ function resolveDoubt(state: MexenState): GameEvent[] {
     { type: 'custom', subtype: 'revealed', data: { announcer, doubter, roll, code, announced, truthful } },
   ];
 
+  // Levensstand vóór de aftrek van deze ronde — basis voor de winnaar-failsafe bij
+  // een gelijktijdige dubbel-eliminatie (anders zouden al-lang-dode stoelen, met
+  // totals 0, alsnog mede-winnaar worden).
+  const livesBefore = [...state.lives];
   const newlyDead: Seat[] = [];
   for (let s = 0; s < state.seatCount; s++) {
     if (loss[s]! <= 0) continue;
@@ -138,7 +142,7 @@ function resolveDoubt(state: MexenState): GameEvent[] {
     state.phase = 'finished';
     state.turn = null;
     state.cupHolder = firstAlive(state);
-    events.push({ type: 'gameEnd', winners: computeWinners(state), totals: toRecord(state.totals) });
+    events.push({ type: 'gameEnd', winners: computeWinners(state, livesBefore), totals: toRecord(state.totals) });
     return events;
   }
 
@@ -149,13 +153,18 @@ function resolveDoubt(state: MexenState): GameEvent[] {
   return events;
 }
 
-function computeWinners(state: MexenState): Seat[] {
+function computeWinners(state: MexenState, livesBefore?: number[]): Seat[] {
   const winners: Seat[] = [];
   for (let s = 0; s < state.seatCount; s++) if (state.alive[s]) winners.push(s as Seat);
-  // Failsafe: als (theoretisch) niemand meer leeft, win wie de meeste levens had.
+  // Failsafe bij een gelijktijdige dubbel-eliminatie (niemand meer levend): win wie
+  // de meeste levens had VÓÓR deze fatale ronde — dus de speler(s) die nu samen
+  // sneuvelden, niet stoelen die al rondes eerder uitlagen (die hebben 0).
   if (winners.length === 0) {
-    const max = Math.max(...state.totals);
-    state.totals.forEach((t, s) => { if (t === max) winners.push(s as Seat); });
+    const pool = livesBefore ?? state.totals;
+    const max = Math.max(...pool);
+    pool.forEach((t, s) => { if (t === max && t > 0) winners.push(s as Seat); });
+    // Niemand had nog levens → val terug op alle stoelen (mag niet leeg zijn).
+    if (winners.length === 0) for (let s = 0; s < state.seatCount; s++) winners.push(s as Seat);
   }
   return winners;
 }

@@ -12,7 +12,7 @@
 import type { PlayerController } from '../../core/player.ts';
 import type { PlayerConfig, PublicGameView, Seat } from '../../core/types.ts';
 import { snelheidsFactor } from '../../core/speed.ts';
-import { counts, hasLargeStraight, isFullHouse, isYahtzee, scoreCategory } from './scoring.ts';
+import { counts, hasLargeStraight, hasSmallStraight, isFullHouse, isYahtzee, scoreCategory } from './scoring.ts';
 import type { YahtzeeCategory, YahtzeeMove, YahtzeeVariantConfig } from './types.ts';
 
 type Difficulty = 'makkelijk' | 'gemiddeld' | 'moeilijk';
@@ -93,8 +93,12 @@ export class YahtzeeAi implements PlayerController {
 
   /** Is er een sterke, af-te-ronden combinatie voor een nog-open vak? */
   private heeftPremium(dice: number[], scores: Record<string, number | null>): boolean {
-    if (isYahtzee(dice) && (scores.yahtzee == null || scores.yahtzee === 50)) return true;
+    // Een vijfling is ALTIJD de moeite waard om te houden — ook als het Yahtzee-vak
+    // al gescratcht (0) is, want via de joker-regel/four-of-a-kind/chance/bovensectie
+    // scoort hij nog hoog. Anders zou de AI een gegarandeerde vijfling weggooien.
+    if (isYahtzee(dice)) return true;
     if (hasLargeStraight(dice) && scores.largeStraight == null) return true;
+    if (hasSmallStraight(dice) && scores.smallStraight == null) return true;
     if (isFullHouse(dice) && scores.fullHouse == null) return true;
     return false;
   }

@@ -26,8 +26,13 @@ interface TdViewExtras {
   target?: number;
 }
 
-/** Bank-drempel per aantal nog te gooien stenen (meer stenen = veiliger doorgooien). */
-const BANK_FLOOR: Record<number, number> = { 0: 1300, 1: 250, 2: 300, 3: 450, 4: 700, 5: 1000, 6: 1300 };
+/**
+ * Bank-drempel (≈ optimale break-even) per aantal nog te gooien stenen. Met WEINIG
+ * stenen is doorgooien sterk −EV (bij 1 steen ~2/3 bust), dus de drempel DAALT naar
+ * weinig stenen toe — eerder de oude tabel die juist op 1-2 stenen veel te lang
+ * doorgooide. (teGooien is altijd 1..6; volle bak → 6 verse stenen.)
+ */
+const BANK_FLOOR: Record<number, number> = { 1: 50, 2: 100, 3: 200, 4: 400, 5: 650, 6: 900 };
 
 function sameMulti(a: readonly number[], b: readonly number[]): boolean {
   if (a.length !== b.length) return false;
@@ -99,7 +104,10 @@ export class TienduizendAi implements PlayerController {
       if (!entered) return potNa >= threshold;
       // Doelscore in zicht → vastzetten.
       if (total + potNa >= target) return true;
-      const factor = this.difficulty === 'makkelijk' ? 0.6 : this.difficulty === 'moeilijk' ? 1.6 : 1.0;
+      // 'moeilijk' speelt rond de optimale break-even (factor 1.0); makkelijk/gemiddeld
+      // banken CONSERVATIEVER (lagere drempel = eerder vastzetten). Géén inversie meer:
+      // de oude factor 1.6 liet 'moeilijk' juist het langst doorgooien (meeste busts).
+      const factor = this.difficulty === 'makkelijk' ? 0.6 : this.difficulty === 'moeilijk' ? 1.0 : 0.8;
       return potNa >= BANK_FLOOR[teGooien]! * factor;
     };
 

@@ -82,11 +82,21 @@ export class QwixxAi implements PlayerController {
     const pass = moves.find((m) => m.type === 'pass');
     if (marks.length === 0) return pass ?? moves[0];
 
-    // Beste (goedkoopste) markering; een slotgetal is extra waardevol.
+    // Beste (goedkoopste) markering; een slotgetal is voorwaardelijk waardevol.
+    const totals = view.totals ?? [];
+    const mijnTotaal = totals[view.seat] ?? 0;
+    const besteAnder = totals.length > 1 ? Math.max(...totals.filter((_, i) => i !== view.seat)) : 0;
+    const reedsDicht = sheet ? Object.values(sheet.rows).filter((r) => r.locked).length : 0;
     const score = (m: typeof marks[number]): number => {
       const rij = sheet?.rows[m.color].marks ?? [];
       const k = this.kosten(rij, m.color, m.value);
-      return m.value === lockNumber(m.color) ? k - 6 : k; // slot zwaar belonen
+      if (m.value !== lockNumber(m.color)) return k;
+      // Een slot levert de eindcel + een bonuskruisje, maar kan het spel beëindigen
+      // (2e slot = einde). Lig je achter én is er al een kleur dicht, beloon het slot
+      // dan NIET — anders bevries je een verlies. Anders belonen naar rijlengte
+      // (langere rij = meer waard om te sluiten).
+      if (mijnTotaal < besteAnder && reedsDicht >= 1) return k;
+      return k - Math.min(6, rij.length); // slot belonen, geschaald op rijlengte
     };
     const beste = [...marks].sort((a, b) => score(a) - score(b))[0]!;
     const besteKosten = score(beste);

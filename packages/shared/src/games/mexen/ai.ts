@@ -70,11 +70,29 @@ export class MexenAi implements PlayerController {
       return this.kiesAankondiging(announceMoves, herworp, extras);
     }
 
-    // Reageren: twijfelen of geloven.
+    // Reageren: twijfelen, geloven, of (ongezien) doorgeven.
     const doubt = moves.find((m) => m.type === 'doubt');
     const believe = moves.find((m) => m.type === 'believe');
     if (!believe) return doubt ?? moves[0]; // Mex onverslaanbaar → alleen twijfelen
-    return this.wilTwijfelen(extras) ? (doubt ?? believe) : believe;
+    if (this.wilTwijfelen(extras)) return doubt ?? believe;
+    // Niet twijfelen: bij een lage claim de beker liever ONGEZIEN doorschuiven met de
+    // laagst-mogelijke hogere waarde (risico naar de buurman) i.p.v. zelf geloven+gooien.
+    const passes = moves.filter(
+      (m): m is Extract<MexenMove, { type: 'passUnseen' }> => m.type === 'passUnseen',
+    );
+    if (passes.length > 0 && this.wilDoorgeven(extras)) {
+      return [...passes].sort((a, b) => rankOf(a.value) - rankOf(b.value))[0]!;
+    }
+    return believe;
+  }
+
+  /** Kans dat de AI de beker ongezien doorschuift i.p.v. gelooft (lage claim → vaker). */
+  private wilDoorgeven(extras: MexenViewExtras): boolean {
+    const ann = extras.currentAnnouncement;
+    if (ann === null) return false;
+    const high = clamp(rankOf(ann) / 20, 0, 1); // 0 (31) .. 1 (Mex)
+    const base = this.difficulty === 'moeilijk' ? 0.5 : this.difficulty === 'makkelijk' ? 0.15 : 0.3;
+    return Math.random() < base * (1 - high); // lage aankondiging → goedkoop doorschuiven
   }
 
   /**

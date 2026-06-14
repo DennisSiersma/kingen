@@ -50,7 +50,9 @@ export function mexenLegalMoves(state: MexenState, seat: Seat): MexenMove[] {
 
   if (state.phase === 'responding') {
     const moves: MexenMove[] = [{ type: 'doubt' }];
-    if (canEscalate(state)) {
+    // Een aangekondigde 21 (Mex) MOET worden betwijfeld: geen believe/passUnseen,
+    // anders kan een 21 in tie-modus eindeloos worden doorgeschoven (niet-terminatie).
+    if (state.currentAnnouncement !== 21 && canEscalate(state)) {
       moves.push({ type: 'believe' });
       if (state.config.allowPassUnseen) {
         for (const value of announceableCodes(state.currentAnnouncement, state.config.announceMode)) {
