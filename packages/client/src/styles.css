@@ -296,13 +296,15 @@
   font-size: 0.84rem;
 }
 
-/* Subtiele ontwerper-signatuur, altijd rechtsonder (setup én spel). */
+/* Subtiele ontwerper-signatuur rechtsonder, tevens discreet linkje naar de stats. */
 #kg-credit {
   position: fixed;
   right: calc(12px + env(safe-area-inset-right));
   bottom: calc(9px + env(safe-area-inset-bottom));
   z-index: 60;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  text-decoration: none;
   user-select: none;
   font-family: var(--kg-serif, Georgia, serif);
   font-size: 0.82rem;
@@ -310,6 +312,10 @@
   letter-spacing: 0.22em;
   color: rgba(201, 162, 39, 0.5);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  transition: color 140ms ease;
+}
+@media (hover: hover) {
+  #kg-credit:hover { color: var(--kg-gold-bright, #e8c75a); }
 }
 
 :root {

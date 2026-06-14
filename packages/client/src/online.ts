@@ -38,6 +38,7 @@ import { createChoiceDialogs, createNotifications } from './ui/notifications.ts'
 import { el, onEnvironmentChange, onUiEvent } from './ui/uiBus.ts';
 import { onLangChange, rankLabels, roundKindName, suitName, t } from './ui/i18n.ts';
 import { WebSocketTransport, defaultWsUrl } from './net/wsTransport.ts';
+import { reportLocalGame } from './net/statsBeacon.ts';
 
 function clientId(): string {
   try {
@@ -518,9 +519,14 @@ export async function runOnlineGame(
         }
         break;
       case 'gameEvent':
-        if (msg.event.type === 'gameStart') lobby.verberg();
+        if (msg.event.type === 'gameStart') {
+          lobby.verberg();
+          // Lokale (solo) partij meetellen in de stats; online telt de server zelf.
+          if (solo && voorkeurGameId) reportLocalGame(voorkeurGameId, 'start');
+        }
         bus.emit(msg.event);
         if (msg.event.type === 'gameEnd') {
+          if (solo && voorkeurGameId) reportLocalGame(voorkeurGameId, 'finish');
           const winnaars = msg.event.winners.map((s) => naamVan(s)).join(', ');
           void scene.waitForIdle().then(() => {
             void notifications.toon(t('online.gameOver', { winner: winnaars }), { soort: 'succes', duurMs: 8000 });

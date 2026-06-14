@@ -2,8 +2,9 @@
 <html lang="nl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kingen — statistieken</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0f" />
+    <title>Spellen — statistieken</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='2' width='24' height='28' rx='3' fill='%23fdfdf6' stroke='%23333' stroke-width='1'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='%23c0392b' font-family='Georgia,serif' font-weight='bold'%3EK%3C/text%3E%3C/svg%3E" />
     <style>
       :root {
@@ -11,8 +12,10 @@
         --panel: rgba(22, 18, 13, 0.95);
         --line: rgba(201, 162, 39, 0.28);
         --gold: #e8c75a;
+        --gold-soft: rgba(201, 162, 39, 0.5);
         --text: #efe7d6;
         --muted: #b1a78f;
+        --green: #7ee0a0;
         --serif: 'Palatino', 'Book Antiqua', Georgia, serif;
       }
       * { box-sizing: border-box; }
@@ -25,43 +28,60 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 32px 16px 48px;
+        padding: 40px 16px calc(56px + env(safe-area-inset-bottom));
       }
-      h1 { font-family: var(--serif); color: var(--gold); margin: 0 0 4px; font-size: 1.8rem; }
-      .sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; }
-      .blok { width: min(680px, 100%); margin-bottom: 22px; }
+      h1 { font-family: var(--serif); color: var(--gold); margin: 0 0 4px; font-size: 1.9rem; letter-spacing: 0.01em; }
+      .sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 28px; }
+      .blok { width: min(720px, 100%); margin-bottom: 26px; }
       .blok h2 {
-        font-family: var(--serif); color: var(--gold); font-size: 1rem;
-        letter-spacing: 0.04em; margin: 0 0 10px; font-weight: 600;
+        font-family: var(--serif); color: var(--gold); font-size: 1.05rem;
+        letter-spacing: 0.04em; margin: 0 0 12px; font-weight: 600;
+        border-bottom: 1px solid var(--line); padding-bottom: 7px;
       }
-      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
       .kaart {
         background: var(--panel);
         border: 1px solid var(--line);
         border-radius: 12px;
-        padding: 16px 18px;
+        padding: 15px 18px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
       }
       .kaart .waarde { font-family: var(--serif); font-size: 2rem; color: var(--gold); line-height: 1.1; }
-      .kaart .waarde.is-live { color: #7ee0a0; }
+      .kaart .waarde.is-live { color: var(--green); }
       .kaart .label { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
-      .voet { color: var(--muted); font-size: 0.78rem; margin-top: 8px; }
+
+      table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+      thead th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--line); }
+      thead th:first-child { text-align: left; }
+      tbody td { padding: 12px 14px; text-align: right; border-bottom: 1px solid rgba(201,162,39,0.1); font-variant-numeric: tabular-nums; }
+      tbody tr:last-child td { border-bottom: none; }
+      tbody td:first-child { text-align: left; }
+      .spel { display: flex; flex-direction: column; gap: 5px; min-width: 130px; }
+      .spel .naam { font-weight: 600; }
+      .spel .naam .emo { margin-right: 7px; }
+      .balk { height: 4px; border-radius: 3px; background: linear-gradient(90deg, var(--gold), var(--gold-soft)); }
+      .num { color: var(--text); }
+      .num small { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 2px; }
+      .num.totaal { color: var(--gold); font-family: var(--serif); font-size: 1.25rem; }
+      .leeg { text-align: center; color: var(--muted); padding: 22px; }
+
+      .voet { color: var(--muted); font-size: 0.78rem; margin-top: 12px; text-align: center; }
       a { color: var(--gold); text-decoration: none; }
       a:hover { text-decoration: underline; }
       .stip {
         display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-        background: #7ee0a0; margin-right: 6px; vertical-align: middle;
-        box-shadow: 0 0 8px #7ee0a0; animation: pols 1.6s ease-in-out infinite;
+        background: var(--green); margin-right: 6px; vertical-align: middle;
+        box-shadow: 0 0 8px var(--green); animation: pols 1.6s ease-in-out infinite;
       }
       @keyframes pols { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
     </style>
   </head>
   <body>
-    <h1>♛ Kingen — statistieken</h1>
+    <h1>♠ Spellen — statistieken ♥</h1>
     <div class="sub"><span class="stip"></span><span id="status">verbinden…</span></div>
 
     <div class="blok">
-      <h2>Nu live</h2>
+      <h2>Nu live (online)</h2>
       <div class="grid">
         <div class="kaart"><div class="waarde is-live" id="bezig">–</div><div class="label">partijen bezig</div></div>
         <div class="kaart"><div class="waarde is-live" id="spelersOnline">–</div><div class="label">spelers online</div></div>
@@ -75,19 +95,75 @@
       <div class="grid">
         <div class="kaart"><div class="waarde" id="uur">–</div><div class="label">afgelopen uur</div></div>
         <div class="kaart"><div class="waarde" id="dag">–</div><div class="label">afgelopen 24 uur</div></div>
-        <div class="kaart"><div class="waarde" id="totaal">–</div><div class="label">sinds serverstart</div></div>
+        <div class="kaart"><div class="waarde" id="totaal">–</div><div class="label">gestart (totaal)</div></div>
         <div class="kaart"><div class="waarde" id="voltooid">–</div><div class="label">uitgespeeld</div></div>
+        <div class="kaart"><div class="waarde" id="online">–</div><div class="label">🌐 online gestart</div></div>
+        <div class="kaart"><div class="waarde" id="lokaal">–</div><div class="label">🧠 lokaal gestart</div></div>
       </div>
-      <div class="voet">Server-uptime: <span id="uptime">–</span> · <a href="/">← naar het spel</a></div>
+    </div>
+
+    <div class="blok">
+      <h2>Per spel</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Spel</th>
+            <th>🌐 Online</th>
+            <th>🧠 Lokaal</th>
+            <th>Totaal</th>
+          </tr>
+        </thead>
+        <tbody id="perSpel">
+          <tr><td class="leeg" colspan="4">laden…</td></tr>
+        </tbody>
+      </table>
+      <div class="voet">Online + lokaal · "gestart / uitgespeeld" · Server-uptime: <span id="uptime">–</span> · <a href="/">← naar de spellen</a></div>
     </div>
 
     <script>
       const $ = (id) => document.getElementById(id);
+      // Spel-id → weergavenaam + embleem (spiegelt de galerij).
+      const SPELLEN = {
+        kingen: ['♛', 'Kingen'],
+        hartenjagen: ['♥', 'Hartenjagen'],
+        hearts: ['♥', 'Hearts'],
+        klaverjassen: ['♣', 'Klaverjassen'],
+        'klaverjas-amsterdams': ['♣', 'Klaverjas (Amsterdams)'],
+        rikken: ['♦', 'Rikken'],
+        toepen: ['✊', 'Toepen'],
+        mexen: ['🎲', 'Mexen'],
+        qwixx: ['🎲', 'Qwixx'],
+        fritzen: ['🎲', 'Fritzen'],
+        yahtzee: ['🎲', 'Yahtzee'],
+        tienduizend: ['🎲', 'Tienduizend'],
+      };
+      const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
       function uptimeTekst(sec) {
         const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
         if (d > 0) return `${d}d ${h}u ${m}m`;
         if (h > 0) return `${h}u ${m}m`;
         return `${m}m`;
+      }
+      function cel(t, v) { return `<td class="num">${t.gestart}<small>${v} uitgespeeld</small></td>`; }
+      function tekenPerSpel(perSpel) {
+        const tb = $('perSpel');
+        if (!perSpel || perSpel.length === 0) {
+          tb.innerHTML = '<tr><td class="leeg" colspan="4">Nog geen partijen gespeeld.</td></tr>';
+          return;
+        }
+        const max = Math.max(1, ...perSpel.map((p) => p.online.gestart + p.lokaal.gestart));
+        tb.innerHTML = perSpel.map((p) => {
+          const meta = SPELLEN[p.gameId] || ['🎲', cap(p.gameId)];
+          const tot = p.online.gestart + p.lokaal.gestart;
+          const pct = Math.round((tot / max) * 100);
+          return `<tr>
+            <td><div class="spel"><span class="naam"><span class="emo">${meta[0]}</span>${meta[1]}</span>
+              <div class="balk" style="width:${pct}%"></div></div></td>
+            <td class="num">${p.online.gestart}<small>${p.online.voltooid} uitgespeeld</small></td>
+            <td class="num">${p.lokaal.gestart}<small>${p.lokaal.voltooid} uitgespeeld</small></td>
+            <td class="num totaal">${tot}</td>
+          </tr>`;
+        }).join('');
       }
       async function ververs() {
         try {
@@ -102,7 +178,10 @@
           $('dag').textContent = s.gestartLaatste24u;
           $('totaal').textContent = s.gestartTotaal;
           $('voltooid').textContent = s.voltooid;
+          $('online').textContent = s.online ? s.online.gestart : '–';
+          $('lokaal').textContent = s.lokaal ? s.lokaal.gestart : '–';
           $('uptime').textContent = uptimeTekst(s.uptimeSec);
+          tekenPerSpel(s.perSpel);
           $('status').textContent = 'live · ververst elke 3s';
         } catch (e) {
           $('status').textContent = 'kan stats niet laden';

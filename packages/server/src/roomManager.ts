@@ -14,8 +14,8 @@ export interface RoomManagerOpts {
   moveTimeoutMs?: number;
   /** Aangeroepen wanneer de lobbylijst verandert (tafel erbij/af/gewijzigd). */
   onLobbyChange?: () => void;
-  onGameStart?: () => void;
-  onGameEnd?: () => void;
+  onGameStart?: (gameId: string) => void;
+  onGameEnd?: (gameId: string) => void;
 }
 
 /** Momentopname van de live-toestand (voor de stats-pagina). */

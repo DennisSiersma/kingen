@@ -12,6 +12,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import sirv from 'sirv';
 import type { NetMessage } from '@kingen/shared/net/protocol.ts';
 import { registerBuiltinGames } from '@kingen/shared/games/registry.ts';
+import { getGame } from '@kingen/shared/core/gameRegistry.ts';
 import type { ClientConn, Room } from './room.ts';
 import { RoomManager } from './roomManager.ts';
 import { Stats } from './stats.ts';
@@ -48,6 +49,37 @@ const server = http.createServer((req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'content-type': 'text/plain' });
     res.end('ok');
+    return;
+  }
+  // Beacon vanuit de client voor LOKALE partijen (lokaal-tegen-de-computer raakt
+  // de server normaal niet). Best-effort: alleen bekende spel-id's tellen mee, zodat
+  // willekeurige keys de statistiek niet kunnen vervuilen; body gecapt op 1 KB.
+  if (req.method === 'POST' && req.url === '/api/stats/lokaal') {
+    let body = '';
+    let teGroot = false;
+    req.on('data', (chunk: Buffer) => {
+      body += chunk;
+      if (body.length > 1024) {
+        teGroot = true;
+        req.destroy();
+      }
+    });
+    req.on('end', () => {
+      if (!teGroot) {
+        try {
+          const m = JSON.parse(body) as { gameId?: unknown; event?: unknown };
+          const gameId = typeof m.gameId === 'string' ? m.gameId : '';
+          const event = m.event === 'start' || m.event === 'finish' ? m.event : null;
+          if (gameId && getGame(gameId) && event) {
+            if (event === 'start') stats.recordStart(gameId, 'lokaal');
+            else stats.recordFinish(gameId, 'lokaal');
+          }
+        } catch {
+          // ongeldige body → negeren
+        }
+      }
+      res.writeHead(204).end();
+    });
     return;
   }
   if (req.url === '/api/stats') {
@@ -101,8 +133,8 @@ const manager = new RoomManager({
   aiThinkDelayMs: aiDelay,
   moveTimeoutMs,
   onLobbyChange: stuurLobbyLijst,
-  onGameStart: () => stats.recordStart(),
-  onGameEnd: () => stats.recordFinish(),
+  onGameStart: (gameId) => stats.recordStart(gameId, 'online'),
+  onGameEnd: (gameId) => stats.recordFinish(gameId, 'online'),
 });
 
 const isStr = (v: unknown): v is string => typeof v === 'string';

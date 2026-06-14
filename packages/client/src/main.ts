@@ -36,6 +36,7 @@ import { createScoreboard } from './ui/scoreboard.ts';
 import { createChoiceDialogs, createNotifications } from './ui/notifications.ts';
 import { installRotatePrompt } from './ui/rotatePrompt.ts';
 import { installWebglNotice } from './ui/webglNotice.ts';
+import { reportLocalGame } from './net/statsBeacon.ts';
 import type { ChoiceDialogs, Hud, Notifications, Scoreboard, SetupConfig } from './ui/types.ts';
 import { onEnvironmentChange, onUiEvent } from './ui/uiBus.ts';
 
@@ -267,6 +268,7 @@ async function speelPartij(ctx: AppContext, setup: SetupConfig): Promise<'opnieu
       case 'gameEnd':
         hud.setTurn(null);
         einde = { winners: [...ev.winners], totals: naarArray(ev.totals, n) };
+        reportLocalGame('kingen', 'finish'); // lokale partij uitgespeeld
         break;
       default:
         break;
@@ -462,6 +464,7 @@ async function main(): Promise<void> {
       // Zelfde instellingen herspelen tot de gebruiker terug wil naar setup.
       let keuze: 'opnieuw' | 'setup';
       do {
+        reportLocalGame('kingen', 'start'); // lokale partij meetellen in de stats
         keuze = await speelPartij(ctx, setup);
       } while (keuze === 'opnieuw');
     }
