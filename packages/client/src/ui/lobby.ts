@@ -22,13 +22,14 @@ export interface CreateOpts {
 }
 
 /** Spellen die in de lobby gekozen kunnen worden (client kent ze statisch; server valideert via de registry). */
-const SPELLEN: { id: string; naam: string }[] = [
-  { id: 'kingen', naam: 'Kingen' },
-  { id: 'hartenjagen', naam: 'Hartenjagen' },
-  { id: 'hearts', naam: 'Hearts' },
-  { id: 'klaverjassen', naam: 'Klaverjassen' },
-  { id: 'klaverjas-amsterdams', naam: 'Klaverjassen (Amsterdams)' },
-  { id: 'mexen', naam: 'Mexen' },
+// `counts` = de kiesbare spelersaantallen per spel (Mexen vereist minstens 4).
+const SPELLEN: { id: string; naam: string; counts: number[] }[] = [
+  { id: 'kingen', naam: 'Kingen', counts: [3, 4, 5] },
+  { id: 'hartenjagen', naam: 'Hartenjagen', counts: [3, 4, 5] },
+  { id: 'hearts', naam: 'Hearts', counts: [3, 4, 5] },
+  { id: 'klaverjassen', naam: 'Klaverjassen', counts: [3, 4, 5] },
+  { id: 'klaverjas-amsterdams', naam: 'Klaverjassen (Amsterdams)', counts: [3, 4, 5] },
+  { id: 'mexen', naam: 'Mexen', counts: [4, 5, 6, 7, 8] },
 ];
 
 export interface Lobby {
@@ -119,12 +120,19 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
   const spelersTekst = el('span');
   const spelersLabel = el('label', 'kg-lobby-veld');
   const spelersSel = el('select', 'kg-select') as HTMLSelectElement;
-  for (const num of [3, 4, 5]) {
-    const o = el('option', undefined, String(num));
-    o.value = String(num);
-    if (num === 4) o.selected = true;
-    spelersSel.appendChild(o);
-  }
+  // Vul de spelersaantallen passend bij het gekozen spel (Mexen: 4-8).
+  const vulSpelers = (gameId: string): void => {
+    const spel = SPELLEN.find((s) => s.id === gameId) ?? SPELLEN[0]!;
+    spelersSel.replaceChildren();
+    for (const num of spel.counts) {
+      const o = el('option', undefined, String(num)) as HTMLOptionElement;
+      o.value = String(num);
+      if (num === 4 || (!spel.counts.includes(4) && num === spel.counts[0])) o.selected = true;
+      spelersSel.appendChild(o);
+    }
+  };
+  vulSpelers(spelSel.value);
+  spelSel.addEventListener('change', () => vulSpelers(spelSel.value));
   spelersLabel.append(spelersTekst, spelersSel);
   const zichtbaarTekst = el('span');
   const zichtbaarLabel = el('label', 'kg-lobby-veld');

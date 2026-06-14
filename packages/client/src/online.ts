@@ -209,27 +209,34 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
             hud.setTurn(Number(d['seat']) as Seat);
           } else if (ev.subtype === 'announced') {
             const seat = Number(d['seat']);
-            const val = Number(d['value']);
+            const value = codeLabel(Number(d['value']));
             const unseen = d['unseen'] === true;
             void notifications.toon(
-              `${naamVan(seat)} zegt: ${codeLabel(val)}${unseen ? ' (ongezien)' : ''}`,
+              t(unseen ? 'toast.mexenAnnouncedUnseen' : 'toast.mexenAnnounced', { name: naamVan(seat), value }),
               { soort: seat === mySeat ? 'succes' : 'info', duurMs: 1800 },
             );
           } else if (ev.subtype === 'revealed') {
             const announcer = Number(d['announcer']);
             const truthful = d['truthful'] === true;
             void notifications.toon(
-              `${naamVan(announcer)} had ${codeLabel(Number(d['code']))} — ${truthful ? 'het klopte!' : 'gelogen!'}`,
+              t(truthful ? 'toast.mexenRevealedTrue' : 'toast.mexenRevealedLie', {
+                name: naamVan(announcer),
+                code: codeLabel(Number(d['code'])),
+              }),
               { soort: truthful ? 'info' : 'waarschuwing', duurMs: 2600 },
             );
           } else if (ev.subtype === 'lifeLost') {
             const seat = Number(d['seat']);
             void notifications.toon(
-              `${naamVan(seat)} verliest ${Number(d['amount'])} leven(s) → ${Number(d['livesLeft'])} over`,
+              t('toast.mexenLifeLost', {
+                name: naamVan(seat),
+                amount: Number(d['amount']),
+                left: Number(d['livesLeft']),
+              }),
               { soort: seat === mySeat ? 'waarschuwing' : 'info', duurMs: 2400 },
             );
           } else if (ev.subtype === 'playerEliminated') {
-            void notifications.toon(`${naamVan(Number(d['seat']))} ligt eruit!`, {
+            void notifications.toon(t('toast.mexenEliminated', { name: naamVan(Number(d['seat'])) }), {
               soort: 'waarschuwing',
               duurMs: 3000,
             });

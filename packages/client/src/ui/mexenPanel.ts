@@ -8,6 +8,7 @@
  */
 
 import { el } from './uiBus.ts';
+import { t } from './i18n.ts';
 import { codeLabel } from '@shared/games/mexen/ranking.ts';
 
 /** Mexen-zetvormen zoals de server ze in legalMoves aanlevert (geserialiseerd). */
@@ -88,16 +89,18 @@ export function createMexenPanel(root: HTMLElement): MexenPanel {
         const doubt = legal.find((m) => m.type === 'doubt');
 
         if (rolls.length > 0) {
-          titel.textContent = 'Jij hebt de beker — schud en gooi verdekt';
-          const b = maakKnop('🎲 Gooi de beker', '#e7c66a');
+          titel.textContent = t('mexen.yourCup');
+          const b = maakKnop(t('mexen.roll'), '#e7c66a');
           b.addEventListener('click', () => kies({ type: 'roll' }));
           knoppenRij.appendChild(b);
           return;
         }
 
         if (announces.length > 0) {
-          const worp = myRoll ? ` (jij gooide ${DICE_FACES[myRoll[0]] ?? ''}${DICE_FACES[myRoll[1]] ?? ''})` : '';
-          titel.textContent = `Kondig een waarde aan — minstens hoger dan de vorige${worp}`;
+          const worp = myRoll
+            ? t('mexen.youRolled', { dice: `${DICE_FACES[myRoll[0]] ?? ''}${DICE_FACES[myRoll[1]] ?? ''}` })
+            : '';
+          titel.textContent = t('mexen.announceTitle') + worp;
           // Oplopend, zodat de laagste (eerlijke) keuze links staat.
           for (const m of [...announces].sort((a, b) => a.value - b.value)) {
             const knop = maakKnop(codeLabel(m.value), '#bfe3a3');
@@ -108,20 +111,20 @@ export function createMexenPanel(root: HTMLElement): MexenPanel {
         }
 
         // Reageren op de aankondiging van de vorige speler.
-        titel.textContent = 'Geloof je de aankondiging?';
+        titel.textContent = t('mexen.doubtTitle');
         if (believe) {
-          const b = maakKnop('✓ Geloven (zelf gooien)', '#bfe3a3');
+          const b = maakKnop(t('mexen.believe'), '#bfe3a3');
           b.addEventListener('click', () => kies(believe));
           knoppenRij.appendChild(b);
         }
         if (doubt) {
-          const b = maakKnop('✗ Niet geloven — beker omhoog!', '#e7a3a3');
+          const b = maakKnop(t('mexen.doubt'), '#e7a3a3');
           b.addEventListener('click', () => kies(doubt));
           knoppenRij.appendChild(b);
         }
         if (passes.length > 0) {
           const laagste = [...passes].sort((a, b) => a.value - b.value)[0]!;
-          const b = maakKnop(`↪ Ongezien doorschuiven (${codeLabel(laagste.value)})`, '#cdbfe3');
+          const b = maakKnop(t('mexen.passUnseen', { value: codeLabel(laagste.value) }), '#cdbfe3');
           b.addEventListener('click', () => kies(laagste));
           knoppenRij.appendChild(b);
         }
