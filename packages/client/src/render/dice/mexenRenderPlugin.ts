@@ -62,6 +62,9 @@ export class MexenRenderPlugin implements SceneRenderPlugin {
       case 'roundReset':
         await d.animateRoundReset(Number(data['starter']) as Seat);
         return true;
+      case 'mexenLives':
+        d.setLives((data['lives'] as number[]) ?? []);
+        return true;
       default:
         return false; // announce/believe/lifeLost/turn → HUD handelt af
     }
