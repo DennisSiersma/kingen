@@ -296,10 +296,10 @@ export function createHud(root: HTMLElement): Hud {
     const heeftRonde = huidigeRonde !== null && huidigeRonde.kind !== '';
     if (huidigeRonde && heeftRonde) {
       rondeLabel.textContent = roundKindName(huidigeRonde.kind);
-      rondeTeller.textContent = t('hud.roundOf', {
-        num: huidigeRonde.index + 1,
-        total: huidigeRonde.total,
-      });
+      rondeTeller.textContent =
+        huidigeRonde.total > 0
+          ? t('hud.roundOf', { num: huidigeRonde.index + 1, total: huidigeRonde.total })
+          : t('hud.roundN', { num: huidigeRonde.index + 1 });
       uitlegKop.textContent = t('hud.roundGoal');
       uitlegTekst.textContent = roundKindExplanation(huidigeRonde.kind);
     } else {

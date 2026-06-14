@@ -81,7 +81,8 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
   };
   let names: string[] = [];
   let n: number = DEFAULT_VARIANT.playerCount;
-  const totalRondes = getTableParams(DEFAULT_VARIANT).totalRounds;
+  // Aantal rondes voor de HUD-teller; 0 = open einde (bijv. Hartenjagen tot endScore).
+  let totalRondes = getTableParams(DEFAULT_VARIANT).totalRounds;
   let sheet: ScoreSheet | null = null;
   const slagen: number[] = new Array<number>(n).fill(0);
   // Lopende kaartkeuze (gezet zodra het jouw beurt is om een kaart te spelen).
@@ -94,6 +95,8 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
       case 'gameStart':
         names = ev.players.map((p) => p.name);
         n = ev.seatCount;
+        // Kingen heeft een vast aantal rondes; andere spellen (Hartenjagen) zijn open einde.
+        totalRondes = ev.gameId.startsWith('kingen') ? getTableParams(DEFAULT_VARIANT).totalRounds : 0;
         sheet = new ScoreSheet(n);
         slagen.length = 0;
         for (let i = 0; i < n; i++) slagen.push(0);
@@ -315,6 +318,10 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
   function toepassenSnapshot(view: PublicGameView): void {
     n = view.seatCount;
     names = view.playerNames.slice();
+    // Reconnect tijdens de doorgeeffase: herstel de doorgeefrichting uit de view
+    // (er komt geen passRequest-event opnieuw), zodat de dialoog 'm goed toont.
+    const pd = (view.viewExtras as { passDir?: string } | undefined)?.passDir;
+    if (typeof pd === 'string') laatstePassRichting = pd;
     if (!sheet) sheet = new ScoreSheet(n);
     lobby.verberg();
     hud.show();

@@ -254,8 +254,16 @@ function finishRound(state: HartenjagenState): GameEvent[] {
     for (let s = 0; s < n; s++) if (state.pointsTaken[s] === maxStraf) maanSchutter = s;
   }
   if (maanSchutter >= 0) {
-    scores = state.pointsTaken.map((_, s) => (s === maanSchutter ? 0 : maxStraf));
-    events.push({ type: 'custom', subtype: 'shootMoon', data: { seat: maanSchutter } });
+    // Canon: de schutter kiest tussen (a) alle anderen +26 of (b) zichzelf −26,
+    // wat het voordeligst is. Auto-keuze (host/AI): kies (a) alleen als dat de
+    // partij nú winnend afsluit voor de schutter; anders (b) (extra marge).
+    const optieA = state.pointsTaken.map((_, s) => (s === maanSchutter ? 0 : maxStraf));
+    const optieB = state.pointsTaken.map((_, s) => (s === maanSchutter ? -maxStraf : 0));
+    const totA = state.totals.map((t, s) => t + (optieA[s] ?? 0));
+    const winntNuMetA = Math.max(...totA) >= state.config.endScore && totA[maanSchutter] === Math.min(...totA);
+    const variant = winntNuMetA ? 'anderen+26' : 'zelf-26';
+    scores = winntNuMetA ? optieA : optieB;
+    events.push({ type: 'custom', subtype: 'shootMoon', data: { seat: maanSchutter, variant } });
   }
 
   state.scoresPerRound.push(scores.slice());

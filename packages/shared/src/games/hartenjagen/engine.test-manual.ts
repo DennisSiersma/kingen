@@ -82,10 +82,13 @@ function speel(seed: number): Resultaat {
   const n = 4;
   for (const [i, row] of r.scoresPerRound.entries()) {
     const som = row.reduce((a, b) => a + b, 0);
-    const maan = som === 26 * (n - 1) && row.filter((x) => x === 0).length === 1 && row.filter((x) => x === 26).length === n - 1;
+    // Normaal: som 26. Maan optie A (anderen +26): één 0, rest 26 (som 26*(n-1)).
+    // Maan optie B (zelf -26): één -26, rest 0 (som -26).
+    const maanA = som === 26 * (n - 1) && row.filter((x) => x === 0).length === 1 && row.filter((x) => x === 26).length === n - 1;
+    const maanB = som === -26 && row.filter((x) => x === -26).length === 1 && row.filter((x) => x === 0).length === n - 1;
     assert.ok(
-      som === 26 || maan,
-      `ronde ${i}: ongeldige strafsom ${som} (${row.join(',')}) — verwacht 26 of maan`,
+      som === 26 || maanA || maanB,
+      `ronde ${i}: ongeldige strafsom ${som} (${row.join(',')}) — verwacht 26 of maan(A/B)`,
     );
   }
   // Totalen = som van de rondes.

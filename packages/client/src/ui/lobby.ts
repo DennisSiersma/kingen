@@ -98,10 +98,12 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
   const spelLabel = el('label', 'kg-lobby-veld');
   const spelTekst = el('span');
   const spelSel = el('select', 'kg-select') as HTMLSelectElement;
+  const spelOpties: HTMLOptionElement[] = [];
   for (const g of SPELLEN) {
     const o = el('option', undefined, g.naam) as HTMLOptionElement;
     o.value = g.id;
     spelSel.appendChild(o);
+    spelOpties.push(o);
   }
   spelLabel.append(spelTekst, spelSel);
   browserFase.appendChild(spelLabel);
@@ -179,6 +181,9 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
     kopOpen.textContent = t('lobby.openTables');
     kopNieuw.textContent = t('lobby.newTable');
     spelTekst.textContent = t('lobby.game');
+    spelOpties.forEach((o, i) => {
+      o.textContent = t(`game.${SPELLEN[i]!.id}` as Parameters<typeof t>[0]);
+    });
     spelersTekst.textContent = t('lobby.players');
     zichtbaarTekst.textContent = t('lobby.visibility');
     optOpen.textContent = t('lobby.open');

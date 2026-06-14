@@ -37,6 +37,8 @@ const nl = {
   'suit.spades': 'Schoppen',
 
   // Rondesoorten (KingenRoundKind)
+  'round.hartenjagen': 'Hartenjagen',
+  'roundInfo.hartenjagen': 'Vermijd slagen met harten (1 strafpunt elk) en ♠V (13). Wie alle 26 pakt, schiet de maan.',
   'round.geenSlagen': 'Geen slagen',
   'round.geenHarten': 'Geen harten',
   'round.geenHerenBoeren': 'Geen heren en boeren',
@@ -157,6 +159,7 @@ const nl = {
   'hud.claimTitle': 'Leg je hand af en neem in één keer alle resterende strafpunten van deze ronde',
   'hud.claimConfirm': 'Hand afleggen en alle resterende strafpunten van deze ronde op je nemen?',
   'hud.roundOf': 'Ronde {num} van {total}',
+  'hud.roundN': 'Ronde {num}',
   'hud.trumpPrefix': 'Troef:',
   'hud.noTrump': 'Geen troef',
   'hud.roundInfoAria': 'Doel van deze ronde tonen of verbergen',
@@ -201,7 +204,7 @@ const nl = {
   'game.kingen': 'Kingen',
   'game.hartenjagen': 'Hartenjagen',
   'toast.heartsBroken': 'Harten zijn gebroken!',
-  'toast.shootMoon': '{name} schiet de maan! 26 strafpunten voor de rest.',
+  'toast.shootMoon': '{name} schiet de maan! 🌙',
   'dialog.chooseGame': 'Kies het spel voor deze ronde',
   'dialog.chooseGameSub': 'Jij bent de deler — bekijk je hand onderin beeld. Uitgespeelde keuzes zijn uitgeschakeld.',
   'dialog.unavailable': 'niet meer beschikbaar',
@@ -291,6 +294,8 @@ const en: Record<TranslationKey, string> = {
   'suit.spades': 'Spades',
 
   // Round kinds
+  'round.hartenjagen': 'Hearts',
+  'roundInfo.hartenjagen': 'Avoid tricks with hearts (1 penalty each) and ♠Q (13). Take all 26 to shoot the moon.',
   'round.geenSlagen': 'No tricks',
   'round.geenHarten': 'No hearts',
   'round.geenHerenBoeren': 'No kings & jacks',
@@ -411,6 +416,7 @@ const en: Record<TranslationKey, string> = {
   'hud.claimTitle': 'Throw in your hand and take all remaining penalty points of this round at once',
   'hud.claimConfirm': 'Throw in your hand and take all remaining penalty points of this round?',
   'hud.roundOf': 'Round {num} of {total}',
+  'hud.roundN': 'Round {num}',
   'hud.trumpPrefix': 'Trump:',
   'hud.noTrump': 'No trump',
   'hud.roundInfoAria': 'Show or hide the goal of this round',
@@ -452,7 +458,7 @@ const en: Record<TranslationKey, string> = {
   'game.kingen': 'Kingen',
   'game.hartenjagen': 'Hearts',
   'toast.heartsBroken': 'Hearts have been broken!',
-  'toast.shootMoon': '{name} shot the moon! 26 penalty points for everyone else.',
+  'toast.shootMoon': '{name} shot the moon! 🌙',
   'dialog.chooseTrump': 'Choose the trump suit',
   'dialog.chooseTrumpSub': 'Every trick you win this round scores 1 point.',
   'dialog.suitNotAllowed': 'This suit is not allowed right now',
@@ -600,12 +606,19 @@ function isRoundKind(kind: string): kind is KingenRoundKind {
 
 /** Zichtbare naam van een rondesoort; onbekende soorten vallen terug op de id. */
 export function roundKindName(kind: string): string {
-  return isRoundKind(kind) ? t(`round.${kind}`) : kind;
+  if (isRoundKind(kind)) return t(`round.${kind}`);
+  // Andere spellen (bijv. 'hartenjagen'): val terug op round.<kind> als die bestaat.
+  const key = `round.${kind}` as TranslationKey;
+  const vert = t(key);
+  return vert !== key ? vert : kind;
 }
 
 /** Uitleg bij een rondesoort (HUD-tooltip, dialogen, setup). */
 export function roundKindExplanation(kind: string): string {
-  return isRoundKind(kind) ? t(`roundInfo.${kind}`) : t('roundInfo.fallback');
+  if (isRoundKind(kind)) return t(`roundInfo.${kind}`);
+  const key = `roundInfo.${kind}` as TranslationKey;
+  const vert = t(key);
+  return vert !== key ? vert : t('roundInfo.fallback');
 }
 
 export function suitName(suit: Suit): string {

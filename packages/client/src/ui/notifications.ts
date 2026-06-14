@@ -145,6 +145,9 @@ export function createChoiceDialogs(root: HTMLElement): ChoiceDialogs {
 
     vraagDoorgeven(hand: Card[], richting: string): Promise<Card[]> {
       return new Promise((resolve) => {
+        // Een eerder geopende doorgeefdialoog (bijv. door een reconnect-resend) sluiten,
+        // zodat er nooit twee tegelijk stapelen.
+        root.querySelectorAll('.kg-doorgeef').forEach((p) => p.closest('.kg-overlay')?.remove());
         const { overlay, panel } = maakDialoog('kg-dialoog kg-doorgeef', true);
         panel.appendChild(el('h3', undefined, t('dialog.passTitle')));
         const richtingTekst = t(`pass.${richting}` as Parameters<typeof t>[0]);
