@@ -75,14 +75,14 @@ for (const [naam, policy] of [['eerste', altijdEerste], ['geloven', liefstGelove
 // --- 2. Verborgen-worp-invariant -------------------------------------------
 {
   const def = createMexenDefinition();
-  let state = def.createInitialState(players(3), cfg({ playerCount: 3 }), 7);
+  let state = def.createInitialState(players(4), cfg({ playerCount: 4 }), 7);
   def.initialEvents(state);
   // Gooi met de houder → fase 'announcing'.
   const holder = def.currentActor(state)!;
   state = def.applyMove(state, holder, { type: 'roll' }).state;
   assert.equal(state.phase, 'announcing', 'na roll → announcing');
   const ownView = def.getView(state, holder);
-  const otherView = def.getView(state, ((holder + 1) % 3) as Seat);
+  const otherView = def.getView(state, ((holder + 1) % 4) as Seat);
   const ownExtras = ownView.viewExtras as { myRoll: unknown };
   const otherExtras = otherView.viewExtras as { myRoll: unknown };
   assert.ok(ownExtras.myRoll !== null, 'houder ziet zijn eigen worp');
@@ -103,7 +103,7 @@ for (const [naam, policy] of [['eerste', altijdEerste], ['geloven', liefstGelove
 // --- 4. Twijfel-resolutie: waarheid → twijfelaar verliest -------------------
 {
   const def = createMexenDefinition();
-  let state = def.createInitialState(players(3), cfg({ playerCount: 3 }), 5);
+  let state = def.createInitialState(players(4), cfg({ playerCount: 4 }), 5);
   const holder = def.currentActor(state)!;
   state = def.applyMove(state, holder, { type: 'roll' }).state;
   const code = rollToCode(state.actualRoll as Roll);
@@ -120,7 +120,7 @@ for (const [naam, policy] of [['eerste', altijdEerste], ['geloven', liefstGelove
 // --- 5. Twijfel-resolutie: leugen → aankondiger verliest --------------------
 {
   const def = createMexenDefinition();
-  let state = def.createInitialState(players(3), cfg({ playerCount: 3 }), 8);
+  let state = def.createInitialState(players(4), cfg({ playerCount: 4 }), 8);
   const holder = def.currentActor(state)!;
   state = def.applyMove(state, holder, { type: 'roll' }).state;
   const code = rollToCode(state.actualRoll as Roll);
@@ -138,7 +138,7 @@ for (const [naam, policy] of [['eerste', altijdEerste], ['geloven', liefstGelove
 // --- 6. Mäxchen-resolutie kost 2 levens -------------------------------------
 {
   const def = createMexenDefinition();
-  let state = def.createInitialState(players(3), cfg({ playerCount: 3 }), 11);
+  let state = def.createInitialState(players(4), cfg({ playerCount: 4 }), 11);
   const holder = def.currentActor(state)!;
   state = def.applyMove(state, holder, { type: 'roll' }).state;
   const code = rollToCode(state.actualRoll as Roll);

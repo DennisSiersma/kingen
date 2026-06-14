@@ -14,7 +14,7 @@ type Entry = GameEntry<MexenState, MexenMove, MexenVariantConfig>;
 export const mexenGame: Entry = {
   id: 'mexen',
   naam: 'Mexen',
-  minPlayers: 3,
+  minPlayers: 4,
   maxPlayers: 8,
   configForPlayers: (players: number) => ({ ...MEXEN_DEFAULT, playerCount: players }),
   createDefinition: () => createMexenDefinition(),

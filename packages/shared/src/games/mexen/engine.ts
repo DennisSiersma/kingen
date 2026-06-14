@@ -156,7 +156,7 @@ export function createMexenDefinition(): MexenDefinition {
   return {
     id: 'mexen',
     naam: 'Mexen',
-    minPlayers: 3,
+    minPlayers: 4,
     maxPlayers: 8,
 
     createInitialState(players: PlayerConfig[], config: MexenVariantConfig, seed?: number): MexenState {
