@@ -32,6 +32,8 @@ export interface RoomOpts {
   maxPlayers: number;
   aiThinkDelayMs?: [number, number];
   moveTimeoutMs?: number;
+  /** Vaste seed voor deterministisch delen (tests). Weglaten = willekeurig. */
+  seed?: number;
   /** Aangeroepen bij elke wijziging die de lobbylijst raakt (join/leave/start/eind). */
   onChange?: () => void;
   /** Aangeroepen wanneer een partij start (voor statistiek). */
@@ -62,6 +64,7 @@ export class Room {
   private chatTeller = 0;
   private readonly aiThinkDelayMs: [number, number] | undefined;
   private readonly moveTimeoutMs: number;
+  private readonly fixedSeed: number | undefined;
   private readonly onChange: (() => void) | undefined;
   private readonly onGameStart: (() => void) | undefined;
   private readonly onGameEnd: (() => void) | undefined;
@@ -76,6 +79,7 @@ export class Room {
     this.maxPlayers = opts.maxPlayers;
     this.aiThinkDelayMs = opts.aiThinkDelayMs;
     this.moveTimeoutMs = opts.moveTimeoutMs ?? 60000;
+    this.fixedSeed = opts.seed;
     this.onChange = opts.onChange;
     this.onGameStart = opts.onGameStart;
     this.onGameEnd = opts.onGameEnd;
@@ -235,7 +239,7 @@ export class Room {
       }
     }
 
-    const seed = Math.floor(Math.random() * 0x7fffffff);
+    const seed = this.fixedSeed ?? Math.floor(Math.random() * 0x7fffffff);
     this.host = new GameHost(
       {
         roomId: this.id,

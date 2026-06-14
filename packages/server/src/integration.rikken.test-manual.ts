@@ -97,6 +97,7 @@ async function main(): Promise<void> {
     config: { ...RIKKEN_STICHTING, playerCount: 4, rondes: 3 },
     maxPlayers: 4,
     aiThinkDelayMs: [0, 0],
+    seed: 7, // vaste seed: deterministisch 3 volledige rik-rondes (geen passspel)
   });
 
   const a = maakClient('A', room);
