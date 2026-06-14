@@ -3,8 +3,34 @@
 > Concreet bouwplan voor **Mexen** (de Nederlandse blufvariant met doorgeven; intl. Mäxchen/
 > Mia/Meiern), gegrond in de bestaande engine-naden. Leest bovenop:
 > `DICEGAME_RULES_RESEARCH.md` (regels + graphics-onderzoek) en `DICEGAME_PLAN.md`
-> (dobbel-infra-haalbaarheid). Datum: 2026-06-14. Status: **plan** (nog geen code).
+> (dobbel-infra-haalbaarheid). Datum: 2026-06-14. Status: **gebouwd** (blok 1 + blok 2).
 > Doel-branch: `claude/dobbelspellen-onderzoek`.
+
+## Bouwstatus (2026-06-14)
+
+**Blok 1 — engine/AI (klaar, getest):**
+- `shared/games/dice/dice.ts` (seedbare worp), `shared/games/mexen/{ranking,types,rules,engine,ai,index}.ts`.
+- Geregistreerd in de gameRegistry; min. **4** spelers (max 8).
+- Tests: `ranking.test-manual` + `engine.test-manual` (headless) + `server/integration.mexen.test-manual`
+  (verticale plak, geen worplekkage). Alle groen.
+
+**Blok 2 — render + UI (gebouwd, compileert + bundelt; visueel nog niet in browser geverifieerd):**
+- `client/render/dice/diceRenderer.ts` — dobbelstenen (canvas-pips) + 3D-beker (LatheGeometry +
+  vilt), deterministische `faceQuaternion` (headless getest).
+- `client/render/dice/diceScene.ts` + `mexenRenderPlugin.ts` — één-beker-model met schud-/
+  doorgeef-/optil-animaties, gegated via de scene-animatieketen (`waitForIdle`).
+- Render-contract uitgebreid: `TableLayout` (seatAngle/getSurfaceY/getRadius), `SceneRenderPlugin.attach`.
+- `client/ui/mexenPanel.ts` — actiepaneel (gooien/aankondigen/geloven/twijfelen/ongezien).
+- Protocol: `requestMove.viewExtras` zodat de speler zijn eigen verborgen worp ziet.
+- `online.ts`: plugin aangehangen + Mexen-tak in `handleRequest`, levens in de HUD, event-toasts;
+  Mexen kiesbaar in de lobby.
+
+**Nog te doen / open:**
+- **Visuele verificatie in de browser** (bekerposities per stoel, animatie-timing, optil-onthul) —
+  niet mogelijk in deze headless omgeving.
+- i18n voor het actiepaneel (nu Nederlandse literals i.p.v. `t()`-keys).
+- Spelersbereik 6-8 in de lobby-selector (nu 3-5; server bewaakt min. 4).
+- Optioneel: schud-jitter van de stenen, dobbelsteen-skin-keuze, personalize-hardening (§7).
 
 ## 0. Samenvatting & belangrijkste ontwerpbeslissing
 
