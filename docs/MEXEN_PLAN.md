@@ -268,14 +268,21 @@ Alle afwijkingen zijn config-flags (§4) zodat varianten later aanklikbaar zijn.
 geteste Mexen headless/AI-engine** zónder render (~5-7 d). Daarna D0b → 5 → 6 voor de
 grafische beleving. Dit ontkoppelt regel-correctheid van render-finetuning.
 
-## 13. Open beslissingen (voor jou)
+## 13. Beslissingen
 
-1. **Variant-defaults akkoord?** (§10) — m.n. strikt-hoger en Mäxchen=2 levens. Of wil je de
-   "mit"/gelijk-variant en/of `flatMexOnRoll` standaard aan?
-2. **Spelersbereik:** 3-8 stoelen? (Mexen werkt vanaf 3; UI-tafel ondersteunt nu tot wat de
-   environment toelaat — checken bij stap 5.)
-3. **Dobbelsteen-look default:** doorschijnende casinohars of ivoor/been? (skin-keuze)
-4. **Render-diepte beker:** volledige 3D-beker met "alleen jij ziet je stenen" (duurst, leukst)
-   of een 2D-privé-overlay voor je eigen worp (goedkoper)? Bepaalt scope van stap 6.
-5. **Personalize-hardening (stap 7) nu of later?** MVP is correct zonder; de hook is puur
+**Vastgelegd (2026-06-14):**
+- ✅ **Variant-defaults uit §10 akkoord:** 6 levens, **strikt-hoger** aankondigen,
+  **Mäxchen-resolutie = 2 levens**, `flatMexOnRoll` uit, géén "halve mex". Overige varianten
+  blijven beschikbaar als config-flag (§4), niet standaard.
+- ✅ **Verborgen-worp-render: volledige 3D-dobbelbeker** met schud/optil-animatie; alleen de
+  eigenaar ziet zijn stenen onder de beker. ➡️ Stap D0b + stap 6 krijgen de zwaardere scope:
+  echte beker-geometrie (`LatheGeometry` + vilt-interieur), schud-animatie, en een
+  optil/onthul-beweging bij `doubt`. De eigen worp wordt onder de eigen beker getoond (uit de
+  view); andermans beker blijft dicht tot onthulling.
+
+**Nog open:**
+1. **Spelersbereik:** 3-8 stoelen? (Mexen werkt vanaf 3; UI-tafel-ondersteuning checken bij stap 5.)
+2. **Dobbelsteen-look default:** doorschijnende casinohars of ivoor/been? (skin-keuze; cosmetisch,
+   kan tijdens stap D0b bepaald worden.)
+3. **Personalize-hardening (stap 7) nu of later?** MVP is correct zonder; de hook is puur
    defense-in-depth + voorbereiding op Perudo/geheime trekstapel.
