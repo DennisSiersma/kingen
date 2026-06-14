@@ -33,6 +33,7 @@ const SPELLEN: { id: string; naam: string; counts: number[] }[] = [
   { id: 'toepen', naam: 'Toepen', counts: [2, 3, 4, 5, 6, 7, 8] },
   { id: 'mexen', naam: 'Mexen', counts: [4, 5, 6, 7, 8] },
   { id: 'qwixx', naam: 'Qwixx', counts: [2, 3, 4, 5] },
+  { id: 'fritzen', naam: 'Fritzen', counts: [2, 3, 4, 5, 6, 7, 8] },
 ];
 
 export interface Lobby {

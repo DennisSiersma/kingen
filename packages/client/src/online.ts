@@ -21,10 +21,12 @@ import type { Roll } from '@shared/games/dice/dice.ts';
 import { createSceneManager } from './render/scene.ts';
 import { MexenRenderPlugin } from './render/dice/mexenRenderPlugin.ts';
 import { QwixxRenderPlugin } from './render/dice/qwixxRenderPlugin.ts';
+import { FritzenRenderPlugin } from './render/dice/fritzenRenderPlugin.ts';
 import type { CardAnimator, RenderPluginContext, SceneRenderPlugin } from './render/types.ts';
 import { createHud } from './ui/hud.ts';
 import { createMexenPanel, type MexenMoveJSON } from './ui/mexenPanel.ts';
 import { createQwixxSheet, type QwixxMoveJSON, type QwixxSheetExtras } from './ui/qwixxSheet.ts';
+import { createFritzenPanel, type FritzenMoveJSON, type FritzenPanelExtras } from './ui/fritzenPanel.ts';
 import { createScoreboard } from './ui/scoreboard.ts';
 import { createChatPanel } from './ui/chat.ts';
 import { createLobby } from './ui/lobby.ts';
@@ -65,10 +67,12 @@ export async function runOnlineGame(
   const toepBanner = maakToepBanner(ui);
   const mexenPaneel = createMexenPanel(ui);
   const qwixxBord = createQwixxSheet(ui);
+  const fritzenPaneel = createFritzenPanel(ui);
   const mexenPlugin = new MexenRenderPlugin();
   const qwixxPlugin = new QwixxRenderPlugin();
+  const fritzenPlugin = new FritzenRenderPlugin();
   // Eén scene, meerdere dobbel-render-plugins: elk handelt zijn eigen spel af.
-  const renderPlugins = [mexenPlugin, qwixxPlugin];
+  const renderPlugins = [mexenPlugin, qwixxPlugin, fritzenPlugin];
   const renderPlugin: SceneRenderPlugin = {
     attach: (ctx: RenderPluginContext) => renderPlugins.forEach((p) => p.attach?.(ctx)),
     handleEvent: async (ev, anim: CardAnimator) => {
@@ -104,6 +108,7 @@ export async function runOnlineGame(
   // Mexen-state: levens per stoel (HUD-score) en of dit een Mexen-tafel is.
   let isMexen = false;
   let isQwixx = false;
+  let isFritzen = false;
   // Klaverjas-state voor het live team-paneel (Wij/Zij kaartpunten + roem deze boom).
   let isKlaverjas = false;
   let kjTrump: Suit | null = null;
@@ -161,6 +166,9 @@ export async function runOnlineGame(
         isQwixx = ev.gameId.startsWith('qwixx');
         if (isQwixx) qwixxBord.toon();
         else qwixxBord.verberg();
+        isFritzen = ev.gameId.startsWith('fritzen');
+        if (isFritzen) fritzenPaneel.toon();
+        else fritzenPaneel.verberg();
         if (isKlaverjas) teamPaneel.toon();
         else teamPaneel.verberg();
         isRikken = ev.gameId.startsWith('rikken');
@@ -245,7 +253,7 @@ export async function runOnlineGame(
       case 'scoreUpdate':
         // Mexen: totals = resterende levens; Qwixx: totals = score. In beide
         // gevallen direct in de spelerschips tonen.
-        if (isMexen || isQwixx) {
+        if (isMexen || isQwixx || isFritzen) {
           hud.setScores(Array.from({ length: n }, (_, i) => ev.totals[i] ?? 0));
         }
         break;
@@ -512,6 +520,7 @@ export async function runOnlineGame(
               toepBanner.verberg();
               mexenPaneel.verberg();
               qwixxBord.verberg();
+              fritzenPaneel.verberg();
               if (huidigeRoom) lobby.toonWachtkamer(huidigeRoom, mySeat);
             }, 5000);
           });
@@ -592,6 +601,7 @@ export async function runOnlineGame(
     toepBanner.verberg();
     mexenPaneel.verberg();
     qwixxBord.verberg();
+    fritzenPaneel.verberg();
     lobby.toonBrowser();
   });
 
@@ -752,6 +762,15 @@ export async function runOnlineGame(
       const legal = (msg.legalMoves ?? []) as QwixxMoveJSON[];
       const extras = (msg.viewExtras ?? {}) as QwixxSheetExtras;
       const move = await qwixxBord.vraag(legal, extras, mySeat);
+      transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move });
+      return;
+    }
+
+    // --- Fritzen: gooien, stenen vasthouden, opnieuw gooien of stoppen ---
+    if (isFritzen) {
+      const legal = (msg.legalMoves ?? []) as FritzenMoveJSON[];
+      const extras = (msg.viewExtras ?? {}) as FritzenPanelExtras;
+      const move = await fritzenPaneel.vraag(legal, extras);
       transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move });
       return;
     }
