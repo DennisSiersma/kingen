@@ -58,7 +58,7 @@ async function speelSolo(gameId: string): Promise<{ play: number; end: boolean; 
 }
 
 async function main(): Promise<void> {
-  for (const gameId of ['kingen', 'hartenjagen', 'hearts', 'klaverjassen', 'klaverjas-amsterdams']) {
+  for (const gameId of ['kingen', 'hartenjagen', 'hearts', 'klaverjassen', 'klaverjas-amsterdams', 'rikken']) {
     const r = await speelSolo(gameId);
     assert.ok(r.end, `${gameId}: partij eindigde niet`);
     assert.ok(r.play > 0, `${gameId}: geen kaarten gespeeld`);
