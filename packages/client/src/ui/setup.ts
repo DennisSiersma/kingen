@@ -305,6 +305,14 @@ export function createSetupScreen(root: HTMLElement): SetupScreen {
     }
     kop.appendChild(taal);
 
+    // Terug naar de spelgalerij (verse staat via herladen).
+    const terugKnop = el('button', 'kg-setup__terug kg-klikbaar', t('gamePage.back'));
+    terugKnop.type = 'button';
+    terugKnop.addEventListener('click', () => {
+      location.href = location.pathname;
+    });
+    kop.appendChild(terugKnop);
+
     const titel = el('h1', 'kg-setup__titel');
     titel.innerHTML = '<span class="kg-suit-deco">♠</span>Kingen<span class="kg-suit-deco">♥</span>';
     kop.appendChild(titel);

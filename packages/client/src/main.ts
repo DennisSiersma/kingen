@@ -29,6 +29,8 @@ import type { KingenCardAnimator } from './render/animations.ts';
 
 import { createSetupScreen } from './ui/setup.ts';
 import { createHud, leesSnelheidNiveau } from './ui/hud.ts';
+import { createLanding } from './ui/landing.ts';
+import { createGamePage } from './ui/gamePage.ts';
 import { onLangChange, rankLabels, roundKindName, suitName, t } from './ui/i18n.ts';
 import { createScoreboard } from './ui/scoreboard.ts';
 import { createChoiceDialogs, createNotifications } from './ui/notifications.ts';
@@ -412,38 +414,74 @@ async function main(): Promise<void> {
   // Kaartlabels volgen de taal (NL B/V/H ↔ EN J/Q/K); hertekent de textures.
   onLangChange(() => scene?.cardRenderer.setRankLabels(rankLabels()));
 
-  for (;;) {
-    const setup = await setupScreen.show(vorige);
-    setupScreen.hide();
-    vorige = structuredClone(setup);
+  // Kingen lokaal: het bestaande setup→partij→setup-circuit. Oneindige lus; de
+  // "← Alle spellen"-link in het setupscherm herlaadt naar de galerij.
+  async function runKingenLokaal(): Promise<void> {
+    for (;;) {
+      const setup = await setupScreen.show(vorige);
+      setupScreen.hide();
+      vorige = structuredClone(setup);
 
-    // Scene pas na de eerste setup bouwen (omgeving is dan bekend).
-    if (!scene) {
-      scene = await createSceneManager(app, bus, setup.omgeving);
-      scene.start();
-    } else {
-      await scene.setEnvironment(setup.omgeving);
+      // Scene pas na de eerste setup bouwen (omgeving is dan bekend).
+      if (!scene) {
+        scene = await createSceneManager(app!, bus, setup.omgeving);
+        scene.start();
+      } else {
+        await scene.setEnvironment(setup.omgeving);
+      }
+      // Kaartlabels in de juiste taal vóór het delen (textures worden lazy gemaakt).
+      scene.cardRenderer.setRankLabels(rankLabels());
+      hud.setEnvironment(setup.omgeving);
+
+      const ctx: AppContext = {
+        uiRoot: ui!,
+        bus,
+        scene,
+        hud,
+        scoreboard,
+        notifications,
+        dialogs,
+        transport,
+      };
+
+      // Zelfde instellingen herspelen tot de gebruiker terug wil naar setup.
+      let keuze: 'opnieuw' | 'setup';
+      do {
+        keuze = await speelPartij(ctx, setup);
+      } while (keuze === 'opnieuw');
     }
-    // Kaartlabels in de juiste taal vóór het delen (textures worden lazy gemaakt).
-    scene.cardRenderer.setRankLabels(rankLabels());
-    hud.setEnvironment(setup.omgeving);
+  }
 
-    const ctx: AppContext = {
-      uiRoot: ui,
-      bus,
-      scene,
-      hud,
-      scoreboard,
-      notifications,
-      dialogs,
-      transport,
-    };
+  // --- Navigatie: galerij → spelpagina → lokaal of online ---
+  const landing = createLanding(ui);
+  const gamePage = createGamePage(ui);
 
-    // Zelfde instellingen herspelen tot de gebruiker terug wil naar setup.
-    let keuze: 'opnieuw' | 'setup';
-    do {
-      keuze = await speelPartij(ctx, setup);
-    } while (keuze === 'opnieuw');
+  // Online lazy laden (apart bundel-chunk) zodat lokaal spelen 'm niet meetrekt.
+  const startOnline = async (gameId: string): Promise<void> => {
+    const { runOnlineGame } = await import('./online.ts');
+    await runOnlineGame(app, ui, gameId);
+  };
+
+  for (;;) {
+    const family = await landing.kies();
+    landing.verberg();
+    const keuze = await gamePage.toon(family);
+    if (keuze.action === 'back') continue; // terug naar de galerij
+
+    if (keuze.action === 'online') {
+      // Online neemt het over (eigen lobby); de "← Lokaal"-link herlaadt naar de galerij.
+      await startOnline(keuze.gameId);
+      return;
+    }
+
+    // Lokaal tegen de computer.
+    if (family.localKind === 'kingen') {
+      await runKingenLokaal(); // oneindig; terug = herladen via de setup-link
+      return;
+    }
+    // Overige spellen lokaal: in-browser host (Fase 2). Voorlopig via de online-brug.
+    await startOnline(keuze.gameId);
+    return;
   }
 }
 

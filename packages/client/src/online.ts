@@ -39,7 +39,7 @@ function clientId(): string {
   }
 }
 
-export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<void> {
+export async function runOnlineGame(app: HTMLElement, ui: HTMLElement, voorkeurGameId?: string): Promise<void> {
   const bus = createGameEventBus();
   const hud = createHud(ui);
   const scoreboard = createScoreboard(ui);
@@ -244,7 +244,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement): Promise<
 
   // --- transport + lobby + chat ---
   const transport = new WebSocketTransport(defaultWsUrl());
-  const lobby = createLobby(ui, leesOpgeslagen('kingen.name'));
+  const lobby = createLobby(ui, leesOpgeslagen('kingen.name'), voorkeurGameId);
   const chat = createChatPanel(ui);
   chat.onVerstuur((tekst) => {
     if (huidigeRoomId) transport.sendChat(huidigeRoomId, tekst);

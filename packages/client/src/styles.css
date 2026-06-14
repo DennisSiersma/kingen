@@ -1665,3 +1665,210 @@
   padding: 1px 7px;
   display: inline-block;
 }
+
+/* ----------------------------------------------------------------------------
+   Landingsgalerij (spelkeuze) + spelpagina
+---------------------------------------------------------------------------- */
+.kg-landing {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: clamp(20px, 5vh, 64px) clamp(16px, 5vw, 80px);
+  overflow-y: auto;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(201, 162, 39, 0.10), transparent 60%),
+    linear-gradient(180deg, #0c0a08, #141019 70%, #0a0a0f);
+}
+.kg-landing__kop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.kg-landing__titel {
+  margin: 0;
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  color: var(--kg-gold-bright, #e8c75a);
+  letter-spacing: 0.01em;
+}
+.kg-landing__sub {
+  margin: 4px 0 0;
+  color: var(--kg-muted, #b9ad93);
+  font-size: 0.98rem;
+  max-width: 52ch;
+}
+.kg-landing__raster {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+  align-content: start;
+}
+.kg-tegel {
+  --accent: #c9a227;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 22px 20px 18px;
+  min-height: 200px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%),
+    var(--kg-panel, rgba(20, 16, 12, 0.92));
+  color: var(--kg-text, #efe7d6);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.kg-tegel:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.kg-tegel__embleem {
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.kg-tegel__titel {
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.kg-tegel__desc {
+  color: var(--kg-muted, #b9ad93);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  flex: 1;
+}
+.kg-tegel__spelers {
+  margin-top: 4px;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.kg-gamepage {
+  --accent: #c9a227;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
+    linear-gradient(180deg, #0c0a08, #141019 70%, #0a0a0f);
+}
+.kg-gamepage__kaart {
+  width: min(560px, 100%);
+  padding: 26px 28px 28px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--kg-panel, rgba(20, 16, 12, 0.94));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+.kg-gamepage__terug {
+  background: none;
+  border: none;
+  color: var(--kg-muted, #b9ad93);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 10px;
+  float: left;
+}
+.kg-gamepage__terug:hover { color: var(--kg-gold-bright, #e8c75a); }
+.kg-gamepage__embleem {
+  font-size: 3.2rem;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 2px 14px color-mix(in srgb, var(--accent) 50%, transparent);
+  clear: both;
+  padding-top: 8px;
+}
+.kg-gamepage__titel {
+  margin: 10px 0 4px;
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 1.8rem;
+  color: var(--kg-gold-bright, #e8c75a);
+}
+.kg-gamepage__desc {
+  margin: 0 auto 6px;
+  max-width: 44ch;
+  color: var(--kg-text, #efe7d6);
+  line-height: 1.5;
+}
+.kg-gamepage__spelers {
+  display: inline-block;
+  margin-bottom: 14px;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.kg-gamepage__varianten { margin: 6px 0 16px; }
+.kg-gamepage__variantlabel {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--kg-muted, #b9ad93);
+  margin-bottom: 8px;
+}
+.kg-gamepage__variantknoppen {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.kg-variantknop {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--kg-panel-line, rgba(201, 162, 39, 0.3));
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--kg-text, #efe7d6);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.kg-variantknop.is-gekozen {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: #fff;
+}
+.kg-gamepage__knoppen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.kg-btn--groot {
+  width: 100%;
+  padding: 13px 18px;
+  font-size: 1rem;
+}
+
+/* Terug-naar-galerij-link op het Kingen-setupscherm */
+.kg-setup__terug {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--kg-muted, #b9ad93);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0 0 6px;
+}
+.kg-setup__terug:hover { color: var(--kg-gold-bright, #e8c75a); }

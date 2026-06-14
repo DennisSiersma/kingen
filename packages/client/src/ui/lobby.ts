@@ -46,7 +46,7 @@ export interface Lobby {
   verberg(): void;
 }
 
-export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
+export function createLobby(ui: HTMLElement, beginNaam: string, voorkeurGameId?: string): Lobby {
   let naam = beginNaam;
   let cbConnect: ((name: string) => void) | null = null;
   let cbCreate: ((o: CreateOpts) => void) | null = null;
@@ -107,6 +107,10 @@ export function createLobby(ui: HTMLElement, beginNaam: string): Lobby {
     o.value = g.id;
     spelSel.appendChild(o);
     spelOpties.push(o);
+  }
+  // Spel vooraf gekozen vanaf de spelpagina → de create-form daarop instellen.
+  if (voorkeurGameId && SPELLEN.some((g) => g.id === voorkeurGameId)) {
+    spelSel.value = voorkeurGameId;
   }
   spelLabel.append(spelTekst, spelSel);
   browserFase.appendChild(spelLabel);
