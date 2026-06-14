@@ -192,6 +192,31 @@ export function createChoiceDialogs(root: HTMLElement): ChoiceDialogs {
       });
     },
 
+    vraagOptie(titel, sub, opties): Promise<string> {
+      return new Promise((resolve) => {
+        // Een eerder geopende optie-dialoog sluiten (reconnect-resend kan 'm her-openen).
+        root.querySelectorAll('.kg-optiekeuze').forEach((p) => p.closest('.kg-overlay')?.remove());
+        const { overlay, panel } = maakDialoog('kg-dialoog kg-optiekeuze', true);
+        panel.appendChild(el('h3', undefined, titel));
+        if (sub) panel.appendChild(el('p', 'kg-dialoog__sub', sub));
+        const lijst = el('div', 'kg-optielijst');
+        for (const o of opties) {
+          const knop = el('button', `kg-optieknop kg-klikbaar${o.primair ? ' is-primair' : ''}`) as HTMLButtonElement;
+          knop.type = 'button';
+          const tekst = el('div');
+          tekst.appendChild(el('div', 'kg-optieknop__label', o.label));
+          if (o.uitleg) tekst.appendChild(el('div', 'kg-optieknop__uitleg', o.uitleg));
+          knop.appendChild(tekst);
+          knop.addEventListener('click', () => {
+            overlay.remove();
+            resolve(o.id);
+          });
+          lijst.appendChild(knop);
+        }
+        panel.appendChild(lijst);
+      });
+    },
+
     toonEindstand(names: string[], totals: number[], winners: Seat[]): Promise<'opnieuw' | 'setup'> {
       return new Promise((resolve) => {
         const { overlay, panel } = maakDialoog('kg-eindstand');

@@ -54,6 +54,7 @@ export async function runOnlineGame(
   const notifications = createNotifications(ui);
   const dialogs = createChoiceDialogs(ui);
   const teamPaneel = maakTeamPaneel(ui);
+  const rikBanner = maakRikBanner(ui);
 
   const scene = await createSceneManager(app, bus, 'cafe');
   scene.start();
@@ -88,6 +89,8 @@ export async function runOnlineGame(
   const updateTeamPaneel = (): void => {
     teamPaneel.set((mySeat % 2) as 0 | 1, kjCardPoints, kjRoem, kjMakingTeam);
   };
+  // Rikken: contract-banner.
+  let isRikken = false;
   const leesOpgeslagen = (key: string): string => {
     try {
       return localStorage.getItem(key) ?? '';
@@ -123,6 +126,9 @@ export async function runOnlineGame(
         isKlaverjas = ev.gameId.startsWith('klaverjas');
         if (isKlaverjas) teamPaneel.toon();
         else teamPaneel.verberg();
+        isRikken = ev.gameId.startsWith('rikken');
+        if (isRikken) rikBanner.toon();
+        else rikBanner.verberg();
         sheet = new ScoreSheet(n);
         slagen.length = 0;
         for (let i = 0; i < n; i++) slagen.push(0);
@@ -146,6 +152,7 @@ export async function runOnlineGame(
           kjMakingTeam = teamOf(((ev.dealer + 1) % n) as Seat) as 0 | 1;
           updateTeamPaneel();
         }
+        if (isRikken) rikBanner.setBidding();
         break;
       case 'trumpChosen':
         hud.setTrump(ev.trump);
@@ -246,6 +253,28 @@ export async function runOnlineGame(
             soort: team === myTeam ? 'succes' : 'waarschuwing',
             duurMs: 4000,
           });
+        } else if (ev.subtype === 'bidPlaced') {
+          const d = ev.data as { seat: number; bid: 'pass' | { kind: string; beter?: boolean } };
+          if (d.bid === 'pass') void notifications.toon(t('rikken.passToast', { name: naamVan(d.seat) }), { duurMs: 1300 });
+          else void notifications.toon(t('rikken.bidToast', { name: naamVan(d.seat), bid: rikBidLabel(d.bid) }), { soort: 'info', duurMs: 1500 });
+        } else if (ev.subtype === 'contractSet') {
+          const d = ev.data as { kind: string; declarer: number; trump: string | null; target: number; passGame?: string };
+          rikBanner.setContract(naamVan(d.declarer), rikContractLabel(d.kind, d.passGame), d.trump, d.kind === 'rik' || d.kind === 'beterRik');
+          void notifications.toon(t('rikken.contractToast', { name: naamVan(d.declarer), contract: rikContractLabel(d.kind, d.passGame) }), { soort: 'info', duurMs: 2400 });
+        } else if (ev.subtype === 'partnerRevealed') {
+          const d = ev.data as { partner: number };
+          rikBanner.setMaat(naamVan(d.partner));
+          void notifications.toon(t('rikken.partnerToast', { name: naamVan(d.partner) }), { soort: 'info', duurMs: 2600 });
+        } else if (ev.subtype === 'contractResolved') {
+          const d = ev.data as { kind: string; passGame?: string; declarer: number; deltas: number[] };
+          if (!d.passGame) {
+            const gehaald = (d.deltas[d.declarer] ?? 0) > 0;
+            const label = rikContractLabel(d.kind);
+            void notifications.toon(t(gehaald ? 'rikken.madeToast' : 'rikken.natToast', { contract: label }), {
+              soort: gehaald ? 'succes' : 'waarschuwing',
+              duurMs: 3000,
+            });
+          }
         }
         break;
       default:
@@ -316,6 +345,7 @@ export async function runOnlineGame(
               replayTimer = null;
               hud.hide();
               teamPaneel.verberg();
+              rikBanner.verberg();
               if (huidigeRoom) lobby.toonWachtkamer(huidigeRoom, mySeat);
             }, 5000);
           });
@@ -392,6 +422,7 @@ export async function runOnlineGame(
     chat.verberg();
     hud.hide();
     teamPaneel.verberg();
+    rikBanner.verberg();
     lobby.toonBrowser();
   });
 
@@ -446,6 +477,20 @@ export async function runOnlineGame(
     } else {
       teamPaneel.verberg();
     }
+    // Rikken: contract-banner herstellen uit de view.
+    isRikken = view.round.kind === 'rikken';
+    if (isRikken) {
+      const c = (view.viewExtras as { contract?: { kind: string; declarer: number; trump: string | null; target: number; partner: number | null; passGame?: string } | null })?.contract;
+      if (c) {
+        rikBanner.setContract(naamVan(c.declarer), rikContractLabel(c.kind, c.passGame), c.trump, c.kind === 'rik' || c.kind === 'beterRik');
+        if (c.partner !== null && c.partner !== undefined) rikBanner.setMaat(naamVan(c.partner));
+      } else {
+        rikBanner.setBidding();
+      }
+      rikBanner.toon();
+    } else {
+      rikBanner.verberg();
+    }
     if (!sheet) sheet = new ScoreSheet(n);
     lobby.verberg();
     hud.show();
@@ -468,7 +513,11 @@ export async function runOnlineGame(
     | { type: 'chooseTrump'; suit: Suit }
     | { type: 'chooseRoundKind'; kind: string }
     | { type: 'claimHand' }
-    | { type: 'passCards'; cards: Card[] };
+    | { type: 'passCards'; cards: Card[] }
+    // Rikken-zetten (via het generieke moveType-pad):
+    | { type: 'bid'; bid: 'pass' | { kind: string; beter?: boolean } }
+    | { type: 'askAce'; cardId: string }
+    | { type: 'choosePassGame'; game: 'schoppenMie' | 'eenOfVijf' };
 
   async function handleRequest(msg: Extract<import('@shared/net/protocol.ts').NetMessage, { kind: 'requestMove' }>): Promise<void> {
     // Wacht tot de animaties bij zijn, zodat de keuze-UI synchroon loopt.
@@ -523,8 +572,53 @@ export async function runOnlineGame(
         legalMoves.find((m) => m.type === 'passCards' && m.cards.length === 3 && m.cards.every((c) => ids.has(c.id))) ??
         legalMoves[0];
       if (move) stuur(move);
+    } else if (msg.moveType === 'bid') {
+      // Rikken: kies een bod (of pas) uit de aangeboden treden.
+      const opties = legalMoves.map((m, i) => {
+        if (m.type !== 'bid') return { id: String(i), label: '?' };
+        return { id: String(i), label: rikBidLabel(m.bid), primair: m.bid !== 'pass' && m.bid.kind === 'rik' };
+      });
+      const id = await dialogs.vraagOptie(t('rikken.bidTitle'), t('rikken.bidSub'), opties);
+      const move = legalMoves[Number(id)];
+      if (move) stuur(move);
+    } else if (msg.moveType === 'askAce') {
+      // Rikken: vraag een maat-aas/heer.
+      const opties = legalMoves.flatMap((m, i) => {
+        if (m.type !== 'askAce') return [];
+        const sep = m.cardId.lastIndexOf('-');
+        const suit = m.cardId.slice(0, sep) as Suit;
+        const rank = Number(m.cardId.slice(sep + 1));
+        const woord = rank === 14 ? t('rikken.aas') : t('rikken.heer');
+        return [{ id: String(i), label: `${suitName(suit)} ${woord}` }];
+      });
+      const id = await dialogs.vraagOptie(t('rikken.askTitle'), t('rikken.askSub'), opties);
+      const move = legalMoves[Number(id)];
+      if (move) stuur(move);
+    } else if (msg.moveType === 'choosePassGame') {
+      const opties = legalMoves.flatMap((m, i) => {
+        if (m.type !== 'choosePassGame') return [];
+        const mie = m.game === 'schoppenMie';
+        return [{ id: String(i), label: t(mie ? 'rikken.schoppenMie' : 'rikken.eenOfVijf'), uitleg: t(mie ? 'rikken.schoppenMieUitleg' : 'rikken.eenOfVijfUitleg') }];
+      });
+      const id = await dialogs.vraagOptie(t('rikken.passTitle'), t('rikken.passSub'), opties);
+      const move = legalMoves[Number(id)];
+      if (move) stuur(move);
     }
   }
+}
+
+/** Leesbaar label voor een Rikken-bod. */
+function rikBidLabel(bid: 'pass' | { kind: string; beter?: boolean }): string {
+  if (bid === 'pass') return t('rikken.pass');
+  let label = t(`rikken.kind.${bid.kind}` as Parameters<typeof t>[0]);
+  if (bid.beter && bid.kind.startsWith('alleen')) label += t('rikken.beterSuffix');
+  return label;
+}
+
+/** Leesbaar label voor een Rikken-contract (of passspel). */
+function rikContractLabel(kind: string, passGame?: string): string {
+  if (passGame) return t(passGame === 'schoppenMie' ? 'rikken.schoppenMie' : 'rikken.eenOfVijf');
+  return t(`rikken.kind.${kind}` as Parameters<typeof t>[0]);
 }
 
 /**
@@ -596,3 +690,54 @@ function maakTeamPaneel(root: HTMLElement): {
   };
 }
 
+
+/**
+ * Rikken contract-banner: toont tijdens het bieden "Bieden…" en daarna het
+ * contract (soort + troef + speler + maat — "?" tot de gevraagde aas valt).
+ */
+function maakRikBanner(root: HTMLElement): {
+  toon(): void;
+  verberg(): void;
+  setBidding(): void;
+  setContract(declarer: string, label: string, trump: string | null, hasMaat: boolean): void;
+  setMaat(naam: string): void;
+} {
+  const wrap = el('div', 'kg-rikbanner');
+  wrap.hidden = true;
+  const titel = el('div', 'kg-rikbanner__titel');
+  const regel = el('div', 'kg-rikbanner__regel');
+  const maatRegel = el('div', 'kg-rikbanner__maat');
+  wrap.append(titel, regel, maatRegel);
+  root.appendChild(wrap);
+  let huidigMaat: string | null = null;
+
+  function setBidding(): void {
+    titel.textContent = t('rikken.biddingLabel');
+    regel.textContent = '';
+    maatRegel.hidden = true;
+    huidigMaat = null;
+  }
+  function setContract(declarer: string, label: string, trump: string | null, hasMaat: boolean): void {
+    titel.textContent = label;
+    const troef = trump ? `${SUIT_SYMBOLS[trump as Suit]} ${suitName(trump as Suit)}` : t('rikken.noTrump');
+    regel.textContent = `${t('rikken.declarerLabel')}: ${declarer} · ${troef}`;
+    maatRegel.hidden = !hasMaat;
+    if (hasMaat) maatRegel.textContent = `${t('rikken.maatLabel')}: ${huidigMaat ?? t('rikken.maatUnknown')}`;
+  }
+  function setMaat(naam: string): void {
+    huidigMaat = naam;
+    maatRegel.hidden = false;
+    maatRegel.textContent = `${t('rikken.maatLabel')}: ${naam}`;
+  }
+  return {
+    toon(): void {
+      wrap.hidden = false;
+    },
+    verberg(): void {
+      wrap.hidden = true;
+    },
+    setBidding,
+    setContract,
+    setMaat,
+  };
+}

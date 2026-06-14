@@ -73,6 +73,16 @@ export const GAME_FAMILIES: GameFamily[] = [
       { gameId: 'klaverjassen', labelKey: 'catalog.variant.rotterdams', descKey: 'variant.klaverjas.rotterdams' },
     ],
   },
+  {
+    key: 'rikken',
+    titleKey: 'game.rikken',
+    descKey: 'catalog.rikken.desc',
+    players: '4',
+    accent: '#7b5cc4',
+    embleem: '♦',
+    localKind: 'generic',
+    variants: [{ gameId: 'rikken', labelKey: 'game.rikken', descKey: 'catalog.rikken.desc' }],
+  },
 ];
 
 /** Zoek een familie op key. */

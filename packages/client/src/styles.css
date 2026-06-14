@@ -1884,3 +1884,60 @@
   border-top: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
   padding-top: 10px;
 }
+
+/* ----------------------------------------------------------------------------
+   Rikken: generieke optie-dialoog (bieden/maat/passspel) + contract-banner
+---------------------------------------------------------------------------- */
+.kg-optielijst {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  max-height: 56vh;
+  overflow-y: auto;
+}
+.kg-optieknop {
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--kg-panel-line, rgba(201, 162, 39, 0.3));
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--kg-text, #efe7d6);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.kg-optieknop:hover {
+  border-color: var(--kg-gold-bright, #e8c75a);
+  background: rgba(201, 162, 39, 0.12);
+}
+.kg-optieknop.is-primair {
+  border-color: var(--kg-gold-bright, #e8c75a);
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.22), rgba(201, 162, 39, 0.1));
+}
+.kg-optieknop__label { font-weight: 600; font-size: 0.96rem; }
+.kg-optieknop__uitleg { font-size: 0.8rem; color: var(--kg-muted, #b9ad93); margin-top: 2px; }
+
+.kg-rikbanner {
+  position: fixed;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  min-width: 150px;
+  max-width: 220px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--kg-panel, rgba(20, 16, 12, 0.94));
+  border: 1px solid var(--kg-panel-line, rgba(201, 162, 39, 0.3));
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+.kg-rikbanner__titel {
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--kg-gold-bright, #e8c75a);
+  margin-bottom: 4px;
+}
+.kg-rikbanner__regel { font-size: 0.82rem; color: var(--kg-text, #efe7d6); }
+.kg-rikbanner__maat { font-size: 0.82rem; color: var(--kg-muted, #b9ad93); margin-top: 3px; }

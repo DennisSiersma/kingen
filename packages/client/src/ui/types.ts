@@ -111,6 +111,15 @@ export interface ChoiceDialogs {
   vraagRondeKeuze(available: KingenRoundKind[]): Promise<KingenRoundKind>;
   /** Hartenjagen: kies precies 3 kaarten om door te geven (richting = pass.left/right/...). */
   vraagDoorgeven(hand: Card[], richting: string): Promise<Card[]>;
+  /**
+   * Generieke knoppenkeuze (Rikken: bieden, maat meevragen, passspel). Retourneert
+   * de `id` van de gekozen optie.
+   */
+  vraagOptie(
+    titel: string,
+    sub: string,
+    opties: { id: string; label: string; uitleg?: string; primair?: boolean }[],
+  ): Promise<string>;
   /** Einde partij: uitslag + "Nog een keer?" */
   toonEindstand(names: string[], totals: number[], winners: Seat[]): Promise<'opnieuw' | 'setup'>;
 }

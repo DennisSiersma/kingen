@@ -28,6 +28,7 @@ const SPELLEN: { id: string; naam: string }[] = [
   { id: 'hearts', naam: 'Hearts' },
   { id: 'klaverjassen', naam: 'Klaverjassen' },
   { id: 'klaverjas-amsterdams', naam: 'Klaverjassen (Amsterdams)' },
+  { id: 'rikken', naam: 'Rikken' },
 ];
 
 export interface Lobby {
