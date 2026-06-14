@@ -340,6 +340,7 @@ const nl = {
   // Mexen
   'mexen.yourCup': 'Jij hebt de beker — schud en gooi verdekt',
   'mexen.roll': '🎲 Gooi de beker',
+  'mexen.rollAgain': '🎲 Nog eens gooien',
   'mexen.announceTitle': 'Kondig een waarde aan — minstens hoger dan de vorige',
   'mexen.youRolled': ' (jij gooide {dice})',
   'mexen.believe': '✓ Geloven (zelf gooien)',
@@ -745,6 +746,7 @@ const en: Record<TranslationKey, string> = {
   // Mexen
   'mexen.yourCup': 'You hold the cup — shake and roll concealed',
   'mexen.roll': '🎲 Roll the cup',
+  'mexen.rollAgain': '🎲 Roll again',
   'mexen.announceTitle': 'Announce a value — must beat the previous one',
   'mexen.youRolled': ' (you rolled {dice})',
   'mexen.believe': '✓ Believe (roll yourself)',

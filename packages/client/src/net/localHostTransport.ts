@@ -119,7 +119,7 @@ export class LocalHostTransport implements Transport {
             config: this.opts.config,
             humanSeats: new Set<Seat>([0 as Seat]),
             sendRequestMove: (seat, payload) =>
-              this.deliver({ kind: 'requestMove', roomId: this.roomId, seat, moveType: payload.moveType, legalMoves: payload.legalMoves }),
+              this.deliver({ kind: 'requestMove', roomId: this.roomId, seat, moveType: payload.moveType, legalMoves: payload.legalMoves, viewExtras: payload.viewExtras }),
             forwardEvent: (event) => this.deliver({ kind: 'gameEvent', roomId: this.roomId, event: this.personalize(event) }),
             aiThinkDelayMs: this.opts.aiThinkDelayMs,
           },

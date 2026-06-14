@@ -1,13 +1,14 @@
 /**
  * src/render/dice/diceScene.ts
- * Beheert de 3D-objecten voor Mexen: één dobbelbeker en twee stenen die samen
- * rondgaan. Levert de animaties (schudden, doorgeven, optillen/onthullen) als
+ * Beheert de 3D-objecten voor Mexen: een dobbelbeker, twee stenen en een
+ * bierviltje. Levert de animaties (schudden, doorgeven, optillen/onthullen) als
  * Promises, zodat de render-plugin ze kan awaiten en de spelloop netjes wacht.
  *
- * Eén-beker-model: in Mexen gaat dezelfde beker met dezelfde stenen de tafel
- * rond. De werkelijke worp is onder de (ondoorzichtige) beker verborgen; bij een
- * onthulling tilt de beker op en staan de stenen al deterministisch op de juiste
- * ogen (faceQuaternion), passend bij de seedbare engine-waarde.
+ * Echt-Mexen-model: de beker staat OMGEKEERD (gesloten bodem boven, monding op
+ * het viltje) over de verborgen stenen. Bij je eigen worp of een onthulling tilt
+ * de beker op en komen de stenen — al deterministisch op de juiste ogen
+ * (faceQuaternion), passend bij de seedbare engine-waarde — eronder vandaan.
+ * Eén beker met dezelfde stenen reist de tafel rond.
  */
 
 import * as THREE from 'three';
@@ -16,13 +17,16 @@ import type { Roll } from '@shared/games/dice/dice.ts';
 import type { TableLayout } from '../types.ts';
 import { startTween, easeInOutCubic, easeOutCubic } from '../animations.ts';
 import {
-  CUP_HEIGHT, DIE_SIZE, createCup, createDie, disposeCup, disposeDie, faceQuaternion,
+  CUP_HEIGHT, DIE_SIZE, createCoaster, createCup, createDie, disposeCoaster, disposeCup, disposeDie,
+  faceQuaternion,
 } from './diceRenderer.ts';
 
-/** Hoe ver de beker boven het tafelblad uittilt bij een onthulling. */
-const LIFT = CUP_HEIGHT * 1.15;
+/** Hoe ver de bekermonding boven het tafelblad uittilt bij een onthulling. */
+const LIFT = CUP_HEIGHT * 1.1;
 /** Bekerafstand vanaf het tafelmidden (tussen speler en midden in). */
 const CUP_RADIUS_FACTOR = 0.52;
+/** Omgekeerde beker: 180° gekanteld zodat de monding naar beneden wijst. */
+const INVERT = Math.PI;
 
 export class DiceScene {
   private readonly scene: THREE.Scene;
@@ -30,6 +34,7 @@ export class DiceScene {
   private seatCount = 4;
 
   private cup: THREE.Group | null = null;
+  private coaster: THREE.Group | null = null;
   private dice: [THREE.Mesh, THREE.Mesh] | null = null;
   private holder: Seat = 0 as Seat;
   /** Of de beker momenteel opgetild is (onthuld). */
@@ -40,13 +45,15 @@ export class DiceScene {
     this.layout = layout;
   }
 
-  /** (Her)initialiseer beker + stenen voor een nieuwe partij. */
+  /** (Her)initialiseer beker + stenen + viltje voor een nieuwe partij. */
   reset(seatCount: number, starter: Seat): void {
     this.seatCount = seatCount;
     this.clear();
     this.cup = createCup();
+    this.cup.rotation.x = INVERT; // omgekeerd: monding omlaag
+    this.coaster = createCoaster();
     this.dice = [createDie(), createDie()];
-    this.scene.add(this.cup, this.dice[0], this.dice[1]);
+    this.scene.add(this.cup, this.coaster, this.dice[0], this.dice[1]);
     this.holder = starter;
     this.opgetild = false;
     this.plaatsBeker(starter);
@@ -59,6 +66,11 @@ export class DiceScene {
       this.scene.remove(this.cup);
       disposeCup(this.cup);
       this.cup = null;
+    }
+    if (this.coaster) {
+      this.scene.remove(this.coaster);
+      disposeCoaster(this.coaster);
+      this.coaster = null;
     }
     if (this.dice) {
       for (const d of this.dice) {
@@ -75,27 +87,40 @@ export class DiceScene {
     return this.layout.getSurfaceY();
   }
 
-  /** Wereldpositie van de beker(bodem) voor een stoel. */
+  /** Y van het beker-nulpunt zodat de (omgekeerde) monding net op tafel rust. */
+  private cupHomeY(): number {
+    return this.surfaceY() + CUP_HEIGHT;
+  }
+
+  /** Wereldpositie (tafelvlak) van de beker voor een stoel. */
   private cupSpot(seat: Seat): THREE.Vector3 {
     const a = this.layout.seatAngle(seat, this.seatCount);
     const r = this.layout.getRadius() * CUP_RADIUS_FACTOR;
-    return new THREE.Vector3(Math.cos(a) * r, this.surfaceY(), Math.sin(a) * r);
+    return new THREE.Vector3(Math.cos(a) * r, this.cupHomeY(), Math.sin(a) * r);
+  }
+
+  /** Centrale presentatie-z (iets naar de camera, boven het actiepaneel). */
+  private presentatieZ(): number {
+    return this.layout.getRadius() * 0.16;
+  }
+
+  /** Beker-pose recht boven de centrale presentatieplek, `hoog` opgetild. */
+  private centerCupPose(hoog: number): THREE.Vector3 {
+    return new THREE.Vector3(0, this.cupHomeY() + hoog, this.presentatieZ());
+  }
+
+  /** Houd het viltje recht onder de beker op het tafelblad. */
+  private syncViltje(): void {
+    if (!this.coaster || !this.cup) return;
+    this.coaster.position.set(this.cup.position.x, this.surfaceY() + 0.004, this.cup.position.z);
   }
 
   private plaatsBeker(seat: Seat): void {
     if (!this.cup) return;
     const spot = this.cupSpot(seat);
-    this.cup.position.set(spot.x, this.surfaceY(), spot.z);
-  }
-
-  /** Centrale presentatieplek voor een onthulde/eigen worp (boven het paneel). */
-  private presentatieZ(): number {
-    return this.layout.getRadius() * 0.16;
-  }
-
-  /** Beker-pose recht boven de centrale presentatieplek, op hoogte `hoog`. */
-  private centerCupPose(hoog: number): THREE.Vector3 {
-    return new THREE.Vector3(0, this.surfaceY() + hoog, this.presentatieZ());
+    this.cup.position.copy(spot);
+    this.cup.rotation.set(INVERT, 0, 0);
+    this.syncViltje();
   }
 
   /** Leg de twee stenen centraal op tafel op de juiste ogen, zichtbaar. */
@@ -121,8 +146,8 @@ export class DiceScene {
   // --- animaties -----------------------------------------------------------
 
   /**
-   * Schud-worp op `seat`: schud de beker even. De werkelijke worp blijft
-   * verborgen onder de beker tot een onthulling (de plugin kent hem nog niet).
+   * Schud-worp op `seat`: schud de omgekeerde beker even op het viltje. De
+   * werkelijke worp blijft verborgen tot een onthulling (de plugin kent hem nog niet).
    */
   async animateRoll(seat: Seat): Promise<void> {
     if (!this.cup) return;
@@ -130,21 +155,21 @@ export class DiceScene {
     this.opgetild = false;
     this.plaatsBeker(seat);
     this.verbergStenen();
-    const baseY = this.surfaceY();
+    const baseY = this.cupHomeY();
     const cup = this.cup;
     await startTween({
       duur: 620,
       ease: easeInOutCubic,
       onUpdate: (t) => {
-        // Een paar schud-slagen: lichte verticale stoot + kanteling.
+        // Een paar schud-slagen: lichte verticale stoot + wiebel rond de omgekeerde stand.
         const golf = Math.sin(t * Math.PI * 6);
-        cup.position.y = baseY + Math.abs(golf) * 0.025;
-        cup.rotation.z = golf * 0.18;
-        cup.rotation.x = Math.cos(t * Math.PI * 5) * 0.12;
+        cup.position.y = baseY + Math.abs(golf) * 0.03;
+        cup.rotation.x = INVERT + Math.cos(t * Math.PI * 5) * 0.12;
+        cup.rotation.z = golf * 0.16;
       },
     }).promise;
     cup.position.y = baseY;
-    cup.rotation.set(0, 0, 0);
+    cup.rotation.set(INVERT, 0, 0);
   }
 
   /** Schuif de beker (met de verborgen stenen eronder) van `from` naar `to`. */
@@ -153,27 +178,24 @@ export class DiceScene {
     const cup = this.cup;
     const a = this.cupSpot(from);
     const b = this.cupSpot(to);
-    const baseY = this.surfaceY();
+    const baseY = this.cupHomeY();
     await startTween({
       duur: 520,
       ease: easeInOutCubic,
       onUpdate: (t) => {
         cup.position.lerpVectors(a, b, t);
         cup.position.y = baseY + Math.sin(Math.PI * t) * 0.05; // boogje
+        this.syncViltje();
       },
     }).promise;
     cup.position.set(b.x, baseY, b.z);
+    this.syncViltje();
     this.holder = to;
   }
 
-  /**
-   * Onthul: til de beker op de huidige plek op en laat de stenen (al op de
-   * juiste ogen) zien.
-   */
+  /** Onthul (publiek): presenteer de worp centraal en til de beker er met een boogje vandaan. */
   async animateReveal(roll: Roll): Promise<void> {
     if (!this.cup || !this.dice) return;
-    // Presenteer de onthulde worp centraal (zichtbaar voor iedereen) en til de
-    // beker daar met een boogje vandaan.
     this.presenteerStenen(roll);
     const cup = this.cup;
     const start = cup.position.clone();
@@ -184,23 +206,25 @@ export class DiceScene {
       onUpdate: (t) => {
         cup.position.lerpVectors(start, doel, t);
         cup.position.y = start.y + (doel.y - start.y) * t + Math.sin(Math.PI * t) * 0.03;
+        this.syncViltje();
       },
     }).promise;
     cup.position.copy(doel);
+    this.syncViltje();
     this.opgetild = true;
   }
 
   /**
    * Toon de eigen worp aan de kijker (alleen lokaal aangeroepen door de
-   * mens-controller): til de beker kort op zodat alleen jij je stenen ziet.
+   * mens-controller): til de beker op zodat ALLEEN jij je stenen ziet.
    */
   showOwnRoll(seat: Seat, roll: Roll): void {
     if (!this.cup || !this.dice) return;
     this.holder = seat;
-    // Presenteer je eigen stenen centraal op tafel (boven het actiepaneel) met de
-    // beker erboven — alleen jij ziet ze.
     this.presenteerStenen(roll);
-    this.cup.position.copy(this.centerCupPose(LIFT * 1.25));
+    this.cup.position.copy(this.centerCupPose(LIFT * 1.2));
+    this.cup.rotation.set(INVERT, 0, 0);
+    this.syncViltje();
     this.opgetild = true;
   }
 
@@ -212,7 +236,7 @@ export class DiceScene {
     this.plaatsBeker(this.holder);
   }
 
-  /** Nieuwe ronde: beker laten zakken, stenen verbergen, naar de starter. */
+  /** Nieuwe ronde: beker terug naar de starter, stenen verbergen. */
   async animateRoundReset(starter: Seat): Promise<void> {
     if (!this.cup) return;
     const cup = this.cup;
@@ -223,9 +247,12 @@ export class DiceScene {
       ease: easeInOutCubic,
       onUpdate: (t) => {
         cup.position.lerpVectors(start, doel, t);
+        this.syncViltje();
       },
     }).promise;
     cup.position.copy(doel);
+    cup.rotation.set(INVERT, 0, 0);
+    this.syncViltje();
     this.verbergStenen();
     this.opgetild = false;
     this.holder = starter;

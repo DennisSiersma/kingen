@@ -22,9 +22,16 @@ export type MexenMoveJSON =
 /** Unicode-dobbelstenen voor de eigen-worp-weergave. */
 const DICE_FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
+/** Eigen, alleen-voor-jou-zichtbare view-extra's bij een zet-verzoek. */
+export interface MexenPanelExtras {
+  myRoll: [number, number] | null;
+  rollsThisTurn?: number;
+  maxRolls?: number;
+}
+
 export interface MexenPanel {
-  /** Vraag een zet; resolvt met één van `legal`. `myRoll` = eigen verborgen worp (of null). */
-  vraag(legal: MexenMoveJSON[], myRoll: [number, number] | null): Promise<MexenMoveJSON>;
+  /** Vraag een zet; resolvt met één van `legal`. `extras` bevat o.a. de eigen worp. */
+  vraag(legal: MexenMoveJSON[], extras: MexenPanelExtras): Promise<MexenMoveJSON>;
   verberg(): void;
 }
 
@@ -73,13 +80,14 @@ export function createMexenPanel(root: HTMLElement): MexenPanel {
   };
 
   return {
-    vraag(legal, myRoll): Promise<MexenMoveJSON> {
+    vraag(legal, extras): Promise<MexenMoveJSON> {
+      const myRoll = extras.myRoll;
       return new Promise<MexenMoveJSON>((resolve) => {
         actief = resolve;
         leeg();
         wrap.style.display = 'flex';
 
-        const rolls = legal.filter((m) => m.type === 'roll');
+        const kanGooien = legal.some((m) => m.type === 'roll');
         const announces = legal.filter(
           (m): m is Extract<MexenMoveJSON, { type: 'announce' }> => m.type === 'announce',
         );
@@ -89,26 +97,36 @@ export function createMexenPanel(root: HTMLElement): MexenPanel {
         const believe = legal.find((m) => m.type === 'believe');
         const doubt = legal.find((m) => m.type === 'doubt');
 
-        if (rolls.length > 0) {
-          titel.textContent = t('mexen.yourCup');
-          const b = maakKnop(t('mexen.roll'), '#e7c66a');
-          b.addEventListener('click', () => kies({ type: 'roll' }));
-          knoppenRij.appendChild(b);
-          return;
-        }
-
+        // Aankondigen (na een worp) — eventueel met de optie nog eens te gooien.
         if (announces.length > 0) {
           const worp = myRoll
             ? t('mexen.youRolled', { dice: `${DICE_FACES[myRoll[0]] ?? ''}${DICE_FACES[myRoll[1]] ?? ''}` })
             : '';
           titel.textContent = t('mexen.announceTitle') + worp;
-          // Op RANG oplopend (niet numeriek!): 31 laag … Mex (21) hoog, zodat de
+          // Op RANG oplopend (niet numeriek!): 31 laag … Mex hoog, zodat de
           // laagste/eerlijke keuze links staat en Mex helemaal rechts.
           for (const m of [...announces].sort((a, b) => rankOf(a.value) - rankOf(b.value))) {
             const knop = maakKnop(codeLabel(m.value), '#bfe3a3');
             knop.addEventListener('click', () => kies(m));
             knoppenRij.appendChild(knop);
           }
+          if (kanGooien) {
+            const rest = extras.maxRolls && extras.rollsThisTurn !== undefined
+              ? ` (${extras.rollsThisTurn}/${extras.maxRolls})`
+              : '';
+            const b = maakKnop(t('mexen.rollAgain') + rest, '#e7c66a');
+            b.addEventListener('click', () => kies({ type: 'roll' }));
+            knoppenRij.appendChild(b);
+          }
+          return;
+        }
+
+        // Eerste worp van de beurt.
+        if (kanGooien) {
+          titel.textContent = t('mexen.yourCup');
+          const b = maakKnop(t('mexen.roll'), '#e7c66a');
+          b.addEventListener('click', () => kies({ type: 'roll' }));
+          knoppenRij.appendChild(b);
           return;
         }
 

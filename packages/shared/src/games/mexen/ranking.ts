@@ -69,9 +69,14 @@ export function announceableCodes(prev: number | null, mode: 'strict' | 'tie'): 
   return RANK_ORDER.filter((c) => beats(c, prev, mode));
 }
 
-/** Label voor UI/log: "65", "Paar zessen (66)", "Mex (21)". */
+/**
+ * Label voor UI/log volgens de Mexen-telling:
+ *  - niet-paren = het tweecijferige getal ("31" … "65"),
+ *  - paren = honderdtallen (paar enen = 100 … paar zessen = 600),
+ *  - 21 = "Mex".
+ */
 export function codeLabel(code: number): string {
-  if (code === 21) return 'Mex (21)';
-  if (isPair(code)) return `Paar ${code % 10}-en (${code})`;
+  if (code === 21) return 'Mex';
+  if (isPair(code)) return String((code % 10) * 100); // 11→100 … 66→600
   return String(code);
 }

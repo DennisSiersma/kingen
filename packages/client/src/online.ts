@@ -702,14 +702,23 @@ export async function runOnlineGame(
     // --- Mexen: dobbel-acties via het eigen actiepaneel ---
     if (isMexen) {
       const legal = (msg.legalMoves ?? []) as MexenMoveJSON[];
-      const extras = (msg.viewExtras ?? {}) as { myRoll?: [number, number] | null };
+      const extras = (msg.viewExtras ?? {}) as {
+        myRoll?: [number, number] | null;
+        rollsThisTurn?: number;
+        maxRolls?: number;
+      };
       const myRoll = extras.myRoll ?? null;
-      // Tijdens het aankondigen tilt de beker op zodat ALLEEN jij je worp ziet.
+      // Tijdens het aankondigen kantelt de beker zodat ALLEEN jij je worp ziet.
       if (myRoll && legal.some((m) => m.type === 'announce')) {
         mexenPlugin.scene?.showOwnRoll(mySeat, myRoll as Roll);
       }
-      const move = await mexenPaneel.vraag(legal, myRoll);
-      // Beker weer laten zakken vóór het aankondigen/doorschuiven (dan reist hij door).
+      const move = await mexenPaneel.vraag(legal, {
+        myRoll,
+        rollsThisTurn: extras.rollsThisTurn,
+        maxRolls: extras.maxRolls,
+      });
+      // Beker weer dicht vóór het aankondigen/doorschuiven (dan reist hij door); bij
+      // 'nog eens gooien' blijft de eigen blik staan tot de nieuwe worp binnen is.
       if (move.type === 'announce' || move.type === 'passUnseen') mexenPlugin.scene?.hideRoll();
       transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move });
       return;

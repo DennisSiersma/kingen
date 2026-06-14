@@ -42,6 +42,7 @@ function openRound(state: MexenState, starter: Seat): GameEvent[] {
   state.actualRoll = null;
   state.currentAnnouncement = null;
   state.announcer = null;
+  state.rollsThisTurn = 0;
   return [
     { type: 'roundStart', roundIndex: state.roundIndex, roundKind: 'mexen', roundLabel: '', dealer: starter },
     { type: 'custom', subtype: 'turn', data: { seat: starter, phase: 'rolling' } },
@@ -52,10 +53,11 @@ function openRound(state: MexenState, starter: Seat): GameEvent[] {
 function doRoll(state: MexenState): GameEvent[] {
   const seed = (state.seed + state.rollSeq * ROLL_SALT) >>> 0;
   state.rollSeq += 1;
+  state.rollsThisTurn += 1;
   state.actualRoll = rollTwo(seed);
   state.phase = 'announcing';
   return [
-    { type: 'custom', subtype: 'diceRolled', data: { seat: state.cupHolder } },
+    { type: 'custom', subtype: 'diceRolled', data: { seat: state.cupHolder, rollNr: state.rollsThisTurn, maxRolls: state.config.maxRolls } },
     { type: 'custom', subtype: 'turn', data: { seat: state.cupHolder, phase: 'announcing' } },
   ];
 }
@@ -172,6 +174,7 @@ export function createMexenDefinition(): MexenDefinition {
         phase: 'rolling',
         roundIndex: 0,
         rollSeq: 0,
+        rollsThisTurn: 0,
         lives: new Array<number>(n).fill(config.startLives),
         alive: new Array<boolean>(n).fill(true),
         cupHolder: 0 as Seat,
@@ -223,6 +226,8 @@ export function createMexenDefinition(): MexenDefinition {
           currentAnnouncement: state.currentAnnouncement,
           direction: state.direction,
           myRoll: myRoll ? [myRoll[0], myRoll[1]] : null,
+          rollsThisTurn: state.rollsThisTurn,
+          maxRolls: state.config.maxRolls,
           lastReveal: state.lastReveal ? structuredClone(state.lastReveal) : null,
         },
       };
@@ -240,7 +245,13 @@ export function createMexenDefinition(): MexenDefinition {
       let events: GameEvent[];
       switch (move.type) {
         case 'roll': {
-          if (next.phase !== 'rolling') throw new Error('Er kan nu niet gegooid worden');
+          // Eerste worp ('rolling') of nog eens gooien ('announcing', tot maxRolls).
+          if (next.phase !== 'rolling' && next.phase !== 'announcing') {
+            throw new Error('Er kan nu niet gegooid worden');
+          }
+          if (next.phase === 'announcing' && next.rollsThisTurn >= next.config.maxRolls) {
+            throw new Error('Geen worpen meer deze beurt');
+          }
           events = doRoll(next);
           break;
         }
@@ -264,6 +275,7 @@ export function createMexenDefinition(): MexenDefinition {
           if (next.phase !== 'responding') throw new Error('Geloven kan hier niet');
           next.phase = 'rolling';
           next.actualRoll = null; // de believer gooit zo zelf een verse worp
+          next.rollsThisTurn = 0; // verse beurt: weer tot maxRolls worpen
           events = [
             { type: 'custom', subtype: 'believed', data: { seat } },
             { type: 'custom', subtype: 'turn', data: { seat, phase: 'rolling' } },

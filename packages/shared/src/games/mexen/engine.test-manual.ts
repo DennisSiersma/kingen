@@ -162,4 +162,41 @@ for (const [naam, policy] of [['eerste', altijdEerste], ['geloven', liefstGelove
   assert.equal(a.events.length, b.events.length, 'zelfde aantal events');
 }
 
+// --- 8. Max. drie worpen per beurt -----------------------------------------
+{
+  const def = createMexenDefinition();
+  let state = def.createInitialState(players(4), cfg({ playerCount: 4, maxRolls: 3 }), 3);
+  const holder = def.currentActor(state)!;
+  for (let worp = 1; worp <= 3; worp++) {
+    state = def.applyMove(state, holder, { type: 'roll' }).state;
+    assert.equal(state.phase, 'announcing', `na worp ${worp} → announcing`);
+    const kanGooien = def.getLegalMoves(state, holder).some((m) => m.type === 'roll');
+    if (worp < 3) assert.ok(kanGooien, `mag nog eens gooien (${worp}/3)`);
+    else assert.ok(!kanGooien, 'na 3 worpen geen her-worp meer');
+  }
+  assert.equal(state.rollsThisTurn, 3, '3 worpen geteld');
+  assert.ok(
+    def.getLegalMoves(state, holder).every((m) => m.type === 'announce'),
+    'na max worpen alleen nog aankondigen',
+  );
+  let threw = false;
+  try {
+    def.applyMove(state, holder, { type: 'roll' });
+  } catch {
+    threw = true;
+  }
+  assert.ok(threw, 'her-worp na het maximum is illegaal');
+
+  // Geloven geeft een verse beurt met opnieuw maxRolls worpen.
+  let s2 = def.createInitialState(players(4), cfg({ playerCount: 4, maxRolls: 3 }), 9);
+  const h0 = def.currentActor(s2)!;
+  s2 = def.applyMove(s2, h0, { type: 'roll' }).state;
+  const code0 = rollToCode(s2.actualRoll as Roll);
+  s2 = def.applyMove(s2, h0, { type: 'announce', value: code0 }).state;
+  const responder = def.currentActor(s2)!;
+  s2 = def.applyMove(s2, responder, { type: 'believe' }).state;
+  assert.equal(s2.rollsThisTurn, 0, 'na geloven is de worp-teller gereset');
+  assert.equal(s2.phase, 'rolling', 'believer gaat zelf gooien');
+}
+
 console.log('✓ engine.test-manual: alle asserties geslaagd');

@@ -197,6 +197,44 @@ export function createCup(): THREE.Group {
 
 /** Geef de resources van een beker-group vrij. */
 export function disposeCup(group: THREE.Group): void {
+  disposeGroup(group);
+}
+
+// ---------------------------------------------------------------------------
+// Bierviltje (waar de beker omgekeerd op geschud wordt)
+// ---------------------------------------------------------------------------
+
+/** Straal van het viltje (ruim groter dan de bekermonding). */
+export const COASTER_RADIUS = CUP_RADIUS * 1.7;
+
+/**
+ * Maak een rond bierviltje: crème rand met een rood middenvlak (generiek, geen
+ * merklogo). Lokaal nulpunt in het midden; leg het net boven het tafelblad.
+ */
+export function createCoaster(): THREE.Group {
+  const group = new THREE.Group();
+  const rand = new THREE.Mesh(
+    new THREE.CylinderGeometry(COASTER_RADIUS, COASTER_RADIUS, 0.006, 48),
+    new THREE.MeshStandardMaterial({ color: 0xece3d2, roughness: 0.92 }),
+  );
+  rand.receiveShadow = true;
+  const midden = new THREE.Mesh(
+    new THREE.CylinderGeometry(COASTER_RADIUS * 0.84, COASTER_RADIUS * 0.84, 0.008, 48),
+    new THREE.MeshStandardMaterial({ color: 0x8a1f1f, roughness: 0.7 }),
+  );
+  midden.position.y = 0.0015;
+  midden.receiveShadow = true;
+  group.add(rand, midden);
+  group.userData['coaster'] = true;
+  return group;
+}
+
+/** Geef de resources van een viltje-group vrij. */
+export function disposeCoaster(group: THREE.Group): void {
+  disposeGroup(group);
+}
+
+function disposeGroup(group: THREE.Group): void {
   group.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
