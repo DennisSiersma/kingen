@@ -1,0 +1,20 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - complementary "Scoreboard" [ref=e3]:
+      - generic [ref=e4]:
+        - heading "Scoreboard" [level=3] [ref=e5]
+        - button "✕" [ref=e6] [cursor=pointer]
+      - generic [ref=e7]:
+        - button "Score" [ref=e8] [cursor=pointer]
+        - button "Chatsoon" [disabled] [ref=e9] [cursor=pointer]
+      - paragraph [ref=e12]: No rounds played yet.
+    - generic [ref=e48]:
+      - button "← All games" [ref=e49] [cursor=pointer]
+      - generic [ref=e50]: ✊
+      - heading "Toepen" [level=2] [ref=e51]
+      - paragraph [ref=e52]: "A trick-taking bluff/gambling game: avoid the penalty of the 4th trick. Knock (\"toep\") to raise the stake; call or fold. Reach the maximum and you are out — last player standing wins."
+      - generic [ref=e53]: 2–8 players
+      - generic [ref=e54]:
+        - button "🧠 Play locally (vs the computer)" [ref=e55] [cursor=pointer]
+        - button "🌐 Play online (with others)" [ref=e56] [cursor=pointer]
+  - generic "Ontworpen door DJS": DJS

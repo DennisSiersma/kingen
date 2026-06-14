@@ -55,6 +55,7 @@ export async function runOnlineGame(
   const dialogs = createChoiceDialogs(ui);
   const teamPaneel = maakTeamPaneel(ui);
   const rikBanner = maakRikBanner(ui);
+  const toepBanner = maakToepBanner(ui);
 
   const scene = await createSceneManager(app, bus, 'cafe');
   scene.start();
@@ -91,6 +92,15 @@ export async function runOnlineGame(
   };
   // Rikken: contract-banner.
   let isRikken = false;
+  // Toepen: inzet/status-banner + per-stoel status (active|folded|eliminated).
+  let isToepen = false;
+  let toepStatus: string[] = [];
+  let toepInzet = 1;
+  let laatsteToeper = 0;
+  let laatsteClaimer = 0;
+  const updateToepBanner = (): void => {
+    toepBanner.set(toepStatus, names, mySeat, toepInzet);
+  };
   const leesOpgeslagen = (key: string): string => {
     try {
       return localStorage.getItem(key) ?? '';
@@ -129,6 +139,13 @@ export async function runOnlineGame(
         isRikken = ev.gameId.startsWith('rikken');
         if (isRikken) rikBanner.toon();
         else rikBanner.verberg();
+        isToepen = ev.gameId.startsWith('toepen');
+        if (isToepen) {
+          toepStatus = new Array<string>(n).fill('active');
+          toepInzet = 1;
+          updateToepBanner();
+          toepBanner.toon();
+        } else toepBanner.verberg();
         sheet = new ScoreSheet(n);
         slagen.length = 0;
         for (let i = 0; i < n; i++) slagen.push(0);
@@ -153,6 +170,13 @@ export async function runOnlineGame(
           updateTeamPaneel();
         }
         if (isRikken) rikBanner.setBidding();
+        if (isToepen) {
+          // Nieuwe ronde: inzet terug naar 1, gevouwen spelers weer actief
+          // (afgevallen spelers blijven 'eliminated').
+          toepInzet = 1;
+          toepStatus = toepStatus.map((s) => (s === 'eliminated' ? 'eliminated' : 'active'));
+          updateToepBanner();
+        }
         break;
       case 'trumpChosen':
         hud.setTrump(ev.trump);
@@ -275,6 +299,66 @@ export async function runOnlineGame(
               duurMs: 3000,
             });
           }
+        } else if (ev.subtype === 'stakeChanged') {
+          const d = ev.data as { stake?: number };
+          if (typeof d?.stake === 'number') {
+            toepInzet = d.stake;
+            updateToepBanner();
+          }
+        } else if (ev.subtype === 'toepCalled') {
+          const d = ev.data as { seat: number; stake: number };
+          laatsteToeper = d.seat;
+          void notifications.toon(t('toepen.toastToep', { name: naamVan(d.seat), stake: String(d.stake) }), {
+            soort: d.seat === mySeat ? 'succes' : 'waarschuwing',
+            duurMs: 2200,
+          });
+        } else if (ev.subtype === 'playerFolded') {
+          const d = ev.data as { seat: number; penalty: number };
+          toepStatus[d.seat] = 'folded';
+          updateToepBanner();
+          void notifications.toon(t('toepen.toastFold', { name: naamVan(d.seat), penalty: String(d.penalty) }), { duurMs: 1800 });
+        } else if (ev.subtype === 'vierGelijke') {
+          const d = ev.data as { seat: number };
+          void notifications.toon(t('toepen.toastVierGelijke', { name: naamVan(d.seat) }), {
+            soort: d.seat === mySeat ? 'succes' : 'info',
+            duurMs: 3000,
+          });
+        } else if (ev.subtype === 'vuileWasClaimed') {
+          const d = ev.data as { seat: number };
+          laatsteClaimer = d.seat;
+          void notifications.toon(t('toepen.toastVuileWasClaim', { name: naamVan(d.seat) }), { soort: 'info', duurMs: 1800 });
+        } else if (ev.subtype === 'vuileWasResolved') {
+          const d = ev.data as { claimer: number; challenger: number; terecht: boolean; penaltySeat: number };
+          if (d.terecht) {
+            void notifications.toon(t('toepen.toastVuileWasTerecht', { name: naamVan(d.challenger) }), { soort: 'info', duurMs: 2600 });
+          } else {
+            void notifications.toon(t('toepen.toastVuileWasBluf', { name: naamVan(d.claimer) }), { soort: 'waarschuwing', duurMs: 3000 });
+          }
+        } else if (ev.subtype === 'handOpened') {
+          const d = ev.data as { seat: number };
+          void notifications.toon(t('toepen.toastOpenHand', { name: naamVan(d.seat) }), { soort: 'info', duurMs: 3000 });
+        } else if (ev.subtype === 'roundWonByLastStanding') {
+          const d = ev.data as { seat: number };
+          void notifications.toon(t('toepen.toastLastStanding', { name: naamVan(d.seat) }), {
+            soort: d.seat === mySeat ? 'succes' : 'info',
+            duurMs: 2600,
+          });
+        } else if (ev.subtype === 'roundResult') {
+          const d = ev.data as { winner: number; stake: number };
+          if (isToepen) {
+            void notifications.toon(t('toepen.toastRound', { name: naamVan(d.winner), stake: String(d.stake) }), {
+              soort: d.winner === mySeat ? 'succes' : 'info',
+              duurMs: 2400,
+            });
+          }
+        } else if (ev.subtype === 'playerEliminated') {
+          const d = ev.data as { seat: number; total: number };
+          toepStatus[d.seat] = 'eliminated';
+          updateToepBanner();
+          void notifications.toon(t('toepen.toastEliminated', { name: naamVan(d.seat), total: String(d.total) }), {
+            soort: d.seat === mySeat ? 'waarschuwing' : 'info',
+            duurMs: 3000,
+          });
         }
         break;
       default:
@@ -346,6 +430,7 @@ export async function runOnlineGame(
               hud.hide();
               teamPaneel.verberg();
               rikBanner.verberg();
+              toepBanner.verberg();
               if (huidigeRoom) lobby.toonWachtkamer(huidigeRoom, mySeat);
             }, 5000);
           });
@@ -423,6 +508,7 @@ export async function runOnlineGame(
     hud.hide();
     teamPaneel.verberg();
     rikBanner.verberg();
+    toepBanner.verberg();
     lobby.toonBrowser();
   });
 
@@ -491,6 +577,17 @@ export async function runOnlineGame(
     } else {
       rikBanner.verberg();
     }
+    // Toepen: inzet/status-banner herstellen uit de view-extra's.
+    isToepen = view.round.kind === 'toepen';
+    if (isToepen) {
+      const ex = view.viewExtras as { stake?: number; status?: string[] } | undefined;
+      toepInzet = ex?.stake ?? 1;
+      toepStatus = ex?.status ? ex.status.slice() : new Array<string>(n).fill('active');
+      updateToepBanner();
+      toepBanner.toon();
+    } else {
+      toepBanner.verberg();
+    }
     if (!sheet) sheet = new ScoreSheet(n);
     lobby.verberg();
     hud.show();
@@ -517,7 +614,16 @@ export async function runOnlineGame(
     // Rikken-zetten (via het generieke moveType-pad):
     | { type: 'bid'; bid: 'pass' | { kind: string; beter?: boolean } }
     | { type: 'askAce'; cardId: string }
-    | { type: 'choosePassGame'; game: 'schoppenMie' | 'eenOfVijf' };
+    | { type: 'choosePassGame'; game: 'schoppenMie' | 'eenOfVijf' }
+    // Toepen-zetten:
+    | { type: 'callToep' }
+    | { type: 'respondMeegaan' }
+    | { type: 'respondPas' }
+    | { type: 'declareVierGelijke' }
+    | { type: 'claimVuileWas' }
+    | { type: 'passClaim' }
+    | { type: 'challengeVuileWas' }
+    | { type: 'passChallenge' };
 
   async function handleRequest(msg: Extract<import('@shared/net/protocol.ts').NetMessage, { kind: 'requestMove' }>): Promise<void> {
     // Wacht tot de animaties bij zijn, zodat de keuze-UI synchroon loopt.
@@ -533,6 +639,13 @@ export async function runOnlineGame(
       const kaartZetten = new Map<string, KingenMoveJSON>();
       for (const m of legalMoves) if (m.type === 'playCard') kaartZetten.set(m.card.id, m);
       scene.setPlayableCards([...kaartZetten.keys()]);
+      // Toepen: een "Toep!"-knop als toepen nu een legale zet is.
+      const toepMove = legalMoves.find((m) => m.type === 'callToep');
+      let toepKnop: HTMLButtonElement | null = null;
+      const opruimenToep = (): void => {
+        toepKnop?.remove();
+        toepKnop = null;
+      };
       let klaar = false;
       const kies = (id: string): void => {
         const move = kaartZetten.get(id);
@@ -540,6 +653,7 @@ export async function runOnlineGame(
         klaar = true;
         stopScene();
         stopUi();
+        opruimenToep();
         scene.setPlayableCards([]);
         kaartKeuze = null;
         stuur(move);
@@ -549,6 +663,22 @@ export async function runOnlineGame(
       const stopUi = onUiEvent(ui, (ev) => {
         if (ev.type === 'cardChosen' && ev.seat === mySeat) kies(ev.cardId);
       });
+      if (toepMove) {
+        toepKnop = el('button', 'kg-toepknop kg-klikbaar') as HTMLButtonElement;
+        toepKnop.type = 'button';
+        toepKnop.textContent = t('toepen.toepKnop');
+        toepKnop.addEventListener('click', () => {
+          if (klaar) return;
+          klaar = true;
+          stopScene();
+          stopUi();
+          opruimenToep();
+          scene.setPlayableCards([]);
+          kaartKeuze = null;
+          stuur(toepMove);
+        });
+        ui.appendChild(toepKnop);
+      }
       // Dev-hook (alleen in dev) zodat een geautomatiseerde test een legale
       // kaart kan spelen zonder op de 3D-kaart te hoeven klikken.
       kaartKeuze = { legaal: [...kaartZetten.keys()], kies };
@@ -603,7 +733,57 @@ export async function runOnlineGame(
       const id = await dialogs.vraagOptie(t('rikken.passTitle'), t('rikken.passSub'), opties);
       const move = legalMoves[Number(id)];
       if (move) stuur(move);
+    } else if (msg.moveType === 'respondMeegaan' || msg.moveType === 'respondPas') {
+      // Toepen: reageren op een toep (meegaan tegen de hogere inzet, of vouwen).
+      const stake = toepInzet;
+      const kosten = Math.max(1, toepInzet - 1);
+      const opties = [
+        { id: 'mee', label: t('toepen.meegaan', { stake: String(stake) }), primair: true },
+        { id: 'pas', label: t('toepen.passen', { kosten: String(kosten) }) },
+      ];
+      const id = await dialogs.vraagOptie(
+        t('toepen.responsTitel', { name: naamVan(toepLaatsteToeper()), stake: String(stake) }),
+        t('toepen.responsSub', { kosten: String(kosten) }),
+        opties,
+      );
+      const wil = id === 'pas' ? 'respondPas' : 'respondMeegaan';
+      const move = legalMoves.find((m) => m.type === wil) ?? legalMoves[0];
+      if (move) stuur(move);
+    } else if (msg.moveType === 'declareVierGelijke' || msg.moveType === 'claimVuileWas' || msg.moveType === 'passClaim') {
+      // Toepen: speciale-hand-fase (vier gelijke / vuile was / doorgaan).
+      const opties = legalMoves.flatMap((m, i) => {
+        if (m.type === 'declareVierGelijke') return [{ id: String(i), label: t('toepen.vierGelijke'), uitleg: t('toepen.vierGelijkeUitleg'), primair: true }];
+        if (m.type === 'claimVuileWas') return [{ id: String(i), label: t('toepen.vuileWas'), uitleg: t('toepen.vuileWasUitleg') }];
+        if (m.type === 'passClaim') return [{ id: String(i), label: t('toepen.doorgaan') }];
+        return [];
+      });
+      const id = await dialogs.vraagOptie(t('toepen.claimTitel'), t('toepen.claimSub'), opties);
+      const move = legalMoves[Number(id)];
+      if (move) stuur(move);
+    } else if (msg.moveType === 'challengeVuileWas' || msg.moveType === 'passChallenge') {
+      // Toepen: een vuile-was-claim van een ander controleren of laten gaan.
+      const opties = [
+        { id: 'check', label: t('toepen.controleren') },
+        { id: 'laat', label: t('toepen.laatGaan'), primair: true },
+      ];
+      const id = await dialogs.vraagOptie(
+        t('toepen.challengeTitel', { name: naamVan(toepClaimer()) }),
+        t('toepen.challengeSub'),
+        opties,
+      );
+      const wil = id === 'check' ? 'challengeVuileWas' : 'passChallenge';
+      const move = legalMoves.find((m) => m.type === wil) ?? legalMoves[0];
+      if (move) stuur(move);
     }
+  }
+
+  /** Wie toepte het laatst (voor de respons-dialoogtitel), uit de banner-state. */
+  function toepLaatsteToeper(): number {
+    return laatsteToeper;
+  }
+  /** Wie claimt nu vuile was (voor de challenge-dialoogtitel). */
+  function toepClaimer(): number {
+    return laatsteClaimer;
   }
 }
 
@@ -739,5 +919,65 @@ function maakRikBanner(root: HTMLElement): {
     setBidding,
     setContract,
     setMaat,
+  };
+}
+
+/**
+ * Toepen inzet-/status-banner: toont de huidige inzet (pot) prominent en per
+ * stoel de status (speelt mee / gevouwen / af). De client houdt de status zelf
+ * bij uit de toep-events, dus de banner werkt zonder extra serverberichten.
+ */
+function maakToepBanner(root: HTMLElement): {
+  toon(): void;
+  verberg(): void;
+  set(status: readonly string[], names: readonly string[], mySeat: number, inzet: number): void;
+} {
+  const wrap = el('div', 'kg-toepbanner');
+  wrap.hidden = true;
+  const titel = el('div', 'kg-toepbanner__titel');
+  const inzetBadge = el('div', 'kg-toepbanner__inzet');
+  const inzetLabel = el('span', 'kg-toepbanner__inzetlabel');
+  const inzetWaarde = el('span', 'kg-toepbanner__inzetwaarde', '1');
+  inzetBadge.append(inzetLabel, inzetWaarde);
+  const rij = el('div', 'kg-toepbanner__rij');
+  wrap.append(titel, inzetBadge, rij);
+  root.appendChild(wrap);
+
+  let laatste: { status: string[]; names: string[]; mySeat: number; inzet: number } | null = null;
+
+  const statusWoord = (s: string): string =>
+    s === 'folded' ? t('toepen.statusGepast') : s === 'eliminated' ? t('toepen.statusAf') : t('toepen.statusActief');
+
+  function teken(): void {
+    titel.textContent = t('toepen.bannerTitel');
+    inzetLabel.textContent = `${t('toepen.inzet')}: `;
+    if (!laatste) return;
+    inzetWaarde.textContent = String(laatste.inzet);
+    rij.innerHTML = '';
+    laatste.status.forEach((s, seat) => {
+      const chip = el('div', 'kg-toepbanner__chip');
+      chip.classList.toggle('is-gevouwen', s === 'folded');
+      chip.classList.toggle('is-af', s === 'eliminated');
+      chip.classList.toggle('is-zelf', seat === laatste!.mySeat);
+      const naam = laatste!.names[seat] ?? t('app.seat', { num: seat + 1 });
+      chip.textContent = `${naam} · ${statusWoord(s)}`;
+      rij.appendChild(chip);
+    });
+  }
+
+  onLangChange(() => teken());
+  teken();
+
+  return {
+    toon(): void {
+      wrap.hidden = false;
+    },
+    verberg(): void {
+      wrap.hidden = true;
+    },
+    set(status, names, mySeat, inzet): void {
+      laatste = { status: [...status], names: [...names], mySeat, inzet };
+      teken();
+    },
   };
 }

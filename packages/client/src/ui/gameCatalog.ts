@@ -83,6 +83,16 @@ export const GAME_FAMILIES: GameFamily[] = [
     localKind: 'generic',
     variants: [{ gameId: 'rikken', labelKey: 'game.rikken', descKey: 'catalog.rikken.desc' }],
   },
+  {
+    key: 'toepen',
+    titleKey: 'catalog.toepen.title',
+    descKey: 'catalog.toepen.desc',
+    players: '2–8',
+    accent: '#d98324',
+    embleem: '✊',
+    localKind: 'generic',
+    variants: [{ gameId: 'toepen', labelKey: 'catalog.toepen.title', descKey: 'variant.toepen.standaard' }],
+  },
 ];
 
 /** Zoek een familie op key. */

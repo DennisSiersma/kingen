@@ -1941,3 +1941,74 @@
 }
 .kg-rikbanner__regel { font-size: 0.82rem; color: var(--kg-text, #efe7d6); }
 .kg-rikbanner__maat { font-size: 0.82rem; color: var(--kg-muted, #b9ad93); margin-top: 3px; }
+
+/* Toepen: inzet-/status-banner (links) + grote toep-knop (rechtsonder). */
+.kg-toepbanner {
+  position: fixed;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  min-width: 160px;
+  max-width: 230px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--kg-panel, rgba(20, 16, 12, 0.94));
+  border: 1px solid rgba(217, 131, 36, 0.4);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+.kg-toepbanner__titel {
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f0a948;
+  margin-bottom: 6px;
+}
+.kg-toepbanner__inzet {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(217, 131, 36, 0.18);
+  border: 1px solid rgba(217, 131, 36, 0.5);
+  margin-bottom: 8px;
+}
+.kg-toepbanner__inzetlabel { font-size: 0.8rem; color: var(--kg-muted, #b9ad93); }
+.kg-toepbanner__inzetwaarde { font-size: 1.35rem; font-weight: 800; color: #f0a948; }
+.kg-toepbanner__rij { display: flex; flex-direction: column; gap: 4px; }
+.kg-toepbanner__chip {
+  font-size: 0.78rem;
+  color: var(--kg-text, #efe7d6);
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+}
+.kg-toepbanner__chip.is-zelf { border-color: rgba(217, 131, 36, 0.55); }
+.kg-toepbanner__chip.is-gevouwen { color: var(--kg-muted, #8c8270); text-decoration: line-through; opacity: 0.7; }
+.kg-toepbanner__chip.is-af { color: #c0392b; opacity: 0.6; }
+
+.kg-toepknop {
+  position: fixed;
+  right: 22px;
+  bottom: 120px;
+  z-index: 40;
+  padding: 12px 22px;
+  border-radius: 14px;
+  border: 2px solid #f0a948;
+  background: linear-gradient(180deg, #d98324, #b5641a);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 18px rgba(217, 131, 36, 0.45);
+  cursor: pointer;
+  animation: kg-toep-puls 1.4s ease-in-out infinite;
+}
+.kg-toepknop:hover { filter: brightness(1.1); }
+@keyframes kg-toep-puls {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}

@@ -473,7 +473,8 @@ async function main(): Promise<void> {
       ]);
     registerBuiltinGames(); // zodat de in-browser GameHost het spel vindt
     const entry = getGame(gameId);
-    const playerCount = entry?.minPlayers ?? 4;
+    // Voorkeur: een tafel van 4 (leuk voor o.a. Toepen 2–8), geclampt op het bereik.
+    const playerCount = Math.min(Math.max(4, entry?.minPlayers ?? 4), entry?.maxPlayers ?? 4);
     const config = entry?.configForPlayers(playerCount);
     let naam = t('setup.you');
     try {
