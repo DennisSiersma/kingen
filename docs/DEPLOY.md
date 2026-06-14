@@ -44,28 +44,46 @@ docker compose up -d --build
   ```
 - Stoppen: `docker compose down`. Logs: `docker compose logs -f`.
 
-## Productie op de VPS (siersma.farcon.cloud)
+## Productie op de VPS (siersma.farcon.cloud) — Cloudflare-tunnel
 
-1. **DNS (Cloudflare):** maak een `A`-record `siersma.farcon.cloud` → het IP van
-   de VPS.
-2. **TLS-modus:** zet in Cloudflare SSL/TLS op **Full (strict)**. Caddy haalt op
-   de origin een echt Let's Encrypt-certificaat op.
-   - Staat de Cloudflare-proxy (oranje wolk) aan, dan kan de HTTP-challenge
-     mislukken. Twee opties:
-     - Zet het record tijdens de **eerste** uitrol op **DNS only** (grijze wolk),
-       laat Caddy het cert ophalen, zet de proxy daarna weer aan; of
-     - gebruik een Cloudflare **Origin Certificate** + de DNS-challenge in Caddy.
-3. **Starten** (in de projectmap op de VPS):
-   ```bash
-   docker compose -f docker-compose.prod.yml up -d --build
-   ```
-   Caddy luistert op 80/443, haalt automatisch het certificaat op en proxyt
-   HTTP + de WebSocket (`/ws`) door naar de app.
-4. Open `https://siersma.farcon.cloud`.
-5. **Toegang beperken (optioneel):** zet **Cloudflare Access** (Zero Trust) vóór
-   het subdomein voor een inlog-/allowlist-laag zolang er nog geen eigen accounts
-   zijn.
-6. Updaten: `git pull` (of rsync) + `docker compose -f docker-compose.prod.yml up -d --build`.
+> **Belangrijk:** deze VPS draait via een **Cloudflare-tunnel** (cloudflared), NIET
+> via Caddy. De app bindt lokaal op `127.0.0.1:8090` via een **lokale**
+> `docker-compose.override.yml` (staat niet in de repo). Gebruik hier de **basis**
+> `docker-compose.yml`. Gebruik **NIET** `docker-compose.prod.yml` (Caddy) — die
+> bindt poort 80/443 en geeft `address already in use`.
+
+**Deploy / updaten** (in `/opt/kingen` op de VPS):
+```bash
+./deploy.sh
+```
+Dat doet `git pull` → `docker compose up -d --build` (basis + override) →
+health-check op `127.0.0.1:8090`. Handmatig komt het hierop neer:
+```bash
+git pull
+docker compose up -d --build        # géén -f docker-compose.prod.yml
+curl -s http://127.0.0.1:8090/health   # 'ok'
+```
+
+**De lokale override** (`/opt/kingen/docker-compose.override.yml`, eenmalig, bindt
+de app privé achter de tunnel):
+```yaml
+services:
+  kingen:
+    ports: !override
+      - "127.0.0.1:8090:8080"
+```
+
+**De tunnel** routeert `siersma.farcon.cloud` → `http://localhost:8090`
+(cloudflared draait als service op de VPS; WebSockets werken via de tunnel).
+**Toegang beperken (optioneel):** zet **Cloudflare Access** vóór het subdomein.
+
+### Alternatief: Caddy (andere machine, geen tunnel)
+Alleen op een server waar je 80/443 + TLS zélf afhandelt:
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+DNS `A`-record → VPS-IP, Cloudflare SSL/TLS op **Full (strict)** (eerste keer evt.
+proxy op "DNS only" zodat Caddy het Let's Encrypt-cert kan ophalen).
 
 ## Configuratie (env-vars)
 

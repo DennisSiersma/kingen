@@ -1,6 +1,10 @@
-# Dev/intern (bijv. Proxmox): bouwt en draait de app, bereikbaar op poort 8080.
-# Open http://<host-ip>:8080 in de browser.
-#   docker compose up -d --build
+# Basis-compose: bouwt en draait de app op poort 8080.
+#  - Dev/intern (Proxmox): http://<host-ip>:8080  →  docker compose up -d --build
+#  - PRODUCTIE VPS (siersma.farcon.cloud): DIT bestand + de lokale
+#    docker-compose.override.yml (bindt 127.0.0.1:8090), achter de Cloudflare-tunnel.
+#    Deploy:  ./deploy.sh    (of:  git pull && docker compose up -d --build)
+# Gebruik op de VPS NIET docker-compose.prod.yml — dat is de Caddy-variant (poort
+# 80/443) en geeft daar "address already in use". Zie docs/DEPLOY.md.
 services:
   kingen:
     build: .

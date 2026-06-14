@@ -1,5 +1,10 @@
-# Productie (VPS): app achter Caddy als reverse proxy met automatische HTTPS.
-# Caddy termineert TLS en proxyt ook de WebSocket-upgrade naar de app.
+# ⚠️  CADDY-VARIANT (reverse proxy + auto-TLS, bindt poort 80/443).
+#  NIET gebruiken op de siersma.farcon.cloud-VPS! Die draait via de Cloudflare-
+#  tunnel met de BASIS docker-compose.yml + override (127.0.0.1:8090). Caddy bindt
+#  80/443 en geeft daar "address already in use". Op die VPS:  ./deploy.sh
+#
+#  Dit bestand is alleen voor een machine waar JIJ zelf 80/443 + TLS afhandelt
+#  (geen tunnel/externe proxy):
 #   docker compose -f docker-compose.prod.yml up -d --build
 services:
   kingen:
