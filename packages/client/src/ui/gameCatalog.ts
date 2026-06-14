@@ -17,9 +17,14 @@ export interface GameVariant {
   descKey: TranslationKey;
 }
 
+/** Spelsoort, bepaalt onder welke sectie de tegel in de galerij valt. */
+export type GameCategory = 'kaart' | 'dobbel';
+
 export interface GameFamily {
   /** Sleutel van de familie (voor routing + i18n), bijv. 'klaverjassen'. */
   key: string;
+  /** Kaartspel of dobbelspel (galerij-sectie). */
+  category: GameCategory;
   titleKey: TranslationKey;
   descKey: TranslationKey;
   /** Korte spelersaanduiding, bijv. '4' of '3–5'. */
@@ -38,6 +43,7 @@ export interface GameFamily {
 export const GAME_FAMILIES: GameFamily[] = [
   {
     key: 'kingen',
+    category: 'kaart',
     titleKey: 'game.kingen',
     descKey: 'catalog.kingen.desc',
     players: '3–5',
@@ -48,6 +54,7 @@ export const GAME_FAMILIES: GameFamily[] = [
   },
   {
     key: 'hartenjagen',
+    category: 'kaart',
     titleKey: 'catalog.hartenjagen.title',
     descKey: 'catalog.hartenjagen.desc',
     players: '4',
@@ -61,6 +68,7 @@ export const GAME_FAMILIES: GameFamily[] = [
   },
   {
     key: 'klaverjassen',
+    category: 'kaart',
     titleKey: 'catalog.klaverjassen.title',
     descKey: 'catalog.klaverjassen.desc',
     players: '4',
@@ -75,6 +83,7 @@ export const GAME_FAMILIES: GameFamily[] = [
   },
   {
     key: 'rikken',
+    category: 'kaart',
     titleKey: 'game.rikken',
     descKey: 'catalog.rikken.desc',
     players: '4',
@@ -85,6 +94,7 @@ export const GAME_FAMILIES: GameFamily[] = [
   },
   {
     key: 'toepen',
+    category: 'kaart',
     titleKey: 'catalog.toepen.title',
     descKey: 'catalog.toepen.desc',
     players: '2–8',
@@ -95,6 +105,7 @@ export const GAME_FAMILIES: GameFamily[] = [
   },
   {
     key: 'mexen',
+    category: 'dobbel',
     titleKey: 'catalog.mexen.title',
     descKey: 'catalog.mexen.desc',
     players: '4–8',

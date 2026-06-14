@@ -312,8 +312,10 @@ const nl = {
   'toepen.toastOpenHand': 'Open op tafel: {name}',
 
   // Landingsgalerij + spelpagina
-  'landing.title': 'Kaartspellen',
+  'landing.title': 'Spellen',
   'landing.subtitle': 'Kies een spel — speel lokaal tegen de computer of online met anderen.',
+  'landing.sectionCards': 'Kaartspellen',
+  'landing.sectionDice': 'Dobbelspellen',
   'landing.playersBadge': '{players} spelers',
   'catalog.kingen.desc': 'Het klassieke Nederlandse slagenspel: negatieve rondes vermijden, dan troeven. Deler kiest het spel.',
   'catalog.hartenjagen.title': 'Hartenjagen',
@@ -715,8 +717,10 @@ const en: Record<TranslationKey, string> = {
   'toepen.toastOpenHand': 'Open on the table: {name}',
 
   // Landing gallery + game page
-  'landing.title': 'Card games',
+  'landing.title': 'Games',
   'landing.subtitle': 'Pick a game — play locally against the computer or online with others.',
+  'landing.sectionCards': 'Card games',
+  'landing.sectionDice': 'Dice games',
   'landing.playersBadge': '{players} players',
   'catalog.kingen.desc': 'The classic Dutch trick game: avoid the negative rounds, then play trumps. The dealer picks the game.',
   'catalog.hartenjagen.title': 'Hearts',

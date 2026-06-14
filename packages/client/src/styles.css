@@ -1701,6 +1701,16 @@
   font-size: 0.98rem;
   max-width: 52ch;
 }
+.kg-landing__sectie {
+  margin: 8px 0 -8px;
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--kg-gold, #c9a227);
+  letter-spacing: 0.02em;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--kg-panel-line, rgba(201, 162, 39, 0.25));
+}
 .kg-landing__raster {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

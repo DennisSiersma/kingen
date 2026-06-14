@@ -7,8 +7,14 @@
 
 import '../styles.css';
 import { el } from './uiBus.ts';
-import { getLang, onLangChange, setLang, t } from './i18n.ts';
-import { GAME_FAMILIES, type GameFamily } from './gameCatalog.ts';
+import { getLang, onLangChange, setLang, t, type TranslationKey } from './i18n.ts';
+import { GAME_FAMILIES, type GameCategory, type GameFamily } from './gameCatalog.ts';
+
+/** Galerij-secties in volgorde, elk met een i18n-kop. */
+const SECTIES: { category: GameCategory; titelKey: TranslationKey }[] = [
+  { category: 'kaart', titelKey: 'landing.sectionCards' },
+  { category: 'dobbel', titelKey: 'landing.sectionDice' },
+];
 
 export interface Landing {
   /** Toon de galerij en wacht tot de speler een spel kiest. */
@@ -39,28 +45,40 @@ export function createLanding(ui: HTMLElement): Landing {
   kop.append(kopTekst, taal);
   overlay.appendChild(kop);
 
-  const raster = el('div', 'kg-landing__raster');
-  overlay.appendChild(raster);
-
   interface TegelRefs {
+    familie: GameFamily;
     titel: HTMLElement;
     desc: HTMLElement;
     spelers: HTMLElement;
   }
   const tegels: TegelRefs[] = [];
+  const sectieKoppen: { titelKey: TranslationKey; el: HTMLElement }[] = [];
 
-  for (const familie of GAME_FAMILIES) {
-    const tegel = el('button', 'kg-tegel kg-klikbaar') as HTMLButtonElement;
-    tegel.type = 'button';
-    tegel.style.setProperty('--accent', familie.accent);
-    const embleem = el('div', 'kg-tegel__embleem', familie.embleem);
-    const tTitel = el('div', 'kg-tegel__titel');
-    const tDesc = el('div', 'kg-tegel__desc');
-    const tSpelers = el('div', 'kg-tegel__spelers');
-    tegel.append(embleem, tTitel, tDesc, tSpelers);
-    tegel.addEventListener('click', () => resolver?.(familie));
-    raster.appendChild(tegel);
-    tegels.push({ titel: tTitel, desc: tDesc, spelers: tSpelers });
+  // Per sectie (kaartspellen, dobbelspellen) een kop + raster; lege secties slaan we over.
+  for (const sectie of SECTIES) {
+    const families = GAME_FAMILIES.filter((f) => f.category === sectie.category);
+    if (families.length === 0) continue;
+
+    const sectieKop = el('h2', 'kg-landing__sectie');
+    overlay.appendChild(sectieKop);
+    sectieKoppen.push({ titelKey: sectie.titelKey, el: sectieKop });
+
+    const raster = el('div', 'kg-landing__raster');
+    overlay.appendChild(raster);
+
+    for (const familie of families) {
+      const tegel = el('button', 'kg-tegel kg-klikbaar') as HTMLButtonElement;
+      tegel.type = 'button';
+      tegel.style.setProperty('--accent', familie.accent);
+      const embleem = el('div', 'kg-tegel__embleem', familie.embleem);
+      const tTitel = el('div', 'kg-tegel__titel');
+      const tDesc = el('div', 'kg-tegel__desc');
+      const tSpelers = el('div', 'kg-tegel__spelers');
+      tegel.append(embleem, tTitel, tDesc, tSpelers);
+      tegel.addEventListener('click', () => resolver?.(familie));
+      raster.appendChild(tegel);
+      tegels.push({ familie, titel: tTitel, desc: tDesc, spelers: tSpelers });
+    }
   }
 
   ui.appendChild(overlay);
@@ -70,13 +88,12 @@ export function createLanding(ui: HTMLElement): Landing {
     sub.textContent = t('landing.subtitle');
     nlKnop.classList.toggle('is-actief', getLang() === 'nl');
     enKnop.classList.toggle('is-actief', getLang() === 'en');
-    GAME_FAMILIES.forEach((familie, i) => {
-      const refs = tegels[i];
-      if (!refs) return;
-      refs.titel.textContent = t(familie.titleKey);
-      refs.desc.textContent = t(familie.descKey);
-      refs.spelers.textContent = t('landing.playersBadge', { players: familie.players });
-    });
+    for (const kop of sectieKoppen) kop.el.textContent = t(kop.titelKey);
+    for (const refs of tegels) {
+      refs.titel.textContent = t(refs.familie.titleKey);
+      refs.desc.textContent = t(refs.familie.descKey);
+      refs.spelers.textContent = t('landing.playersBadge', { players: refs.familie.players });
+    }
   }
 
   teken();
