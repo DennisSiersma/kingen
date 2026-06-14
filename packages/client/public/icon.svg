@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="96" fill="#0a0a0f"/>
-  <rect x="150" y="96" width="212" height="300" rx="22" fill="#fdfdf6" stroke="#c9a227" stroke-width="8"/>
-  <text x="256" y="300" font-size="190" text-anchor="middle" fill="#c0392b" font-family="Georgia, serif" font-weight="bold">K</text>
-  <text x="256" y="452" font-size="44" text-anchor="middle" fill="#c9a227" font-family="Georgia, serif" font-weight="600" letter-spacing="6">KINGEN</text>
+  <rect x="150" y="80" width="212" height="300" rx="22" fill="#11100c" stroke="#c9a227" stroke-width="8"/>
+  <text x="256" y="290" font-size="120" text-anchor="middle" fill="#e8c75a" font-family="Georgia, serif" font-weight="bold" letter-spacing="2">DJS</text>
+  <text x="256" y="452" font-size="50" text-anchor="middle" fill="#c9a227" font-family="Georgia, serif" font-weight="600" letter-spacing="8">GAMES</text>
 </svg>
