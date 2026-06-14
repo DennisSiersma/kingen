@@ -579,10 +579,19 @@ export async function runOnlineGame(
     }
     // Toepen: inzet/status-banner herstellen uit de view-extra's.
     isToepen = view.round.kind === 'toepen';
+    // Een eventuele stale Toep!-knop uit een vorige requestMove-closure opruimen
+    // (de snapshot vervangt de hele weergave; een nieuwe requestMove maakt 'm terug).
+    document.querySelectorAll('.kg-toepknop').forEach((b) => b.remove());
     if (isToepen) {
-      const ex = view.viewExtras as { stake?: number; status?: string[] } | undefined;
+      const ex = view.viewExtras as
+        | { stake?: number; status?: string[]; lastToeper?: number | null; vuileWasClaim?: { claimer: number } | null }
+        | undefined;
       toepInzet = ex?.stake ?? 1;
       toepStatus = ex?.status ? ex.status.slice() : new Array<string>(n).fill('active');
+      // Herstel wie laatst toepte / vuile was claimde, zodat de respons- en
+      // challenge-dialoogtitels na een reconnect de juiste naam tonen.
+      if (typeof ex?.lastToeper === 'number') laatsteToeper = ex.lastToeper;
+      if (ex?.vuileWasClaim) laatsteClaimer = ex.vuileWasClaim.claimer;
       updateToepBanner();
       toepBanner.toon();
     } else {

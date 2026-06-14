@@ -237,4 +237,30 @@ function baseState(n: number, hands: Card[][]): ToepenState {
   check('bluf: hand ongewijzigd (geen ruil)', s.hands[1]!.some((c) => c.id === 'clubs-8'));
 }
 
+// ---------------------------------------------------------------------------
+// F) Uitkomer vouwt mid-slag → gevraagde kleur blijft die van de uitkomer
+//    (regressie: filteren op actief mocht plays[0]/de gevraagde kleur niet
+//     verschuiven, anders won de verkeerde speler de slag).
+// ---------------------------------------------------------------------------
+{
+  const hands = [
+    [k('clubs', 12), k('spades', 9), k('spades', 8), k('spades', 7)], // seat0: hoge klaveren
+    [k('clubs', 7), k('hearts', 13), k('hearts', 12), k('hearts', 11)], // seat1: uitkomer, lage klaveren
+    [k('diamonds', 14), k('hearts', 9), k('hearts', 8), k('hearts', 7)], // seat2: geen klaveren (renonce)
+  ];
+  let s = baseState(3, hands); // leader = 1, turn = 1
+  s = def.applyMove(s, 1, { type: 'playCard', card: k('clubs', 7) }).state as ToepenState; // uitkomer leidt clubs
+  s = def.applyMove(s, 2, { type: 'callToep' }).state as ToepenState; // seat2 toept
+  // Responders [0,1]: seat0 gaat mee, seat1 (de uitkomer!) vouwt.
+  s = def.applyMove(s, 0, { type: 'respondMeegaan' }).state as ToepenState;
+  s = def.applyMove(s, 1, { type: 'respondPas' }).state as ToepenState;
+  check('uitkomer (seat1) is gevouwen', s.status[1] === 'folded');
+  s = def.applyMove(s, 2, { type: 'playCard', card: k('diamonds', 14) }).state as ToepenState; // off-suit afgooi
+  s = def.applyMove(s, 0, { type: 'playCard', card: k('clubs', 12) }).state as ToepenState; // volgt clubs
+  check('slag voltooid', s.completedTricks.length === 1);
+  // Gevraagde kleur = clubs (uitkomer). seat0's clubs-12 wint van de afgegooide
+  // diamonds-aas van seat2 — niet andersom.
+  check('seat0 wint de slag (clubs blijft gevraagde kleur)', s.completedTricks[0]!.winner === 0);
+}
+
 console.log(`OK — ${geslaagd} checks geslaagd (engine)`);

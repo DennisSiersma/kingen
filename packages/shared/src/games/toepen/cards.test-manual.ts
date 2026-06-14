@@ -71,4 +71,22 @@ check(
   ]) === 1,
 );
 
+// --- ledSuit-parameter (uitkomer mid-slag weggefilterd) ---
+// Als de uitkomer (clubs) gevouwen is en uit `plays` is gefilterd, mag de
+// gevraagde kleur niet naar diamonds verschuiven: met expliciete ledSuit 'clubs'
+// wint de clubs-12, niet de afgegooide diamonds-aas.
+check(
+  'ledSuit clubs: clubs wint van afgegooide diamonds-aas',
+  toepTrickWinner([{ seat: 2, card: k('diamonds', 14) }, { seat: 0, card: k('clubs', 12) }], 'clubs') === 0,
+);
+check(
+  'zonder ledSuit zou diamonds (foutief) gelden',
+  toepTrickWinner([{ seat: 2, card: k('diamonds', 14) }, { seat: 0, card: k('clubs', 12) }]) === 2,
+);
+// Volgde niemand de gevraagde kleur (alle volgers gevouwen) → hoogste actieve kaart.
+check(
+  'geen volger van gevraagde kleur → hoogste actieve kaart wint',
+  toepTrickWinner([{ seat: 2, card: k('diamonds', 14) }, { seat: 0, card: k('hearts', 10) }], 'clubs') === 0,
+);
+
 console.log(`OK — ${geslaagd} checks geslaagd (cards)`);

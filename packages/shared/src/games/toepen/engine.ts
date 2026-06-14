@@ -521,9 +521,12 @@ function applyPlayCard(state: ToepenState, seat: Seat, played: Card): GameEvent[
     return events;
   }
 
-  // Slag compleet: winnaar onder de nog-actieve spelers (gevouwen kaarten tellen niet).
+  // Slag compleet: de gevraagde kleur ligt vast bij wie FYSIEK uitkwam (de
+  // ongefilterde eerste kaart), óók als die speler mid-slag vouwde. Gevouwen
+  // spelers kunnen de slag niet winnen, maar veranderen de gevraagde kleur niet.
+  const ledSuit = state.currentTrick.plays[0]!.card.suit;
   const actievePlays = state.currentTrick.plays.filter((p) => isActive(state, p.seat));
-  const winner = toepTrickWinner(actievePlays);
+  const winner = toepTrickWinner(actievePlays, ledSuit);
   state.currentTrick.winner = winner;
   state.trickCounts[winner] = (state.trickCounts[winner] ?? 0) + 1;
   const voltooid = state.currentTrick;

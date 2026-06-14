@@ -7,9 +7,9 @@
  * slag — we injecteren toepRankValue als comparator.
  */
 
-import type { Card, CardId, Rank, Seat } from '../../core/types.ts';
+import type { Card, CardId, Rank, Seat, Suit } from '../../core/types.ts';
 import { SUITS } from '../../core/types.ts';
-import { createDeck, trickWinner } from '../../core/deck.ts';
+import { createDeck } from '../../core/deck.ts';
 
 /**
  * Interne rangwaarde (hoger = sterker), volgens de Toepen-volgorde:
@@ -47,10 +47,25 @@ export function toepDeck(): Card[] {
 }
 
 /**
- * Winnaar van een (complete) slag volgens de Toepen-kaartkracht. Geen troef:
- * de hoogste kaart van de GEVRAAGDE kleur wint. `plays` mag al gefilterd zijn op
- * nog-meedoende stoelen (gevouwen spelers tellen niet mee voor de winst).
+ * Winnaar van een (complete) slag volgens de Toepen-kaartkracht. Geen troef: de
+ * hoogste kaart van de GEVRAAGDE kleur wint.
+ *
+ * `plays` mag al gefilterd zijn op nog-meedoende stoelen (gevouwen spelers
+ * tellen niet mee voor de winst). De gevraagde kleur MOET daarom expliciet
+ * worden meegegeven: hij ligt vast bij wie fysiek uitkwam, óók als die speler
+ * later mid-slag vouwt (anders zou `plays[0]` na filteren een afgegooide kaart
+ * van een andere kleur zijn en de gevraagde kleur verschuiven). Zonder `ledSuit`
+ * valt hij terug op de eerste kaart in `plays` (geldig wanneer er niet gefilterd
+ * is). Randgeval: volgde geen enkele nog-actieve speler de gevraagde kleur (de
+ * enige volgers vouwden), dan wint de hoogste kaart onder de actieve spelers.
  */
-export function toepTrickWinner(plays: readonly { seat: Seat; card: Card }[]): Seat {
-  return trickWinner(plays, null, (card) => toepRankValue(card));
+export function toepTrickWinner(
+  plays: readonly { seat: Seat; card: Card }[],
+  ledSuit?: Suit,
+): Seat {
+  if (plays.length === 0) throw new Error('Lege slag');
+  const led = ledSuit ?? plays[0]!.card.suit;
+  const inKleur = plays.filter((p) => p.card.suit === led);
+  const pool = inKleur.length > 0 ? inKleur : plays;
+  return pool.reduce((best, p) => (toepRankValue(p.card) > toepRankValue(best.card) ? p : best), pool[0]!).seat;
 }
