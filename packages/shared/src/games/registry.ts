@@ -8,6 +8,7 @@
 import { registerGame } from '../core/gameRegistry.ts';
 import { kingenGame } from './kingen/index.ts';
 import { hartenjagenGame, heartsGame } from './hartenjagen/index.ts';
+import { klaverjasAmsterdamsGame, klaverjasGame } from './klaverjassen/index.ts';
 
 let gedaan = false;
 
@@ -17,4 +18,6 @@ export function registerBuiltinGames(): void {
   registerGame(kingenGame);
   registerGame(hartenjagenGame);
   registerGame(heartsGame);
+  registerGame(klaverjasGame);
+  registerGame(klaverjasAmsterdamsGame);
 }
