@@ -1872,3 +1872,15 @@
   padding: 0 0 6px;
 }
 .kg-setup__terug:hover { color: var(--kg-gold-bright, #e8c75a); }
+
+/* Variant-uitleg op de spelpagina */
+.kg-gamepage__variantuitleg {
+  margin: 12px auto 0;
+  max-width: 42ch;
+  min-height: 1.2em;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--kg-muted, #b9ad93);
+  border-top: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  padding-top: 10px;
+}

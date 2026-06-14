@@ -48,7 +48,8 @@ export function createGamePage(ui: HTMLElement): GamePage {
   const variantBlok = el('div', 'kg-gamepage__varianten');
   const variantLabel = el('div', 'kg-gamepage__variantlabel');
   const variantKnoppen = el('div', 'kg-gamepage__variantknoppen');
-  variantBlok.append(variantLabel, variantKnoppen);
+  const variantUitleg = el('div', 'kg-gamepage__variantuitleg');
+  variantBlok.append(variantLabel, variantKnoppen, variantUitleg);
   kaart.appendChild(variantBlok);
 
   // Speelknoppen.
@@ -68,12 +69,16 @@ export function createGamePage(ui: HTMLElement): GamePage {
 
   ui.appendChild(overlay);
 
-  let variantRefs: { knop: HTMLButtonElement; labelKey: import('./i18n.ts').TranslationKey }[] = [];
+  type Sleutel = import('./i18n.ts').TranslationKey;
+  let variantRefs: { knop: HTMLButtonElement; labelKey: Sleutel; descKey: Sleutel }[] = [];
 
+  /** Markeer de gekozen variant en toon de bijbehorende uitleg eronder. */
   function tekenVariantselectie(): void {
     variantRefs.forEach(({ knop }, i) => {
       knop.classList.toggle('is-gekozen', familie?.variants[i]?.gameId === gekozenGameId);
     });
+    const gekozen = familie?.variants.find((v) => v.gameId === gekozenGameId);
+    variantUitleg.textContent = gekozen ? t(gekozen.descKey) : '';
   }
 
   function bouwVarianten(): void {
@@ -91,7 +96,7 @@ export function createGamePage(ui: HTMLElement): GamePage {
         tekenVariantselectie();
       });
       variantKnoppen.appendChild(knop);
-      variantRefs.push({ knop, labelKey: v.labelKey });
+      variantRefs.push({ knop, labelKey: v.labelKey, descKey: v.descKey });
     }
   }
 
@@ -103,12 +108,15 @@ export function createGamePage(ui: HTMLElement): GamePage {
     desc.textContent = t(familie.descKey);
     spelers.textContent = t('landing.playersBadge', { players: familie.players });
     variantLabel.textContent = t('gamePage.variant');
-    variantRefs.forEach(({ knop, labelKey }) => {
+    variantRefs.forEach(({ knop, labelKey, descKey }) => {
       knop.textContent = t(labelKey);
+      knop.title = t(descKey); // tooltip met de variantuitleg
     });
     tekenVariantselectie();
     lokaalKnop.textContent = t('gamePage.playLocal');
+    lokaalKnop.title = t('gamePage.playLocalHint');
     onlineKnop.textContent = t('gamePage.playOnline');
+    onlineKnop.title = t('gamePage.playOnlineHint');
   }
 
   onLangChange(() => teken());

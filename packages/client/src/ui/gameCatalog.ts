@@ -13,6 +13,8 @@ export interface GameVariant {
   gameId: string;
   /** i18n-sleutel voor de variantnaam (bijv. 'Rotterdams'). */
   labelKey: TranslationKey;
+  /** i18n-sleutel met een korte uitleg van deze variant (tooltip + uitlegregel). */
+  descKey: TranslationKey;
 }
 
 export interface GameFamily {
@@ -42,7 +44,7 @@ export const GAME_FAMILIES: GameFamily[] = [
     accent: '#c9a227',
     embleem: '♛',
     localKind: 'kingen',
-    variants: [{ gameId: 'kingen', labelKey: 'game.kingen' }],
+    variants: [{ gameId: 'kingen', labelKey: 'game.kingen', descKey: 'catalog.kingen.desc' }],
   },
   {
     key: 'hartenjagen',
@@ -53,8 +55,8 @@ export const GAME_FAMILIES: GameFamily[] = [
     embleem: '♥',
     localKind: 'generic',
     variants: [
-      { gameId: 'hartenjagen', labelKey: 'catalog.variant.nederlands' },
-      { gameId: 'hearts', labelKey: 'catalog.variant.internationaal' },
+      { gameId: 'hartenjagen', labelKey: 'catalog.variant.nederlands', descKey: 'variant.hartenjagen.nederlands' },
+      { gameId: 'hearts', labelKey: 'catalog.variant.internationaal', descKey: 'variant.hartenjagen.internationaal' },
     ],
   },
   {
@@ -65,9 +67,10 @@ export const GAME_FAMILIES: GameFamily[] = [
     accent: '#2e8b57',
     embleem: '♣',
     localKind: 'generic',
+    // Amsterdams is de standaard (eerste = voorgekozen op de spelpagina).
     variants: [
-      { gameId: 'klaverjassen', labelKey: 'catalog.variant.rotterdams' },
-      { gameId: 'klaverjas-amsterdams', labelKey: 'catalog.variant.amsterdams' },
+      { gameId: 'klaverjas-amsterdams', labelKey: 'catalog.variant.amsterdams', descKey: 'variant.klaverjas.amsterdams' },
+      { gameId: 'klaverjassen', labelKey: 'catalog.variant.rotterdams', descKey: 'variant.klaverjas.rotterdams' },
     ],
   },
 ];
