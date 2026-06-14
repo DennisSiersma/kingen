@@ -105,6 +105,12 @@ export interface TableLayout {
   trickSlot(seat: Seat, seatCount: number): THREE.Vector3;
   /** Plek waar gewonnen slagen van deze stoel worden verzameld. */
   wonPile(seat: Seat, seatCount: number): THREE.Vector3;
+  /** Wereldhoek van een stoel rond de tafel (kijker-stoel = bij de camera, +Z). */
+  seatAngle(seat: Seat, seatCount: number): number;
+  /** Y-hoogte van het tafeloppervlak. */
+  getSurfaceY(): number;
+  /** Straal/halve breedte van het speelvlak. */
+  getRadius(): number;
 }
 
 /**
@@ -143,12 +149,26 @@ export interface CardAnimator {
 }
 
 /**
+ * Context die de SceneManager bij creatie aan een render-plugin geeft, zodat
+ * plugins die eigen 3D-objecten beheren (bijv. Mexen's dobbelstenen/beker)
+ * toegang hebben tot de scene, camera en tafel-layout.
+ */
+export interface RenderPluginContext {
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  layout: TableLayout;
+}
+
+/**
  * Per-spel render-plugin: mag een GameEvent zelf afhandelen (bijv. drawCard/
- * layCard voor afleg-trek-spellen) vóór de standaard slag-render. Geeft `true`
- * terug als het event volledig is afgehandeld (de scene slaat zijn default over).
- * Kingen levert geen plugin → de standaard slag-render draait ongewijzigd.
+ * layCard voor afleg-trek-spellen, of dobbelworpen voor Mexen) vóór de standaard
+ * slag-render. Geeft `true` terug als het event volledig is afgehandeld (de scene
+ * slaat zijn default over). Kingen levert geen plugin → de standaard slag-render
+ * draait ongewijzigd.
  */
 export interface SceneRenderPlugin {
+  /** Eenmalig aangeroepen bij scene-creatie; geeft scene/camera/layout-toegang. */
+  attach?(ctx: RenderPluginContext): void;
   handleEvent(ev: GameEvent, animator: CardAnimator): Promise<boolean>;
 }
 

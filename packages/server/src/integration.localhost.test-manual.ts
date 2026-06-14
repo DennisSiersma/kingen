@@ -58,11 +58,14 @@ async function speelSolo(gameId: string): Promise<{ play: number; end: boolean; 
 }
 
 async function main(): Promise<void> {
-  for (const gameId of ['kingen', 'hartenjagen', 'hearts', 'klaverjassen', 'klaverjas-amsterdams', 'rikken', 'toepen']) {
+  // Dobbelspellen (Mexen) spelen geen kaarten → geen playCard-events; voor die
+  // spellen volstaat dat de partij gameEnd bereikt.
+  const dobbelSpellen = new Set(['mexen']);
+  for (const gameId of ['kingen', 'hartenjagen', 'hearts', 'klaverjassen', 'klaverjas-amsterdams', 'rikken', 'toepen', 'mexen']) {
     const r = await speelSolo(gameId);
     assert.ok(r.end, `${gameId}: partij eindigde niet`);
-    assert.ok(r.play > 0, `${gameId}: geen kaarten gespeeld`);
-    console.log(`    OK  ${gameId}: ${r.play} kaarten, gameEnd bereikt`);
+    if (!dobbelSpellen.has(gameId)) assert.ok(r.play > 0, `${gameId}: geen kaarten gespeeld`);
+    console.log(`    OK  ${gameId}: ${dobbelSpellen.has(gameId) ? 'dobbelpartij' : r.play + ' kaarten'}, gameEnd bereikt`);
   }
   console.log('OK  Lokale host: alle spellen solo (mens + AI-fill) tot het einde gespeeld');
 }

@@ -93,6 +93,16 @@ export const GAME_FAMILIES: GameFamily[] = [
     localKind: 'generic',
     variants: [{ gameId: 'toepen', labelKey: 'catalog.toepen.title', descKey: 'variant.toepen.standaard' }],
   },
+  {
+    key: 'mexen',
+    titleKey: 'catalog.mexen.title',
+    descKey: 'catalog.mexen.desc',
+    players: '4–8',
+    accent: '#3a7ca5',
+    embleem: '🎲',
+    localKind: 'generic',
+    variants: [{ gameId: 'mexen', labelKey: 'catalog.mexen.title', descKey: 'variant.mexen.standaard' }],
+  },
 ];
 
 /** Zoek een familie op key. */

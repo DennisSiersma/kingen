@@ -15,9 +15,13 @@ import { DEFAULT_VARIANT, type KingenRoundKind } from '@shared/games/kingen/type
 import { getTableParams } from '@shared/games/kingen/params.ts';
 import { teamOf } from '@shared/games/klaverjassen/types.ts';
 import { cardPoints } from '@shared/games/klaverjassen/cards.ts';
+import { codeLabel } from '@shared/games/mexen/ranking.ts';
+import type { Roll } from '@shared/games/dice/dice.ts';
 
 import { createSceneManager } from './render/scene.ts';
+import { MexenRenderPlugin } from './render/dice/mexenRenderPlugin.ts';
 import { createHud } from './ui/hud.ts';
+import { createMexenPanel, type MexenMoveJSON } from './ui/mexenPanel.ts';
 import { createScoreboard } from './ui/scoreboard.ts';
 import { createChatPanel } from './ui/chat.ts';
 import { createLobby } from './ui/lobby.ts';
@@ -56,8 +60,10 @@ export async function runOnlineGame(
   const teamPaneel = maakTeamPaneel(ui);
   const rikBanner = maakRikBanner(ui);
   const toepBanner = maakToepBanner(ui);
+  const mexenPaneel = createMexenPanel(ui);
+  const mexenPlugin = new MexenRenderPlugin();
 
-  const scene = await createSceneManager(app, bus, 'cafe');
+  const scene = await createSceneManager(app, bus, 'cafe', mexenPlugin);
   scene.start();
   scene.cardRenderer.setRankLabels(rankLabels());
   onLangChange(() => scene.cardRenderer.setRankLabels(rankLabels()));
@@ -81,6 +87,8 @@ export async function runOnlineGame(
   let replayTimer: ReturnType<typeof setTimeout> | null = null;
   // Laatste doorgeefrichting (Hartenjagen), uit het passRequest-event; voor de doorgeefdialoog.
   let laatstePassRichting = 'left';
+  // Mexen-state: levens per stoel (HUD-score) en of dit een Mexen-tafel is.
+  let isMexen = false;
   // Klaverjas-state voor het live team-paneel (Wij/Zij kaartpunten + roem deze boom).
   let isKlaverjas = false;
   let kjTrump: Suit | null = null;
@@ -134,6 +142,7 @@ export async function runOnlineGame(
         // Kingen heeft een vast aantal rondes; andere spellen (Hartenjagen) zijn open einde.
         totalRondes = ev.gameId.startsWith('kingen') ? getTableParams(DEFAULT_VARIANT).totalRounds : 0;
         isKlaverjas = ev.gameId.startsWith('klaverjas');
+        isMexen = ev.gameId.startsWith('mexen');
         if (isKlaverjas) teamPaneel.toon();
         else teamPaneel.verberg();
         isRikken = ev.gameId.startsWith('rikken');
@@ -215,8 +224,16 @@ export async function runOnlineGame(
           { soort: ev.winner === mySeat ? 'succes' : 'info', duurMs: 1500 },
         );
         break;
+      case 'scoreUpdate':
+        // Mexen: totals = resterende levens; toon ze direct in de spelerschips.
+        if (isMexen) {
+          const lives = new Array<number>(n).fill(0);
+          for (let i = 0; i < n; i++) lives[i] = ev.totals[i] ?? 0;
+          hud.setScores(lives);
+        }
+        break;
       case 'roundEnd': {
-        if (!sheet) break;
+        if (!sheet || isMexen) break; // Mexen telt levens via scoreUpdate, niet de scoresheet
         const scores = new Array<number>(n).fill(0);
         // Klaverjas scoort per TEAM (scores gekeyd 0/1); map naar de stoelen van
         // dat team (partners krijgen dezelfde rondescore). Andere spellen per stoel.
@@ -227,6 +244,47 @@ export async function runOnlineGame(
         break;
       }
       case 'custom':
+        // Mexen-events: beurt, aankondiging, onthulling, levensverlies.
+        if (isMexen) {
+          const d = ev.data as Record<string, unknown>;
+          if (ev.subtype === 'turn') {
+            hud.setTurn(Number(d['seat']) as Seat);
+          } else if (ev.subtype === 'announced') {
+            const seat = Number(d['seat']);
+            const value = codeLabel(Number(d['value']));
+            const unseen = d['unseen'] === true;
+            void notifications.toon(
+              t(unseen ? 'toast.mexenAnnouncedUnseen' : 'toast.mexenAnnounced', { name: naamVan(seat), value }),
+              { soort: seat === mySeat ? 'succes' : 'info', duurMs: 1800 },
+            );
+          } else if (ev.subtype === 'revealed') {
+            const announcer = Number(d['announcer']);
+            const truthful = d['truthful'] === true;
+            void notifications.toon(
+              t(truthful ? 'toast.mexenRevealedTrue' : 'toast.mexenRevealedLie', {
+                name: naamVan(announcer),
+                code: codeLabel(Number(d['code'])),
+              }),
+              { soort: truthful ? 'info' : 'waarschuwing', duurMs: 2600 },
+            );
+          } else if (ev.subtype === 'lifeLost') {
+            const seat = Number(d['seat']);
+            void notifications.toon(
+              t('toast.mexenLifeLost', {
+                name: naamVan(seat),
+                amount: Number(d['amount']),
+                left: Number(d['livesLeft']),
+              }),
+              { soort: seat === mySeat ? 'waarschuwing' : 'info', duurMs: 2400 },
+            );
+          } else if (ev.subtype === 'playerEliminated') {
+            void notifications.toon(t('toast.mexenEliminated', { name: naamVan(Number(d['seat'])) }), {
+              soort: 'waarschuwing',
+              duurMs: 3000,
+            });
+          }
+          break;
+        }
         // Spel-specifieke events (o.a. Hartenjagen: doorgeven, harten gebroken, maan).
         if (ev.subtype === 'passRequest') {
           const d = ev.data as { direction?: string };
@@ -431,6 +489,7 @@ export async function runOnlineGame(
               teamPaneel.verberg();
               rikBanner.verberg();
               toepBanner.verberg();
+              mexenPaneel.verberg();
               if (huidigeRoom) lobby.toonWachtkamer(huidigeRoom, mySeat);
             }, 5000);
           });
@@ -509,6 +568,7 @@ export async function runOnlineGame(
     teamPaneel.verberg();
     rikBanner.verberg();
     toepBanner.verberg();
+    mexenPaneel.verberg();
     lobby.toonBrowser();
   });
 
@@ -638,6 +698,23 @@ export async function runOnlineGame(
     // Wacht tot de animaties bij zijn, zodat de keuze-UI synchroon loopt.
     await scene.waitForIdle();
     if (msg.seat !== mySeat) return;
+
+    // --- Mexen: dobbel-acties via het eigen actiepaneel ---
+    if (isMexen) {
+      const legal = (msg.legalMoves ?? []) as MexenMoveJSON[];
+      const extras = (msg.viewExtras ?? {}) as { myRoll?: [number, number] | null };
+      const myRoll = extras.myRoll ?? null;
+      // Tijdens het aankondigen tilt de beker op zodat ALLEEN jij je worp ziet.
+      if (myRoll && legal.some((m) => m.type === 'announce')) {
+        mexenPlugin.scene?.showOwnRoll(mySeat, myRoll as Roll);
+      }
+      const move = await mexenPaneel.vraag(legal, myRoll);
+      // Beker weer laten zakken vóór het aankondigen/doorschuiven (dan reist hij door).
+      if (move.type === 'announce' || move.type === 'passUnseen') mexenPlugin.scene?.hideRoll();
+      transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move });
+      return;
+    }
+
     const legalMoves = (msg.legalMoves ?? []) as KingenMoveJSON[];
     const stuur = (move: KingenMoveJSON): void => {
       transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move });

@@ -124,6 +124,7 @@ export function createTableLayout(tableSurfaceY: number, tableRadius: number): K
       viewer = seat;
     },
     getSurfaceY: () => opp,
+    getRadius: () => straal,
     seatAngle,
 
     handAnchor(seat: Seat, seatCount: number): { position: THREE.Vector3; rotationY: number } {

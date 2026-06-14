@@ -18,6 +18,8 @@ import type { PlayerConfig, PublicGameView, Seat } from '../core/types.ts';
 export interface MoveRequestPayload {
   moveType: string;
   legalMoves: unknown[];
+  /** Eigen (geheime) view-extra's, bijv. Mexen's verborgen worp. Optioneel. */
+  viewExtras?: unknown;
 }
 
 export interface RemotePlayerOpts {
@@ -60,11 +62,11 @@ export class RemotePlayerController implements PlayerController {
    * Spel-onafhankelijke zetkeuze: vraag de client om een zet en wacht op het
    * antwoord. Bij time-out (speler weg) speelt de host de eerste legale zet.
    */
-  chooseMove(_view: PublicGameView, legalMoves: readonly unknown[]): Promise<unknown> {
+  chooseMove(view: PublicGameView, legalMoves: readonly unknown[]): Promise<unknown> {
     const moves = [...legalMoves];
     this.pendingLegal = moves;
     const moveType = (moves[0] as { type?: string } | undefined)?.type ?? 'move';
-    this.vraag({ moveType, legalMoves: moves });
+    this.vraag({ moveType, legalMoves: moves, viewExtras: view.viewExtras });
     const fallback = moves[0]; // eerste legale zet = veilige standaard
     return new Promise<unknown>((resolve) => {
       const timer =
