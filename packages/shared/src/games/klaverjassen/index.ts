@@ -10,6 +10,7 @@
 
 import type { GameEntry } from '../../core/gameRegistry.ts';
 import { createKlaverjasDefinition } from './engine.ts';
+import { KlaverjasAi } from './ai.ts';
 import { KLAVERJAS_AMSTERDAMS, KLAVERJAS_ROTTERDAMS } from './types.ts';
 import type { KlaverjasMove, KlaverjasState, KlaverjasVariantConfig } from './types.ts';
 
@@ -23,6 +24,8 @@ export const klaverjasGame: Entry = {
   maxPlayers: 4,
   configForPlayers: () => ({ ...KLAVERJAS_ROTTERDAMS, playerCount: 4 }),
   createDefinition: () => createKlaverjasDefinition(),
+  createAiController: (seat, config, player, thinkDelayMs) =>
+    new KlaverjasAi(seat, player, config, thinkDelayMs),
 };
 
 /** Amsterdams (selecteerbaar). */
@@ -33,4 +36,6 @@ export const klaverjasAmsterdamsGame: Entry = {
   maxPlayers: 4,
   configForPlayers: () => ({ ...KLAVERJAS_AMSTERDAMS, playerCount: 4 }),
   createDefinition: () => createKlaverjasDefinition(),
+  createAiController: (seat, config, player, thinkDelayMs) =>
+    new KlaverjasAi(seat, player, config, thinkDelayMs),
 };
