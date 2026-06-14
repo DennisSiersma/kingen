@@ -25,8 +25,21 @@ const aiDelay: [number, number] | undefined = process.env.KINGEN_AI_FAST ? [0, 0
 const moveTimeoutMs = Number(process.env.MOVE_TIMEOUT_MS ?? 60000);
 const maxRooms = Number(process.env.MAX_ROOMS ?? 4);
 
-const serveStatic =
-  existsSync(PUBLIC_DIR) ? sirv(PUBLIC_DIR, { single: true, gzip: true, brotli: true }) : null;
+const serveStatic = existsSync(PUBLIC_DIR)
+  ? sirv(PUBLIC_DIR, {
+      single: true,
+      gzip: true,
+      brotli: true,
+      // Alleen de content-gehashte Vite-assets lang + immutable cachen; index.html
+      // en overige bestanden houden de sirv-default (geen lange cache) zodat een
+      // nieuwe deploy meteen zichtbaar is.
+      setHeaders(res, pathname) {
+        if (pathname.startsWith('/assets/')) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      },
+    })
+  : null;
 
 // STATS_FILE (op een Docker-volume) maakt de cijfers persistent over herstarts.
 const stats = new Stats(process.env.STATS_FILE);

@@ -10,7 +10,9 @@ export default defineConfig({
     },
   },
   build: {
-    target: 'es2022',
+    // es2020 dekt oudere iOS-Safari (geen top-level-await/class-static-block-syntax
+    // die <15.4 laat struikelen); dynamische import() blijft ondersteund.
+    target: 'es2020',
     sourcemap: true,
   },
   server: {

@@ -24,7 +24,7 @@ import type { KingenRoundKind } from '@shared/games/kingen/types.ts';
 
 import { getStrategyForDifficulty } from '@shared/ai/strategies.ts';
 
-import { createSceneManager, type KingenSceneManager } from './render/scene.ts';
+import type { KingenSceneManager } from './render/scene.ts';
 import type { KingenCardAnimator } from './render/animations.ts';
 
 import { createSetupScreen } from './ui/setup.ts';
@@ -35,6 +35,7 @@ import { onLangChange, rankLabels, roundKindName, suitName, t } from './ui/i18n.
 import { createScoreboard } from './ui/scoreboard.ts';
 import { createChoiceDialogs, createNotifications } from './ui/notifications.ts';
 import { installRotatePrompt } from './ui/rotatePrompt.ts';
+import { installWebglNotice } from './ui/webglNotice.ts';
 import type { ChoiceDialogs, Hud, Notifications, Scoreboard, SetupConfig } from './ui/types.ts';
 import { onEnvironmentChange, onUiEvent } from './ui/uiBus.ts';
 
@@ -375,6 +376,8 @@ async function main(): Promise<void> {
 
   // Landscape-first draai-prompt (mobiel/portret tijdens een 3D-partij).
   installRotatePrompt(ui, app);
+  // WebGL-contextverlies-overlay (iOS dumpt de GL-context bij geheugendruk).
+  installWebglNotice(ui);
 
   // Online-modus (Fase 1, verticale plak): ?online → speel via de server.
   if (new URLSearchParams(location.search).has('online')) {
@@ -428,6 +431,14 @@ async function main(): Promise<void> {
 
       // Scene pas na de eerste setup bouwen (omgeving is dan bekend).
       if (!scene) {
+        // three.js + render-laag lazy laden zodat de galerij ze niet meetrekt (F6).
+        let createSceneManager: typeof import('./render/scene.ts')['createSceneManager'];
+        try {
+          ({ createSceneManager } = await import('./render/scene.ts'));
+        } catch {
+          await notifications.toon(t('app.loadError'), { soort: 'waarschuwing', duurMs: 8000 });
+          return;
+        }
         scene = await createSceneManager(app!, bus, setup.omgeving);
         scene.start();
       } else {

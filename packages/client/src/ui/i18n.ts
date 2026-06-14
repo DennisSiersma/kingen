@@ -34,6 +34,12 @@ const nl = {
   'rotate.title': 'Draai je toestel',
   'rotate.body': 'De speeltafel komt het best tot zijn recht in liggende stand. Draai je telefoon een kwartslag om te spelen.',
 
+  // WebGL-contextverlies (iOS-geheugendruk) + chunk-laadfout
+  'webgl.lostTitle': 'Weergave onderbroken',
+  'webgl.lostBody': 'De 3D-weergave verloor de grafische context (vaak door geheugendruk op de telefoon). Herlaad de pagina om verder te spelen.',
+  'webgl.reload': 'Herlaad de pagina',
+  'app.loadError': 'Een onderdeel kon niet geladen worden. Controleer je verbinding en herlaad de pagina.',
+
   // Kleuren
   'suit.hearts': 'Harten',
   'suit.diamonds': 'Ruiten',
@@ -464,6 +470,12 @@ const en: Record<TranslationKey, string> = {
   // Rotate prompt (mobile, portrait) — the 3D table plays best in landscape.
   'rotate.title': 'Rotate your device',
   'rotate.body': 'The table looks its best in landscape. Turn your phone a quarter turn to play.',
+
+  // WebGL context loss (iOS memory pressure) + chunk load error
+  'webgl.lostTitle': 'Display interrupted',
+  'webgl.lostBody': 'The 3D view lost its graphics context (often due to memory pressure on the phone). Reload the page to keep playing.',
+  'webgl.reload': 'Reload the page',
+  'app.loadError': 'A component failed to load. Check your connection and reload the page.',
 
   // Suits
   'suit.hearts': 'Hearts',

@@ -2113,3 +2113,37 @@
 @media (orientation: portrait) and (pointer: coarse) {
   body.kg-in-game .kg-draai { display: flex; }
 }
+
+/* ----------------------------------------------------------------------------
+   WebGL-contextverlies-overlay (iOS dumpt de GL-context bij geheugendruk).
+   Scene.ts seint via window-events; ui/webglNotice.ts toont/verbergt dit.
+---------------------------------------------------------------------------- */
+.kg-webgl-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: calc(24px + env(safe-area-inset-top)) 28px calc(24px + env(safe-area-inset-bottom));
+  text-align: center;
+  background: var(--kg-bg-deep, #0a0a0f);
+  pointer-events: auto;
+}
+.kg-webgl-notice[hidden] { display: none; }
+.kg-webgl-notice__titel {
+  margin: 0;
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 1.5rem;
+  color: var(--kg-gold-bright, #e8c75a);
+}
+.kg-webgl-notice__tekst {
+  margin: 0;
+  max-width: 24rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--kg-text, #efe7d6);
+}
+.kg-webgl-notice__knop { margin-top: 4px; }

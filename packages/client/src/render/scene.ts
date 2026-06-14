@@ -281,6 +281,23 @@ export async function createSceneManager(
   renderer.domElement.addEventListener('pointerup', opPointerUp);
   renderer.domElement.addEventListener('pointercancel', opPointerCancel);
 
+  // --- WebGL context-loss robuustheid ---
+  // iOS Safari dumpt de GL-context bij geheugendruk/tab-wissel. Zonder afhandeling
+  // blijft het canvas permanent zwart. We pauzeren de render-loop en seinen de
+  // UI-laag (via een window-event) om een 'herlaad'-overlay te tonen; bij herstel
+  // herstarten we de loop (Three.js her-uploadt zijn resources bij de volgende render).
+  const opContextLost = (e: Event): void => {
+    e.preventDefault(); // sta een latere restore toe i.p.v. de context te laten dumpen
+    renderer.setAnimationLoop(null);
+    window.dispatchEvent(new CustomEvent('kg-webgl-context-lost'));
+  };
+  const opContextRestored = (): void => {
+    renderer.setAnimationLoop(tik);
+    window.dispatchEvent(new CustomEvent('kg-webgl-context-restored'));
+  };
+  renderer.domElement.addEventListener('webglcontextlost', opContextLost);
+  renderer.domElement.addEventListener('webglcontextrestored', opContextRestored);
+
   // --- dimmen van niet-speelbare kaarten (klonen, nooit gedeelde mats muteren) ---
   const dimOrigineel = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
 
@@ -499,6 +516,8 @@ export async function createSceneManager(
       renderer.domElement.removeEventListener('pointerdown', opPointerDown);
       renderer.domElement.removeEventListener('pointerup', opPointerUp);
       renderer.domElement.removeEventListener('pointercancel', opPointerCancel);
+      renderer.domElement.removeEventListener('webglcontextlost', opContextLost);
+      renderer.domElement.removeEventListener('webglcontextrestored', opContextRestored);
       herstelAlleDim();
       animator.cancelAll();
       animator.clearTable();
