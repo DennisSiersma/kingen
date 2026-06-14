@@ -132,7 +132,10 @@
   flex-direction: column;
   gap: 5px;
   max-height: 28vh;
+  max-height: 28svh;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .kg-lobby-tafel {
   display: flex;
@@ -193,8 +196,8 @@
 /* Online-chatpaneel (rechtsonder, inklapbaar). */
 .kg-chat {
   position: fixed;
-  right: 12px;
-  bottom: 34px;
+  right: calc(12px + env(safe-area-inset-right));
+  bottom: calc(34px + env(safe-area-inset-bottom));
   z-index: 65;
   width: min(300px, 80vw);
   display: flex;
@@ -246,7 +249,10 @@
   gap: 5px;
   height: 220px;
   max-height: 38vh;
+  max-height: 38svh;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 10px 12px;
 }
 .kg-chat__bericht {
@@ -293,8 +299,8 @@
 /* Subtiele ontwerper-signatuur, altijd rechtsonder (setup én spel). */
 #kg-credit {
   position: fixed;
-  right: 12px;
-  bottom: 9px;
+  right: calc(12px + env(safe-area-inset-right));
+  bottom: calc(9px + env(safe-area-inset-bottom));
   z-index: 60;
   pointer-events: none;
   user-select: none;
@@ -362,6 +368,16 @@
   font: inherit;
 }
 
+/* iOS Safari zoomt automatisch in bij focus van een veld met font-size < 16px
+   en herstelt daarna niet. Op touch-toestellen dwingen we daarom min. 16px af
+   (specificiteit #ui input wint van de .kg-*-klassen); desktop (pointer: fine)
+   blijft volledig ongewijzigd. */
+@media (pointer: coarse) {
+  #ui input,
+  #ui select,
+  #ui textarea { font-size: 16px; }
+}
+
 /* ---------------------------------------------------------------------------
  * Gedeelde bouwstenen
  * ------------------------------------------------------------------------ */
@@ -417,7 +433,7 @@
   transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
 }
 
-.kg-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+@media (hover: hover) { .kg-btn:hover { filter: brightness(1.08); transform: translateY(-1px); } }
 .kg-btn:active { transform: translateY(0); filter: brightness(0.95); }
 
 .kg-btn:disabled {
@@ -493,6 +509,7 @@
 .kg-setup {
   width: min(1060px, 96vw);
   max-height: 94vh;
+  max-height: 94dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -768,7 +785,7 @@
   transition: all 140ms ease;
 }
 
-.kg-omgeving:hover { border-color: var(--kg-gold); transform: translateY(-2px); }
+@media (hover: hover) { .kg-omgeving:hover { border-color: var(--kg-gold); transform: translateY(-2px); } }
 
 .kg-omgeving.is-actief {
   border-color: var(--kg-gold-bright);
@@ -810,8 +827,8 @@
 
 .kg-hud__ronde {
   position: absolute;
-  top: 14px;
-  left: 14px;
+  top: calc(14px + env(safe-area-inset-top));
+  left: calc(14px + env(safe-area-inset-left));
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1072,8 +1089,8 @@
 /* HUD-knoppen rechtsboven */
 .kg-hud__knoppen {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: calc(14px + env(safe-area-inset-top));
+  right: calc(14px + env(safe-area-inset-right));
   display: flex;
   gap: 8px;
   pointer-events: auto;
@@ -1099,13 +1116,14 @@
 .kg-hud__claim {
   position: absolute;
   bottom: 30vh;
+  bottom: 30dvh;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(16, 13, 10, 0.88);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 
-.kg-hud__claim:hover { transform: translateX(-50%) translateY(-1px); }
+@media (hover: hover) { .kg-hud__claim:hover { transform: translateX(-50%) translateY(-1px); } }
 .kg-hud__claim:active { transform: translateX(-50%); }
 
 /* Instellingenmenu */
@@ -1311,7 +1329,7 @@
 }
 .kg-doorgeefkaart.kg-suit-rood { color: #b3122a; }
 .kg-doorgeefkaart.kg-suit-zwart { color: #1c1c1c; }
-.kg-doorgeefkaart:hover { transform: translateY(-2px); }
+@media (hover: hover) { .kg-doorgeefkaart:hover { transform: translateY(-2px); } }
 .kg-doorgeefkaart.is-gekozen {
   border-color: var(--kg-gold-bright, #e8c75a);
   box-shadow: 0 0 0 2px rgba(232, 199, 90, 0.5), 0 4px 10px rgba(0, 0, 0, 0.35);
@@ -1593,9 +1611,28 @@
 @media (max-width: 560px) {
   .kg-omgevingen { grid-template-columns: 1fr; }
   .kg-stoel { grid-template-columns: 22px minmax(0, 1fr) auto; }
-  .kg-stoel select { grid-column: 2 / -1; }
-  .kg-hud__ronde { left: 8px; top: 8px; padding: 7px 10px; gap: 8px; }
-  .kg-hud__knoppen { right: 8px; top: 8px; }
+  .kg-stoel select { grid-column: 2 / -1; min-width: 0; }
+  /* Variant-/regelrijen op smal scherm verticaal stapelen i.p.v. de select te klemmen. */
+  .kg-variant-rij { grid-template-columns: 1fr; }
+  .kg-variant-rij select { min-width: 0; width: 100%; }
+  .kg-hud__ronde {
+    left: calc(8px + env(safe-area-inset-left));
+    top: calc(8px + env(safe-area-inset-top));
+    padding: 7px 10px;
+    gap: 8px;
+  }
+  .kg-hud__knoppen {
+    right: calc(8px + env(safe-area-inset-right));
+    top: calc(8px + env(safe-area-inset-top));
+  }
+}
+
+/* Touch-toestellen: tap-targets naar de Apple-HIG-minimummaat (~44px), in elke
+   oriëntatie (dus niet aan max-width gekoppeld). Desktop (pointer: fine) ongemoeid. */
+@media (pointer: coarse) {
+  .kg-hud__info { width: 34px; height: 34px; }
+  .kg-hud__knop { min-height: 44px; }
+  .kg-scorebord__sluit { width: 44px; height: 44px; }
 }
 
 /* ----------------------------------------------------------------------------
@@ -1603,7 +1640,7 @@
 ---------------------------------------------------------------------------- */
 .kg-teampaneel {
   position: fixed;
-  left: 14px;
+  left: calc(14px + env(safe-area-inset-left));
   top: 50%;
   transform: translateY(-50%);
   z-index: 30;
@@ -1677,7 +1714,11 @@
   flex-direction: column;
   gap: 22px;
   padding: clamp(20px, 5vh, 64px) clamp(16px, 5vw, 80px);
+  padding-left: max(clamp(16px, 5vw, 80px), env(safe-area-inset-left));
+  padding-right: max(clamp(16px, 5vw, 80px), env(safe-area-inset-right));
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background:
     radial-gradient(120% 80% at 50% -10%, rgba(201, 162, 39, 0.10), transparent 60%),
     linear-gradient(180deg, #0c0a08, #141019 70%, #0a0a0f);
@@ -1735,10 +1776,12 @@
   cursor: pointer;
   transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
 }
-.kg-tegel:hover {
-  transform: translateY(-4px);
-  border-color: var(--accent);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+@media (hover: hover) {
+  .kg-tegel:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
 }
 .kg-tegel__embleem {
   font-size: 2.6rem;
@@ -1904,7 +1947,10 @@
   gap: 8px;
   margin-top: 6px;
   max-height: 56vh;
+  max-height: 56svh;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .kg-optieknop {
   text-align: left;
@@ -1929,7 +1975,7 @@
 
 .kg-rikbanner {
   position: fixed;
-  left: 14px;
+  left: calc(14px + env(safe-area-inset-left));
   top: 50%;
   transform: translateY(-50%);
   z-index: 30;
@@ -1955,7 +2001,7 @@
 /* Toepen: inzet-/status-banner (links) + grote toep-knop (rechtsonder). */
 .kg-toepbanner {
   position: fixed;
-  left: 14px;
+  left: calc(14px + env(safe-area-inset-left));
   top: 50%;
   transform: translateY(-50%);
   z-index: 30;
@@ -2002,8 +2048,8 @@
 
 .kg-toepknop {
   position: fixed;
-  right: 22px;
-  bottom: 120px;
+  right: calc(22px + env(safe-area-inset-right));
+  bottom: calc(120px + env(safe-area-inset-bottom));
   z-index: 40;
   padding: 12px 22px;
   border-radius: 14px;
@@ -2021,4 +2067,49 @@
 @keyframes kg-toep-puls {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.06); }
+}
+
+/* ----------------------------------------------------------------------------
+   Landscape-first draai-prompt (mobiel/portret tijdens een 3D-partij)
+   Getoond door CSS o.b.v. oriëntatie + touch-pointer; main.ts schakelt alleen
+   de body-klasse `kg-in-game` (= er staat een 3D-canvas in #app). Op desktop
+   (pointer: fine) of in landscape blijft de overlay verborgen → geen regressie.
+---------------------------------------------------------------------------- */
+.kg-draai {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: calc(24px + env(safe-area-inset-top)) 28px calc(24px + env(safe-area-inset-bottom));
+  text-align: center;
+  background: var(--kg-bg-deep, #0a0a0f);
+  pointer-events: auto;
+}
+.kg-draai__icoon {
+  font-size: 3.4rem;
+  animation: kg-draai-wiebel 2.4s ease-in-out infinite;
+}
+.kg-draai__titel {
+  margin: 0;
+  font-family: var(--kg-serif, Georgia, serif);
+  font-size: 1.5rem;
+  color: var(--kg-gold-bright, #e8c75a);
+}
+.kg-draai__tekst {
+  margin: 0;
+  max-width: 22rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--kg-text, #efe7d6);
+}
+@keyframes kg-draai-wiebel {
+  0%, 55%, 100% { transform: rotate(0deg); }
+  70%, 85% { transform: rotate(-90deg); }
+}
+@media (orientation: portrait) and (pointer: coarse) {
+  body.kg-in-game .kg-draai { display: flex; }
 }

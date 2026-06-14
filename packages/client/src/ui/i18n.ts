@@ -30,6 +30,10 @@ const nl = {
   'app.roomName': 'Tafel van {name}',
   'app.seat': 'Stoel {num}',
 
+  // Draai-prompt (mobiel, portret) — de 3D-tafel speelt het best in landscape.
+  'rotate.title': 'Draai je toestel',
+  'rotate.body': 'De speeltafel komt het best tot zijn recht in liggende stand. Draai je telefoon een kwartslag om te spelen.',
+
   // Kleuren
   'suit.hearts': 'Harten',
   'suit.diamonds': 'Ruiten',
@@ -438,6 +442,10 @@ const en: Record<TranslationKey, string> = {
   'app.startError': 'Something went wrong while starting: {message}',
   'app.roomName': "{name}'s table",
   'app.seat': 'Seat {num}',
+
+  // Rotate prompt (mobile, portrait) — the 3D table plays best in landscape.
+  'rotate.title': 'Rotate your device',
+  'rotate.body': 'The table looks its best in landscape. Turn your phone a quarter turn to play.',
 
   // Suits
   'suit.hearts': 'Hearts',

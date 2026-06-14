@@ -209,6 +209,7 @@ export async function createSceneManager(
   let hoverId: string | null = null;
   let drukX = 0;
   let drukY = 0;
+  let drukTouch = false;
 
   const vindKaartMesh = (obj: THREE.Object3D | null): THREE.Mesh | null => {
     let huidig = obj;
@@ -251,20 +252,34 @@ export async function createSceneManager(
   const opPointerDown = (e: PointerEvent): void => {
     drukX = e.clientX;
     drukY = e.clientY;
+    drukTouch = e.pointerType === 'touch';
   };
 
   const opPointerUp = (e: PointerEvent): void => {
-    // Alleen een echte klik (geen sleep) telt.
-    if (Math.hypot(e.clientX - drukX, e.clientY - drukY) > 7) return;
+    // Alleen een echte klik (geen sleep) telt. Een vinger jittert meer dan een
+    // muis tussen down en up, dus op touch een ruimere drempel (16px i.p.v. 7px)
+    // zodat een bedoelde tap niet stilzwijgend als sleep sneuvelt.
+    const drempel = drukTouch || e.pointerType === 'touch' ? 16 : 7;
+    if (Math.hypot(e.clientX - drukX, e.clientY - drukY) > drempel) return;
     const id = raycastHand(e.clientX, e.clientY);
     if (id !== null && speelbaar.has(id)) {
       for (const handler of [...klikHandlers]) handler(id);
     }
   };
 
+  const opPointerCancel = (): void => {
+    // iOS kan een pointer-gesture annuleren (systeem-swipe, multi-touch); reset
+    // de interactie-state zodat een volgende tap weer schoon begint.
+    drukX = 0;
+    drukY = 0;
+    drukTouch = false;
+    hoverId = null;
+  };
+
   renderer.domElement.addEventListener('pointermove', opPointerMove);
   renderer.domElement.addEventListener('pointerdown', opPointerDown);
   renderer.domElement.addEventListener('pointerup', opPointerUp);
+  renderer.domElement.addEventListener('pointercancel', opPointerCancel);
 
   // --- dimmen van niet-speelbare kaarten (klonen, nooit gedeelde mats muteren) ---
   const dimOrigineel = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
@@ -483,6 +498,7 @@ export async function createSceneManager(
       renderer.domElement.removeEventListener('pointermove', opPointerMove);
       renderer.domElement.removeEventListener('pointerdown', opPointerDown);
       renderer.domElement.removeEventListener('pointerup', opPointerUp);
+      renderer.domElement.removeEventListener('pointercancel', opPointerCancel);
       herstelAlleDim();
       animator.cancelAll();
       animator.clearTable();

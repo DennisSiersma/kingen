@@ -34,6 +34,7 @@ import { createGamePage } from './ui/gamePage.ts';
 import { onLangChange, rankLabels, roundKindName, suitName, t } from './ui/i18n.ts';
 import { createScoreboard } from './ui/scoreboard.ts';
 import { createChoiceDialogs, createNotifications } from './ui/notifications.ts';
+import { installRotatePrompt } from './ui/rotatePrompt.ts';
 import type { ChoiceDialogs, Hud, Notifications, Scoreboard, SetupConfig } from './ui/types.ts';
 import { onEnvironmentChange, onUiEvent } from './ui/uiBus.ts';
 
@@ -371,6 +372,9 @@ async function main(): Promise<void> {
   const app = document.querySelector<HTMLDivElement>('#app');
   const ui = document.querySelector<HTMLDivElement>('#ui');
   if (!app || !ui) throw new Error('#app of #ui ontbreekt in index.html');
+
+  // Landscape-first draai-prompt (mobiel/portret tijdens een 3D-partij).
+  installRotatePrompt(ui, app);
 
   // Online-modus (Fase 1, verticale plak): ?online → speel via de server.
   if (new URLSearchParams(location.search).has('online')) {

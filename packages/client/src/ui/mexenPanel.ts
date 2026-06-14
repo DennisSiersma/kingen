@@ -38,7 +38,7 @@ export interface MexenPanel {
 export function createMexenPanel(root: HTMLElement): MexenPanel {
   const wrap = el('div', 'kg-mexen-paneel');
   wrap.style.cssText = [
-    'position:absolute', 'left:50%', 'bottom:12px', 'transform:translateX(-50%)',
+    'position:absolute', 'left:50%', 'bottom:calc(12px + env(safe-area-inset-bottom))', 'transform:translateX(-50%)',
     'display:none', 'flex-direction:column', 'gap:8px', 'align-items:center',
     'padding:10px 14px', 'border-radius:14px', 'pointer-events:auto', 'z-index:30',
     'background:rgba(20,24,28,0.82)', 'backdrop-filter:blur(6px)',
