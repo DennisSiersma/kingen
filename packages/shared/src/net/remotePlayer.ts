@@ -1,17 +1,18 @@
 /**
- * @kingen/server — remotePlayer.ts
- * PlayerController voor een menselijke speler op afstand: in plaats van lokaal
- * te beslissen, vraagt hij de verbonden client om een zet (requestMove) en
- * wacht op het bijbehorende moveRequest-antwoord. Zo draait de autoritatieve
- * TurnManager op de server, maar bepaalt de mens zijn eigen zetten.
+ * @kingen/shared — net/remotePlayer.ts
+ * PlayerController voor een speler buiten de engine: in plaats van lokaal te
+ * beslissen, vraagt hij om een zet (requestMove) en wacht op het antwoord. Zo
+ * draait de autoritatieve TurnManager (op de server óf in-browser) terwijl de
+ * mens zijn eigen zetten bepaalt. Gedeeld door de server-room en de in-browser
+ * LocalHostTransport.
  *
  * Reageert de speler niet binnen de zet-time-out (weg/verbinding kwijt), dan
- * speelt de server een veilige legale zet namens hem, zodat de tafel niet
+ * speelt de host een veilige legale zet namens hem, zodat de tafel niet
  * vastloopt. Komt hij terug, dan speelt hij gewoon zijn volgende beurt zelf.
  */
 
-import type { PlayerController } from '@kingen/shared/core/player.ts';
-import type { PlayerConfig, PublicGameView, Seat } from '@kingen/shared/core/types.ts';
+import type { PlayerController } from '../core/player.ts';
+import type { PlayerConfig, PublicGameView, Seat } from '../core/types.ts';
 
 /** Spel-agnostisch zet-verzoek voor de client: hint + de legale zetten zelf. */
 export interface MoveRequestPayload {
@@ -22,7 +23,7 @@ export interface MoveRequestPayload {
 export interface RemotePlayerOpts {
   /** Time-out in ms; 0/undefined = geen automatische overname. */
   timeoutMs?: number;
-  /** Aangeroepen wanneer de server een zet namens deze stoel speelt. */
+  /** Aangeroepen wanneer de host een zet namens deze stoel speelt. */
   onTimeout?: (seat: Seat) => void;
 }
 
@@ -57,7 +58,7 @@ export class RemotePlayerController implements PlayerController {
 
   /**
    * Spel-onafhankelijke zetkeuze: vraag de client om een zet en wacht op het
-   * antwoord. Bij time-out (speler weg) speelt de server de eerste legale zet.
+   * antwoord. Bij time-out (speler weg) speelt de host de eerste legale zet.
    */
   chooseMove(_view: PublicGameView, legalMoves: readonly unknown[]): Promise<unknown> {
     const moves = [...legalMoves];
@@ -92,7 +93,7 @@ export class RemotePlayerController implements PlayerController {
   /**
    * Verwerk een binnengekomen moveRequest van de client. De zet moet exact één
    * van de aangeboden legale zetten zijn (waarde-vergelijking); zo niet, dan
-   * wordt hij genegeerd. We resolven met het SERVER-object zodat de engine
+   * wordt hij genegeerd. We resolven met het HOST-object zodat de engine
    * gegarandeerd een gevalideerde, legale zet toepast.
    */
   deliver(move: unknown): boolean {

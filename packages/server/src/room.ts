@@ -8,8 +8,8 @@
 
 import type { GameEvent, PlayerConfig, Seat } from '@kingen/shared/core/types.ts';
 import type { ChatMessage, NetMessage, RoomInfo } from '@kingen/shared/net/protocol.ts';
-import { GameHost } from './gameHost.ts';
-import type { MoveRequestPayload } from './remotePlayer.ts';
+import { GameHost } from '@kingen/shared/net/gameHost.ts';
+import type { MoveRequestPayload } from '@kingen/shared/net/remotePlayer.ts';
 
 /** Minimale verbinding-abstractie (echte ws of test-stub). */
 export interface ClientConn {
