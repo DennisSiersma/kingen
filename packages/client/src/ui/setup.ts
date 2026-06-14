@@ -39,7 +39,7 @@ import { el, emitUiEvent } from './uiBus.ts';
  */
 const AI_NAME_POOL = [
   'Ada', 'Kaia', 'Chrystal', 'Casheen', 'Jameel', 'Rafique', 'Zain', 'Tillie',
-  'Chris', 'Thom', 'Ali', 'Geeta', 'Myrna', 'Lola', 'Bastian',
+  'Chris', 'Thom', 'Ali', 'Geeta', 'Myrna', 'Lola', 'Bastian', 'Arif', 'Sheila',
 ] as const;
 
 /**

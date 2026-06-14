@@ -17,7 +17,7 @@ export interface ClientConn {
   send(msg: NetMessage): void;
 }
 
-const AI_NAME_POOL = ['Ada', 'Kaia', 'Chris', 'Thom', 'Ali', 'Geeta', 'Myrna', 'Lola'];
+const AI_NAME_POOL = ['Ada', 'Kaia', 'Chris', 'Thom', 'Ali', 'Geeta', 'Myrna', 'Lola', 'Arif', 'Sheila'];
 
 export interface RoomOpts {
   id: string;
