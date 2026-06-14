@@ -22,11 +22,13 @@ import { createSceneManager } from './render/scene.ts';
 import { MexenRenderPlugin } from './render/dice/mexenRenderPlugin.ts';
 import { QwixxRenderPlugin } from './render/dice/qwixxRenderPlugin.ts';
 import { FritzenRenderPlugin } from './render/dice/fritzenRenderPlugin.ts';
+import { YahtzeeRenderPlugin } from './render/dice/yahtzeeRenderPlugin.ts';
 import type { CardAnimator, RenderPluginContext, SceneRenderPlugin } from './render/types.ts';
 import { createHud } from './ui/hud.ts';
 import { createMexenPanel, type MexenMoveJSON } from './ui/mexenPanel.ts';
 import { createQwixxSheet, type QwixxMoveJSON, type QwixxSheetExtras } from './ui/qwixxSheet.ts';
 import { createFritzenPanel, type FritzenMoveJSON, type FritzenPanelExtras } from './ui/fritzenPanel.ts';
+import { createYahtzeePanel, type YahtzeeMoveJSON, type YahtzeePanelExtras } from './ui/yahtzeePanel.ts';
 import { createScoreboard } from './ui/scoreboard.ts';
 import { createChatPanel } from './ui/chat.ts';
 import { createLobby } from './ui/lobby.ts';
@@ -68,11 +70,13 @@ export async function runOnlineGame(
   const mexenPaneel = createMexenPanel(ui);
   const qwixxBord = createQwixxSheet(ui);
   const fritzenPaneel = createFritzenPanel(ui);
+  const yahtzeePaneel = createYahtzeePanel(ui);
   const mexenPlugin = new MexenRenderPlugin();
   const qwixxPlugin = new QwixxRenderPlugin();
   const fritzenPlugin = new FritzenRenderPlugin();
+  const yahtzeePlugin = new YahtzeeRenderPlugin();
   // Eén scene, meerdere dobbel-render-plugins: elk handelt zijn eigen spel af.
-  const renderPlugins = [mexenPlugin, qwixxPlugin, fritzenPlugin];
+  const renderPlugins = [mexenPlugin, qwixxPlugin, fritzenPlugin, yahtzeePlugin];
   const renderPlugin: SceneRenderPlugin = {
     attach: (ctx: RenderPluginContext) => renderPlugins.forEach((p) => p.attach?.(ctx)),
     handleEvent: async (ev, anim: CardAnimator) => {
@@ -109,6 +113,7 @@ export async function runOnlineGame(
   let isMexen = false;
   let isQwixx = false;
   let isFritzen = false;
+  let isYahtzee = false;
   // Klaverjas-state voor het live team-paneel (Wij/Zij kaartpunten + roem deze boom).
   let isKlaverjas = false;
   let kjTrump: Suit | null = null;
@@ -169,6 +174,9 @@ export async function runOnlineGame(
         isFritzen = ev.gameId.startsWith('fritzen');
         if (isFritzen) fritzenPaneel.toon();
         else fritzenPaneel.verberg();
+        isYahtzee = ev.gameId.startsWith('yahtzee');
+        if (isYahtzee) yahtzeePaneel.toon();
+        else yahtzeePaneel.verberg();
         if (isKlaverjas) teamPaneel.toon();
         else teamPaneel.verberg();
         isRikken = ev.gameId.startsWith('rikken');
@@ -253,7 +261,7 @@ export async function runOnlineGame(
       case 'scoreUpdate':
         // Mexen: totals = resterende levens; Qwixx: totals = score. In beide
         // gevallen direct in de spelerschips tonen.
-        if (isMexen || isQwixx || isFritzen) {
+        if (isMexen || isQwixx || isFritzen || isYahtzee) {
           hud.setScores(Array.from({ length: n }, (_, i) => ev.totals[i] ?? 0));
         }
         break;
@@ -521,6 +529,7 @@ export async function runOnlineGame(
               mexenPaneel.verberg();
               qwixxBord.verberg();
               fritzenPaneel.verberg();
+              yahtzeePaneel.verberg();
               if (huidigeRoom) lobby.toonWachtkamer(huidigeRoom, mySeat);
             }, 5000);
           });
@@ -602,6 +611,7 @@ export async function runOnlineGame(
     mexenPaneel.verberg();
     qwixxBord.verberg();
     fritzenPaneel.verberg();
+    yahtzeePaneel.verberg();
     lobby.toonBrowser();
   });
 
@@ -771,6 +781,15 @@ export async function runOnlineGame(
       const legal = (msg.legalMoves ?? []) as FritzenMoveJSON[];
       const extras = (msg.viewExtras ?? {}) as FritzenPanelExtras;
       const move = await fritzenPaneel.vraag(legal, extras);
+      transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move });
+      return;
+    }
+
+    // --- Yahtzee: gooien/herworpen + een categorie scoren op de scorekaart ---
+    if (isYahtzee) {
+      const legal = (msg.legalMoves ?? []) as YahtzeeMoveJSON[];
+      const extras = (msg.viewExtras ?? {}) as YahtzeePanelExtras;
+      const move = await yahtzeePaneel.vraag(legal, extras, mySeat);
       transport.send({ kind: 'moveRequest', roomId: huidigeRoomId, seat: mySeat, move });
       return;
     }
