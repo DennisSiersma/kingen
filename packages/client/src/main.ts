@@ -456,10 +456,33 @@ async function main(): Promise<void> {
   const landing = createLanding(ui);
   const gamePage = createGamePage(ui);
 
-  // Online lazy laden (apart bundel-chunk) zodat lokaal spelen 'm niet meetrekt.
+  // De generieke client (render + HUD + zetkeuze) lazy laden zodat lokaal Kingen
+  // 'm niet meetrekt. Online = echte server; lokaal = in-browser host (zelfde client).
   const startOnline = async (gameId: string): Promise<void> => {
     const { runOnlineGame } = await import('./online.ts');
-    await runOnlineGame(app, ui, gameId);
+    await runOnlineGame(app, ui, { gameId });
+  };
+
+  const startLokaal = async (gameId: string): Promise<void> => {
+    const [{ runOnlineGame }, { LocalHostTransport }, { getGame }, { registerBuiltinGames }] =
+      await Promise.all([
+        import('./online.ts'),
+        import('./net/localHostTransport.ts'),
+        import('@shared/core/gameRegistry.ts'),
+        import('@shared/games/registry.ts'),
+      ]);
+    registerBuiltinGames(); // zodat de in-browser GameHost het spel vindt
+    const entry = getGame(gameId);
+    const playerCount = entry?.minPlayers ?? 4;
+    const config = entry?.configForPlayers(playerCount);
+    let naam = t('setup.you');
+    try {
+      naam = localStorage.getItem('kingen.name') || naam;
+    } catch {
+      // best-effort
+    }
+    const transport = new LocalHostTransport({ gameId, config, playerCount, playerName: naam });
+    await runOnlineGame(app, ui, { gameId, transport, solo: true });
   };
 
   for (;;) {
@@ -469,7 +492,7 @@ async function main(): Promise<void> {
     if (keuze.action === 'back') continue; // terug naar de galerij
 
     if (keuze.action === 'online') {
-      // Online neemt het over (eigen lobby); de "← Lokaal"-link herlaadt naar de galerij.
+      // Online neemt het over (eigen lobby); 'Partij afbreken' herlaadt naar de galerij.
       await startOnline(keuze.gameId);
       return;
     }
@@ -479,8 +502,8 @@ async function main(): Promise<void> {
       await runKingenLokaal(); // oneindig; terug = herladen via de setup-link
       return;
     }
-    // Overige spellen lokaal: in-browser host (Fase 2). Voorlopig via de online-brug.
-    await startOnline(keuze.gameId);
+    // Overige spellen lokaal: in-browser host (mens + AI-fill), zelfde client.
+    await startLokaal(keuze.gameId);
     return;
   }
 }

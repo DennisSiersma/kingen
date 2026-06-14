@@ -39,7 +39,15 @@ function clientId(): string {
   }
 }
 
-export async function runOnlineGame(app: HTMLElement, ui: HTMLElement, voorkeurGameId?: string): Promise<void> {
+export async function runOnlineGame(
+  app: HTMLElement,
+  ui: HTMLElement,
+  opts: { gameId?: string; transport?: import('@shared/net/protocol.ts').Transport; solo?: boolean } = {},
+): Promise<void> {
+  const voorkeurGameId = opts.gameId;
+  // Solo = lokaal tegen de computer: lobby overslaan, automatisch een tafel
+  // maken + starten (de meegegeven transport is dan de in-browser host).
+  const solo = opts.solo === true;
   const bus = createGameEventBus();
   const hud = createHud(ui);
   const scoreboard = createScoreboard(ui);
@@ -57,6 +65,9 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement, voorkeurG
   onUiEvent(ui, (ev) => {
     if (ev.type === 'brightnessChanged') scene.setBrightness(ev.percent);
     if (ev.type === 'cameraMotionChanged') scene.setCameraMotion(ev.enabled);
+    if (ev.type === 'toggleScoreboard') scoreboard.toggle();
+    // Partij afbreken → terug naar de spelgalerij (verse staat via herladen).
+    if (ev.type === 'quitToSetup') location.href = location.pathname;
   });
 
   // --- spelstate (afgeleid uit events) ---
@@ -243,7 +254,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement, voorkeurG
   });
 
   // --- transport + lobby + chat ---
-  const transport = new WebSocketTransport(defaultWsUrl());
+  const transport = opts.transport ?? new WebSocketTransport(defaultWsUrl());
   const lobby = createLobby(ui, leesOpgeslagen('kingen.name'), voorkeurGameId);
   const chat = createChatPanel(ui);
   chat.onVerstuur((tekst) => {
@@ -259,6 +270,7 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement, voorkeurG
   transport.onMessage((msg) => {
     switch (msg.kind) {
       case 'roomList':
+        if (solo) break; // lokaal: geen lobby
         lobby.updateRoomList(msg.rooms);
         if (!inRoom) {
           // Bij een (her)verbinding automatisch terug naar je laatste tafel, anders de browser.
@@ -274,9 +286,14 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement, voorkeurG
         bewaar('kingen.roomCode', msg.room.code ?? '');
         mySeat = msg.yourSeat;
         scene.setViewerSeat(mySeat);
-        chat.setEigenStoel(mySeat);
-        chat.toon();
-        lobby.toonWachtkamer(msg.room, mySeat);
+        if (solo) {
+          // Lokaal: meteen starten, geen wachtkamer of chat.
+          transport.send({ kind: 'startGame', roomId: huidigeRoomId });
+        } else {
+          chat.setEigenStoel(mySeat);
+          chat.toon();
+          lobby.toonWachtkamer(msg.room, mySeat);
+        }
         break;
       case 'roomUpdate':
         if (msg.room.id === huidigeRoomId) {
@@ -291,6 +308,8 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement, voorkeurG
           const winnaars = msg.event.winners.map((s) => naamVan(s)).join(', ');
           void scene.waitForIdle().then(() => {
             void notifications.toon(t('online.gameOver', { winner: winnaars }), { soort: 'succes', duurMs: 8000 });
+            // Lokaal: blijf op de eindstand staan; via 'Partij afbreken' terug naar de galerij.
+            if (solo) return;
             // Terug naar de wachtkamer zodat de host opnieuw kan starten (anderen wachten).
             if (replayTimer) clearTimeout(replayTimer);
             replayTimer = setTimeout(() => {
@@ -379,7 +398,10 @@ export async function runOnlineGame(app: HTMLElement, ui: HTMLElement, voorkeurG
   // Bij herladen (reconnect) automatisch opnieuw verbinden met de bewaarde naam,
   // zodat je via je clientId je stoel + een snapshot terugkrijgt.
   const bewaardeNaam = leesOpgeslagen('kingen.name');
-  if (bewaardeNaam) {
+  if (solo) {
+    // Lokaal: meteen verbinden met de in-browser host; geen naamscherm.
+    void verbind(bewaardeNaam || t('online.defaultName'));
+  } else if (bewaardeNaam) {
     lobby.setStatus('connecting');
     void verbind(bewaardeNaam);
   } else {
